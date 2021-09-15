@@ -1,0 +1,83 @@
+## http://cmake.org/runningcmake
+## http://doc.qt.io/qt-5/cmake-manual.html
+
+cmake_minimum_required(VERSION 3.7)
+
+project(NepesStacker)
+
+set(IS_ARM 0)
+set(CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR}/cmake/modules
+        ${CMAKE_MODULE_PATH})
+
+SET(CMAKE_CXX_STANDARD 14)
+if (${IS_ARM})
+    SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++14 -pthread")
+endif()
+
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+set(CMAKE_INCLUDE_CURRENT_DIR ON)
+set(CMAKE_AUTOMOC ON)
+set(CMAKE_AUTORCC ON)
+set(CMAKE_AUTOUIC_SEARCH_PATHS ${CMAKE_CURRENT_SOURCE_DIR} / ui)
+set(AUTOUIC_OPTIONS - include ${CMAKE_CURRENT_SOURCE_DIR} / src / videolabelview.hpp)
+set(CMAKE_AUTOUIC ON)
+set(AUTOGEN_BUILD_DIR ${CMAKE_CURRENT_SOURCE_DIR} / autogen)
+#set(CMAKE_CXX_CLANG_TIDY clang - tidy - checks = -*, modernize - *)
+#include(cppcheck.cmake)
+## http://www.cmake.org/Wiki/CMake:How_To_Find_Libraries
+
+if (${IS_ARM})
+    find_package(Qt5 COMPONENTS Core Gui Widgets Network Multimedia REQUIRED)
+else ()
+    find_package(Qt5 COMPONENTS Core Gui Widgets WebEngineWidgets WebChannel Network Multimedia REQUIRED)
+endif()
+
+if (WIN32)
+    set(OpenCV_STATIC OFF)
+    set(OpenCV SHARED ON)
+
+    set(EXECUTABLE_OUTPUT_PATH ${CMAKE_SOURCE_DIR}/bin/win) # http://stackoverflow.com/questions/18826789/cmake-output-build-directory
+#set(OpenCV_DIR "C:/Users/kspark/opencv")
+    #set(NM500LLIBDIR_X64 "X:/NM500-SDK-V1/Library/x64")
+    set(LIB_INCLUDE_DIR "D:/NM500-SDK-Windows-CPP-V2.0.1/Library")
+    set(NM500LLIBDIR_X64 "D:/NM500-SDK-Windows-CPP-V2.0.1/Library/x64")
+    set(nmengine ${NM500LLIBDIR_X64}/nmengine.lib ${NM500LLIBDIR_X64}/CyAPI.lib ${NM500LLIBDIR_X64}/cyusbserial.lib)
+elseif (NOT WIN312)
+    set(EXECUTABLE_OUTPUT_PATH ${CMAKE_SOURCE_DIR}/bin) # http://stackoverflow.com/questions/18826789/cmake-output-build-directory
+    if (APPLE)
+        set(LIB_INCLUDE_DIR "/usr/local/include")
+#        set(LIB_LIBRARY_DIR /usr/local/lib/libvlc.dylib)
+        set(nmengine /usr/local/lib/libnmengine.dylib)
+    elseif (NOT APPLE)
+        set(LIB_INCLUDE_DIR "/usr/include")
+#For Raspberry PI
+        set(LIB_LIBRARY_DIR "/usr/lib/arm-linux-gnueabihf")
+#For Intel
+#set(LIB_LIBRARY_DIR "/usr/lib/x86_64-linux-gnu")
+#        set(LIB_LIBRARY_DIR ${LIBVLC_LIBRARY_DIR}/libvlc.so)
+        set(nmengine /usr/local/lib/libnmengine.so)
+    endif (APPLE)
+endif (WIN32)
+#find_package(OpenCV COMPONENTS opencv_core opencv_imgproc opencv_highgui opencv_objdetect opencv_tracking opencv_xfeatures2d REQUIRED)
+find_package(OpenCV COMPONENTS opencv_core opencv_imgproc opencv_highgui opencv_objdetect opencv_videoio REQUIRED)
+include_directories(${Qt5_INCLUDE_DIRS} ${LIB_INCLUDE_DIR} ${OpenCV_INCLUDE_DIRS})
+
+file(GLOB NepesStacker_src ${CMAKE_CURRENT_SOURCE_DIR}/src/*)
+file(GLOB NepesStacker_ui ${CMAKE_CURRENT_SOURCE_DIR}/ui/*)
+
+#find_package(CppCheck)
+# Add the "make analysis" target
+if (CPPCHECK_FOUND)
+    add_custom_target(analysis)
+    # ADD_DEPENDENCIES(analysis ${NepesStacker_src})
+    set_target_properties(analysis PROPERTIES EXCLUDE_FROM_ALL TRUE)
+    message("analysis analysis targets are ${ALL_ANALYSIS_TARGETS}")
+endif ()
+
+add_executable(NepesStacker ${NepesStacker_src} ${NepesStacker_ui} res.qrc resources.qrc)
+
+if (${IS_ARM})
+    target_link_libraries(NepesStacker ${nmengine} Qt5::Core Qt5::Widgets Qt5::Network Qt5::Multimedia ${OpenCV_LIBS} ${LIB_LIBRARY_DIR} )
+else ()
+    target_link_libraries(NepesStacker ${nmengine} Qt5::Core Qt5::Widgets Qt5::WebEngineWidgets Qt5::WebChannel Qt5::Network Qt5::Multimedia ${OpenCV_LIBS} ${LIB_LIBRARY_DIR})
+endif()

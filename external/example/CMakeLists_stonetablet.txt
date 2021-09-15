@@ -1,0 +1,59 @@
+
+#$ sudo cmake CMakeLists.txt
+#$ sudo make
+
+set(DBG ${DEBUG})
+set(DLL ${DLL})
+message("DBG = ${DEBUG}")
+message("DLL = ${DLL}")
+
+cmake_minimum_required(VERSION 3.7)
+
+project(stonetablet)
+
+if (${DBG})
+   message("HUH")
+   add_definitions(-D_DEBUG)
+   #set(CMAKE_CXXFLAGS "-D_DEBUG")
+endif()
+   
+if (${DLL})       
+#   add_definition(-D_MAKEDLL)
+   set(CMAKE_CXXFLAGS "-D_MAKEDLL")
+endif()
+
+set(CMAKE_CXX_FLAGS "-Wno-invalid-source-encoding -Wno-deprecated-register -Wno-writable-strings -Wno-parentheses -O3 -g")
+
+set(CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR}/cmake/modules
+        ${CMAKE_MODULE_PATH})
+SET(CMAKE_CXX_STANDARD 14)
+
+set(LIB_INCLUDE_DIR "/usr/local/include")
+#set(nmengine /usr/local/lib/libnmengine.dylib)
+
+find_package(OpenCV 4.0 REQUIRED)
+
+find_package(PythonInterp 3.7 REQUIRED)
+find_package(PythonLibs 3.7 REQUIRED)
+message(STATUS "Python version: ${PYTHONLIBS_VERSION_STRING}")
+
+file(WRITE ${CMAKE_CURRENT_BINARY_DIR}/findumpyh.py "try:\n\timport numpy; print(numpy.get_include())\nexcept: pass\n")
+exec_program("${PYTHON_EXECUTABLE}"
+             ARGS "\"${CMAKE_CURRENT_BINARY_DIR}/findumpyh.py\""
+             OUTPUT_VARIABLE NUMPY_PATH)
+
+find_path(PYTHON_NUMPY_HEADER arrayobject.h ${NUMPY_PATH}/numpy)
+
+if(NOT PYTHON_NUMPY_HEADER)
+    message(FATAL_ERROR "NumPy header not found")
+endif()
+
+message(STATUS "PYTHON_INCLUDE_DIR: ${PYTHON_INCLUDE_DIR}")
+message(STATUS "NUMPYP_INCLUDE_DIR: ${NUMPY_PATH}")
+
+include_directories(${LIB_INCLUDE_DIR} ${OpenCV_INCLUDE_DIRS} ${PYTHON_INCLUDE_DIR} ${NUMPY_PATH})
+file(GLOB _SRC ${CMAKE_CURRENT_SOURCE_DIR}/src/*)
+#list(REMOVE_ITEM _SRC ${CMAKE_CURRENT_SOURCE_DIR}/src/Run.cpp)
+
+add_executable(stonetablet ${_SRC})
+target_link_libraries(stonetablet ${OpenCV_LIBS} ${PYTHON_LIBRARY})
