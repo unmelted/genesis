@@ -11,7 +11,9 @@
 #include <string>
 #include "os_api.hpp"
 #include "bitmap.hpp"
-#include "lodepng.h"
+#include "lodepng.hpp"
+
+
 
 using namespace std;
 

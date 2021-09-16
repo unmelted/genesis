@@ -1,9 +1,5 @@
 /*
- *  2020.02.11 created by Kelly @nepes
- *  SouthWrap main
- *  SouthWrap.cpp
- *  Copyright (c) 2020, nepes inc, All rights reserved.
- *
+ *  2021.09.15 created by Kelly @4DREPLAY KOREA
  */
 
 #include <stdio.h>
@@ -11,8 +7,8 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <termios.h>
-#include "SouthWrap.hpp"
-#include "SouthWrapEx.hpp"
+#include <vector>
+#include "include/DefData.hpp"
 
 char getcha()
 {
@@ -36,38 +32,35 @@ char getcha()
         return (buf);
 }
 
-//int main(int argc, char *argv[])
-int SouthWrap(char *argv)
+
+int main(int n, char **argv)
 {
     bool exit = false;
     int c;
     int result = -1;
-    printf(" ::::: TRINITY SOUTHWRAPPER ::::: \n");
-
-    SouthWrapper* sthwr = new SouthWrapper(argv, "connect.json");
+    printf(" ::::: GENESIS ::::: \n");
     printf(" argv config %c \n", argv[1]);
 
     while(!exit)
     {
+    
         c = getcha();
         printf("c %d \n", c);
 
         switch(c)
         {
         case 99: //c
-            //sthwr->ConnectToMed("113.130.69.145", 8000);
-            sthwr->ConnectToMed();
+
             break;
 
         case 105: //i
-            sthwr->InitModule();
             break;
 
         case 113://q
             exit = true;
             break;
         case 115://s
-            sthwr->SendStatusUpdate();
+
             break;
         default:
             break;
@@ -75,7 +68,18 @@ int SouthWrap(char *argv)
         }
     }
 
-    printf("main While loop terminated. delete sthwr \n");
-    delete sthwr;
+    printf("main While loop terminated. \n");
     return 1;
+}
+
+void TestFeature(int n, wchar_t* path)
+{
+    printf("Enter count : %d ", n);
+    //string imglist = path;
+    printf("recieved message %ls \n", path);
+
+    /* for(int i = 0 ; i < n ; i ++)
+    {
+
+    }*/
 }

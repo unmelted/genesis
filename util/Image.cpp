@@ -6,13 +6,13 @@
  *
  */
 #include <cassert>
-#include "Data.hpp"
 #include "Image.hpp"
+#include "TimeUtil.hpp"
 
 static int img_cnt = 0;
 static bool fcnt = false;
 
-int getCH(int ch_mode)
+int GetCH(int ch_mode)
 {
     int ch = 0;
     switch(ch_mode){
@@ -27,7 +27,7 @@ int getCH(int ch_mode)
     case rgba_mode:
     case bgra_mode:
         ch = 4;
-        break;
+       break;
     }
 
     return ch;
@@ -36,7 +36,7 @@ int getCH(int ch_mode)
 IMG* CreateImage(int width, int height, int ch_mode)
 {
     IMG* target = (IMG*)g_os_malloc(sizeof(IMG));
-    int ch = getCH(ch_mode);
+    int ch = GetCH(ch_mode);
 
     target->width = width;
     target->height = height;
@@ -61,7 +61,7 @@ IMG* CreateImage(int width, int height, int ch_mode)
 IMG* CreateImage(int width, int height, int ch_mode, unsigned char* data)
 {
     IMG* target = (IMG*)g_os_malloc(sizeof(IMG));
-    int ch = getCH(ch_mode);
+    int ch = GetCH(ch_mode);
     target->width = width;
     target->height = height;
     target->area = width * height;

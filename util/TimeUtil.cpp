@@ -22,7 +22,7 @@ void InitTimer(TIMER *times)
 void SetTimer(TIMER *times, unsigned int expire, void (*func)(void *), void *arg, int id)
 {
     times->expire = expire;
-    times->routine = func;
+//    times->routine = func;
     times->arg = arg;
     times->timer_id = id;
     return;
@@ -120,7 +120,7 @@ string getSerial()
 
 void Logger(const char *format, ...)
 {
-    string filePath = "log/logd_"+getCurrentDateTime("date")+".txt";
+    string filePath = "logd_"+getCurrentDateTime("date")+".txt";
     va_list ap;
     char buf[4096];
     va_start(ap, format);
@@ -131,9 +131,9 @@ void Logger(const char *format, ...)
     ofstream ofs(filePath.c_str(), std::ios_base::out | std::ios_base::app );
     ofs << now << '\t' << buf;
 
-// #ifdef _DEBUG
-//     printf("[%s]\t%s", now.c_str(), buf); fflush(stdout);
-// #endif
+#ifdef _DEBUG
+     printf("[%s]\t%s", now.c_str(), buf); fflush(stdout);
+#endif
 
     ofs.close();
 }
