@@ -1,3 +1,4 @@
+#include "Image.hpp"
 
 typedef struct _TIMER {
     unsigned int expire;

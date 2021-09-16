@@ -36,8 +36,8 @@ int GetCH(int ch_mode)
 IMG* CreateImage(int width, int height, int ch_mode)
 {
     IMG* target = (IMG*)g_os_malloc(sizeof(IMG));
+    printf("create iamge start empty");    
     int ch = GetCH(ch_mode);
-
     target->width = width;
     target->height = height;
     target->area = width * height;
@@ -60,6 +60,7 @@ IMG* CreateImage(int width, int height, int ch_mode)
 
 IMG* CreateImage(int width, int height, int ch_mode, unsigned char* data)
 {
+    printf("create iamge start ");    
     IMG* target = (IMG*)g_os_malloc(sizeof(IMG));
     int ch = GetCH(ch_mode);
     target->width = width;

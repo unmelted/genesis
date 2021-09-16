@@ -32,5 +32,5 @@ message(${PRJ_INC})
 add_library(genesis SHARED ${PRJ_SRC})
 target_link_libraries(genesis)
 
-add_executable(runtest ${PRJ_SRC})
-target_link_libraries(runtest)
+#add_executable(runtest ${PRJ_SRC})
+#target_link_libraries(runtest)

@@ -8,7 +8,9 @@
 #include <unistd.h>
 #include <termios.h>
 #include <vector>
-#include "include/DefData.hpp"
+#include "util/DefData.hpp"
+
+int TestFeature(unsigned char* framedata);
 
 char getcha()
 {
@@ -39,18 +41,23 @@ int main(int n, char **argv)
     int c;
     int result = -1;
     printf(" ::::: GENESIS ::::: \n");
-    printf(" argv config %c \n", argv[1]);
+    //printf(" argv config %c \n", argv[1]);
+    c = 1;
 
-    while(!exit)
+    //while(!exit)
     {
     
-        c = getcha();
-        printf("c %d \n", c);
+        //c = getcha();
+        //printf("c %d \n", c);
 
         switch(c)
         {
+        case 1 : 
+            printf("Start \n");
+            break;
+            
         case 99: //c
-
+            TestFeature((unsigned char*)argv[1]);
             break;
 
         case 105: //i
@@ -72,14 +79,24 @@ int main(int n, char **argv)
     return 1;
 }
 
-void TestFeature(int n, wchar_t* path)
+int TestFeature(unsigned char* framedata)
 {
-    printf("Enter count : %d ", n);
-    //string imglist = path;
-    printf("recieved message %ls \n", path);
-
-    /* for(int i = 0 ; i < n ; i ++)
-    {
-
-    }*/
+    printf("Enter! \n");
+    static int index = 0;    
+    printf("Enter! 2\n");
+    IMG* bframe = CreateImage(1024, 688, 0, framedata);
+    //IMG* bframe = CreateImage(1024, 688, 0);    
+    printf(" 2 \n");
+    char fname[25] = {0, };
+    sprintf(fname, "test/saveimage_%d.png", index);
+    index++;
+    printf(" 3 %s \n", fname);    
+    SaveImagePNG(bframe, fname);
+    printf(" 4 \n");
+    DestroyImage(bframe);
+}
+extern "C" {
+    void Feature(unsigned char* buffers) {
+        TestFeature(buffers);
+    }
 }
