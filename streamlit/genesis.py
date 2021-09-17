@@ -3,15 +3,10 @@ import cv2
 import ctypes
 import pathlib
 import numpy as np
+import connector as cn
 
-datapath = 'test/'
-libname = pathlib.Path().absolute() / 'libgenesis.dylib'
-clib = ctypes.CDLL(libname)
-print(clib)
 
-clib.main(1)
-
-imglist = os.listdir(datapath)
+""" imglist = os.listdir(datapath)
 print(imglist)
 
 for i in imglist :
@@ -25,3 +20,18 @@ for i in imglist :
     framearray = testarray2.tobytes()
     print("CAll clib")
     clib.Feature( framearray)
+ """
+
+class Calibrator(object) :
+    instance = None
+    clib = None
+
+    @staticmethod
+    def getInstance():
+        if Calibrator.instance == None():
+            Calibrator.instance = Calibrator()
+        return Calibrator.instance
+
+    def __init__ (self):
+        clib = ctypes.CDLL(cn.BaseData.libname)
+        print(clib.GetVersion())

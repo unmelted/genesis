@@ -10,6 +10,8 @@
 #include <vector>
 #include "util/DefData.hpp"
 
+#define VER "0.1.0"
+
 int TestFeature(unsigned char* framedata);
 
 char getcha()
@@ -95,8 +97,18 @@ int TestFeature(unsigned char* framedata)
     printf(" 4 \n");
     DestroyImage(bframe);
 }
+
+void GetVersion()
+{
+    cout<< "Cur Version : " << VER << endl;
+}
+
 extern "C" {
     void Feature(unsigned char* buffers) {
         TestFeature(buffers);
     }
+    void GetVerion() {
+        GetVersion();
+    }
+
 }
