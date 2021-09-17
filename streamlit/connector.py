@@ -35,3 +35,23 @@ class Handler(object):
                 newlist.append(self.img_path + i)
 
             return newlist
+
+        def getGroundType(self):
+            gr_type = { "BaseballHome" : 1,
+                        "BaseballGround" : 2,
+                        "BasketballHalf" : 3,
+                        "BasketballGround" : 4,
+                        "Boxing" : 5,
+                        "IceLinkHalf" : 6,
+                        "IceLink" : 7,
+                        "SoccerHalf" : 8,
+                        "Soccer" : 9,
+                        "Taekwondo" : 10,
+                        "TennisHalf" : 11 ,
+                        "Tennis" : 12,
+                        "Ufc" : 13,
+                        "VolleyballHalf" : 14,
+                        "VolleyballGround" : 15,
+                        "Football" : 16 }
+            return gr_type
+

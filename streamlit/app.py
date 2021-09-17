@@ -24,11 +24,15 @@ def main():
         st.session_state['color_to_label'] = {}
     PAGES = {
         "Calibration": color_annotation_app,
-        "About": about,
         "Basic example": full_app,
     }
     page = st.sidebar.selectbox("Page:", options=list(PAGES.keys()))
     PAGES[page]()
+
+    handle = cn.Handler.getInstance()
+    base = handle.BaseData()    
+    playground = st.sidebar.selectbox("Type", options=list(base.getGroundType().keys()))
+
 
     with st.sidebar:
         st.markdown("---")
@@ -36,33 +40,6 @@ def main():
             '<h6>Made by Kelly @4D </h6>',
             unsafe_allow_html=True,
         )
-
-
-def about():
-    st.markdown(
-        """
-    Welcome to the demo of [Streamlit Drawable Canvas](https://github.com/andfanilo/streamlit-drawable-canvas).
-    
-    On this site, you will find a full use case for this Streamlit component, and answers to some frequently asked questions.
-    
-    :pencil: [Demo source code](https://github.com/andfanilo/streamlit-drawable-canvas-demo/)    
-    """
-    )
-    st.image("img/demo.gif")
-    st.markdown(
-        """
-    What you can do with Drawable Canvas:
-
-    * Draw freely, lines, circles and boxes on the canvas, with options on stroke & fill
-    * Rotate, skew, scale, move any object of the canvas on demand
-    * Select a background color or image to draw on
-    * Get image data and every drawn object properties back to Streamlit !
-    * Choose to fetch back data in realtime or on demand with a button
-    * Undo, Redo or Drop canvas
-    * Save canvas data as JSON to reuse for another session
-    """
-    )
-
 
 def full_app():
     st.sidebar.header("Configuration")
@@ -119,40 +96,45 @@ def color_annotation_app():
         You should select ROI, 4 Region.
     """
     )
-    with st.echo("below"):
+    #with st.echo("below"):
 
-        handle = cn.Handler.getInstance()
-        base = handle.BaseData()
-        img_list = base.getImageList()
-        bg_image = Image.open(img_list[0])
-        w, h = bg_image.size[:2]
-        print("image size : ", h , w)
+    handle = cn.Handler.getInstance()
+    base = handle.BaseData()
+    img_list = base.getImageList()
+    bg_image = Image.open(img_list[0])
+    w, h = bg_image.size[:2]
+    print("image size : ", h , w)
 
-        label_color = (
-            st.sidebar.color_picker("Annotation color: ", "#EA1010") + "77"
-        )  # for alpha from 00 to FF
-        label = st.sidebar.text_input("Label", "Default")
-        mode = "transform" if st.sidebar.checkbox("Move ROIs", False) else "rect"
+    label_color = (
+        st.sidebar.color_picker("Annotation color: ", "#EA1010") + "77"
+    )  # for alpha from 00 to FF
+    label = st.sidebar.text_input("Label", "Default")
+    mode = "transform" if st.sidebar.checkbox("Move ROIs", False) else "rect"
 
-        canvas_result = st_canvas(
-            fill_color=label_color,
-            stroke_width=1,
-            background_image=bg_image,
-            height=h/2,
-            width=w/2,
-            drawing_mode=mode,
-            key="color_annotation_app",
-        )
-        if canvas_result.json_data is not None:
-            df = pd.json_normalize(canvas_result.json_data["objects"])
-            if len(df) == 0:
-                return
-            st.session_state["color_to_label"][label_color] = label
-            df["label"] = df["fill"].map(st.session_state["color_to_label"])
-            st.dataframe(df[["top", "left", "width", "height", "fill", "label"]])
+    if st.button('Say hello'):
+        st.write('Why hello there')
+    else:
+        st.write('Goodbye')
 
-        with st.expander("Color to label mapping"):
-            st.json(st.session_state["color_to_label"])
+    canvas_result = st_canvas(
+        fill_color=label_color,
+        stroke_width=1,
+        background_image=bg_image,
+        height=h/2,
+        width=w/2,
+        drawing_mode=mode,
+        key="color_annotation_app",
+    )
+    if canvas_result.json_data is not None:
+        df = pd.json_normalize(canvas_result.json_data["objects"])
+        if len(df) == 0:
+            return
+        st.session_state["color_to_label"][label_color] = label
+        df["label"] = df["fill"].map(st.session_state["color_to_label"])
+        st.dataframe(df[["top", "left", "width", "height", "fill", "label"]])
+
+    with st.expander("Color to label mapping"):
+        st.json(st.session_state["color_to_label"])
     
 
 def png_export():
