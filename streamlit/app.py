@@ -1,6 +1,11 @@
 import base64
-import json
 import os
+import sys
+_dir = os.path.dirname(__file__)
+sys.path.append(_dir)
+
+import pandas as pd
+import json
 import re
 import time
 import uuid
@@ -8,31 +13,37 @@ from io import BytesIO
 from pathlib import Path
 
 import numpy as np
-import pandas as pd
 import streamlit as st
 from PIL import Image
 from streamlit_drawable_canvas import st_canvas
 from svgpathtools import parse_path
+
 import SessionState
 import connector as cn
 
 
+
 def main():
+    handle = cn.Handler.getInstance()
+    base = handle.BaseData()    
+    playground = st.sidebar.selectbox("Type", options=list(base.getGroundType().keys()))
+    
+    print(playground)
+    handle = cn.Handler.getInstance()
+    handle.ParamHolder().setGround(playground)
+
     if 'button_id' not in st.session_state:
         st.session_state['button_id'] = ''
     if 'color_to_label' not in st.session_state:
         st.session_state['color_to_label'] = {}
+    """ 
     PAGES = {
         "Calibration": color_annotation_app,
         "Basic example": full_app,
     }
-    page = st.sidebar.selectbox("Page:", options=list(PAGES.keys()))
-    PAGES[page]()
-
-    handle = cn.Handler.getInstance()
-    base = handle.BaseData()    
-    playground = st.sidebar.selectbox("Type", options=list(base.getGroundType().keys()))
-
+    page = st.sidebar.selectbox("Page:", options=list(PAGES.keys())) """
+    #PAGES[page]()
+    color_annotation_app()
 
     with st.sidebar:
         st.markdown("---")
@@ -41,63 +52,19 @@ def main():
             unsafe_allow_html=True,
         )
 
-def full_app():
-    st.sidebar.header("Configuration")
-    st.markdown(
-        """
-    Draw on the canvas, get the drawings back to Streamlit!
-    * Configure canvas in the sidebar
-    * In transform mode, double-click an object to remove it
-    * In polygon mode, left-click to add a point, right-click to close the polygon, double-click to remove the latest point
-    """
-    )
-
-    with st.echo("below"):
-        # Specify canvas parameters in application
-        stroke_width = st.sidebar.slider("Stroke width: ", 1, 25, 3)
-        stroke_color = st.sidebar.color_picker("Stroke color hex: ")
-        bg_color = st.sidebar.color_picker("Background color hex: ", "#eee")
-        bg_image = st.sidebar.file_uploader("Background image:", type=["png", "jpg"])
-        drawing_mode = st.sidebar.selectbox(
-            "Drawing tool:", ("freedraw", "line", "rect", "circle", "transform", "polygon")
-        )
-        realtime_update = st.sidebar.checkbox("Update in realtime", True)
-
-        # Create a canvas component
-        canvas_result = st_canvas(
-            fill_color="rgba(255, 165, 0, 0.3)",  # Fixed fill color with some opacity
-            stroke_width=stroke_width,
-            stroke_color=stroke_color,
-            background_color=bg_color,
-            background_image=Image.open(bg_image) if bg_image else None,
-            update_streamlit=realtime_update,
-            height=150,
-            drawing_mode=drawing_mode,
-            display_toolbar=st.sidebar.checkbox("Display toolbar", True),
-            key="full_app",
-        )
-
-        # Do something interesting with the image data and paths
-        if canvas_result.image_data is not None:
-            st.image(canvas_result.image_data)
-        if canvas_result.json_data is not None:
-            objects = pd.json_normalize(canvas_result.json_data["objects"])
-            for col in objects.select_dtypes(include=['object']).columns:
-                objects[col] = objects[col].astype("str")
-            st.dataframe(objects)
-
-
 
 def color_annotation_app():
     st.markdown(
         """
-        Display 1 image of First Camera among camera group.
+        You can see one image.
 
-        You should select ROI, 4 Region.
+        It is first Camera among camera group.
+        
+        Please Select ROI, 4 Region.
     """
     )
-    #with st.echo("below"):
-
+    groundtype = None
+    region = []
     handle = cn.Handler.getInstance()
     base = handle.BaseData()
     img_list = base.getImageList()
@@ -111,11 +78,6 @@ def color_annotation_app():
     label = st.sidebar.text_input("Label", "Default")
     mode = "transform" if st.sidebar.checkbox("Move ROIs", False) else "rect"
 
-    if st.button('Say hello'):
-        st.write('Why hello there')
-    else:
-        st.write('Goodbye')
-
     canvas_result = st_canvas(
         fill_color=label_color,
         stroke_width=1,
@@ -125,6 +87,12 @@ def color_annotation_app():
         drawing_mode=mode,
         key="color_annotation_app",
     )
+    if st.button('Select Complete. GO!'):
+        st.write('')
+    else:
+        st.write('Will calculate images')
+        handle.ParamHolder().setRegionData(img_list, region)
+    
     if canvas_result.json_data is not None:
         df = pd.json_normalize(canvas_result.json_data["objects"])
         if len(df) == 0:
@@ -132,6 +100,9 @@ def color_annotation_app():
         st.session_state["color_to_label"][label_color] = label
         df["label"] = df["fill"].map(st.session_state["color_to_label"])
         st.dataframe(df[["top", "left", "width", "height", "fill", "label"]])
+
+        region.append(df[["top", "left", "width", "height", "fill", "label"]])        
+        print(canvas_result.json_data["objects"][0]["left"])
 
     with st.expander("Color to label mapping"):
         st.json(st.session_state["color_to_label"])
@@ -219,6 +190,6 @@ if __name__ == "__main__":
     st.set_page_config(
         page_title="GENESIS", page_icon=":earthl2:"
     )
-    st.title("4DREPLAY CALIBRATION SIMULATION")
+    st.title("CALIBRATION SIMULATION")
     st.sidebar.subheader("Config")
     main()

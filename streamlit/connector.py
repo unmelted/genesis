@@ -15,8 +15,23 @@ class Handler(object):
             Handler.instance = Handler()
         return Handler.instance
 
-    def __init__(self):
-        pass
+
+    class ParamHolder():
+        instance = None
+        ground = None
+        imageset = None
+        region = []
+        
+        def setGround(self, ground):
+            self.ground = ground
+            print("setGround is called ", self.ground)
+
+        def setRegionData(self, imageset, region):
+            self.imageset = imageset
+            self.region = region
+            print("setRegionData is called ", self.region)
+            #gn.Calibrator.getInstance()
+
 
     class BaseData() : 
         cur_path = os.getcwd() +'/'
@@ -24,6 +39,7 @@ class Handler(object):
         prj_path = os.getcwd() +'/'
         img_path = prj_path + 'image/'
         libname = prj_path + 'libgenesis.dylib'
+        print(cur_path, prj_path, img_path)
 
         def getImageList(self):
             newlist = []

@@ -14,6 +14,12 @@ typedef enum _err {
 
 };
 
+typedef struct _PARAM {
+    int dim;
+    int* region; //half size 
+    int ground;
+};
+
 typedef enum groundtype
 {
     BaseballHome,

@@ -98,6 +98,12 @@ int TestFeature(unsigned char* framedata)
     DestroyImage(bframe);
 }
 
+int ExtractFeature()
+{
+    printf(" Extract Feature is called \n");
+
+}
+
 void GetVersion()
 {
     cout<< "Cur Version : " << VER << endl;
@@ -110,5 +116,7 @@ extern "C" {
     void GetVerion() {
         GetVersion();
     }
-
+    int Extract(unsigned char* beffers) {
+        printf("first step");
+    }
 }

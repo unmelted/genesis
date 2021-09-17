@@ -35,3 +35,6 @@ class Calibrator(object) :
     def __init__ (self):
         clib = ctypes.CDLL(cn.BaseData.libname)
         print(clib.GetVersion())
+
+    def extract(self) :
+        self.clib.Extract(void)

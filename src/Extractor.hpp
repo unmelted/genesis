@@ -3,7 +3,7 @@
 *                                                                            *
 *                            Extractor      								 *
 *                                                                            *
-*   Copyright (c) 2004 by 4dreplay, Incoporated. All Rights Reserved.        *
+*   Copyright (c) 2021 by 4dreplay, Incoporated. All Rights Reserved.        *
 ******************************************************************************
 
     File Name       : Extractor.hpp
@@ -12,5 +12,15 @@
 
     Description     : Extractor.hpp
     Notes           : Feature Extractor from image.
+*/
 
-    
+#include "../util/DefData.hpp"
+
+class Extractor {
+
+public :
+    Extractor();
+
+private :
+
+};
