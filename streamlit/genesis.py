@@ -35,8 +35,10 @@ class Calibrator(object) :
         return Calibrator.instance
 
     def extract(self, ground, imgset, region) :
+"""         
         dstruc = c_int * (self.bd.dim * 2 + 1)
-        dd = dstryc(ground, region)
+        dd = dstruc(ground, region)
         self.clib.Extract(byref(dd))
         print("Calibrator is called ")
+ """        
         pass

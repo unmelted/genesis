@@ -21,8 +21,14 @@ class Handler(object):
         return Handler.instance
 
     def ExecuteExtract(self) :
+        temp = []
         print("Execute Extract")
-        gn.Calibrator.getInstance().extract(self.ground, self.imageset, self.region)
+        for i in len(self.region) :
+            for j in self.region[i]:
+                temp.append(j)
+
+        print(temp)
+        gn.Calibrator.getInstance().extract(self.ground, self.imageset, temp)
 
     def setGround(self, ground):
         self.ground = ground
