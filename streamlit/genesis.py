@@ -24,17 +24,19 @@ for i in imglist :
 
 class Calibrator(object) :
     instance = None
-    clib = None
+    bd = cn.Handler.BaseData()    
+    clib = ctypes.CDLL(bd.libname)
+    print(bd.libname, clib)
 
     @staticmethod
     def getInstance():
-        if Calibrator.instance == None():
+        if Calibrator.instance == None:
             Calibrator.instance = Calibrator()
         return Calibrator.instance
 
-    def __init__ (self):
-        clib = ctypes.CDLL(cn.BaseData.libname)
-        print(clib.GetVersion())
-
-    def extract(self) :
-        self.clib.Extract(void)
+    def extract(self, ground, imgset, region) :
+        dstruc = c_int * (self.bd.dim * 2 + 1)
+        dd = dstryc(ground, region)
+        self.clib.Extract(byref(dd))
+        print("Calibrator is called ")
+        pass

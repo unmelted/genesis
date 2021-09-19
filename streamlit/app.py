@@ -30,7 +30,7 @@ def main():
     
     print(playground)
     handle = cn.Handler.getInstance()
-    handle.ParamHolder().setGround(playground)
+    handle.setGround(playground)
 
     if 'button_id' not in st.session_state:
         st.session_state['button_id'] = ''
@@ -89,10 +89,10 @@ def color_annotation_app():
     )
     if st.button('Select Complete. GO!'):
         st.write('')
+        handle.ExecuteExtract()        
     else:
         st.write('Will calculate images')
-        handle.ParamHolder().setRegionData(img_list, region)
-    
+
     if canvas_result.json_data is not None:
         df = pd.json_normalize(canvas_result.json_data["objects"])
         if len(df) == 0:
@@ -100,9 +100,14 @@ def color_annotation_app():
         st.session_state["color_to_label"][label_color] = label
         df["label"] = df["fill"].map(st.session_state["color_to_label"])
         st.dataframe(df[["top", "left", "width", "height", "fill", "label"]])
+        
+        region.append([canvas_result.json_data["objects"][len(df)-1]["left"],
+                        canvas_result.json_data["objects"][len(df)-1]["top"],        
+                        canvas_result.json_data["objects"][len(df)-1]["width"],
+                        canvas_result.json_data["objects"][len(df)-1]["height"]])
 
-        region.append(df[["top", "left", "width", "height", "fill", "label"]])        
-        print(canvas_result.json_data["objects"][0]["left"])
+
+        handle.setRegion(region)
 
     with st.expander("Color to label mapping"):
         st.json(st.session_state["color_to_label"])

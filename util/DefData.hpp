@@ -1,3 +1,8 @@
+#include <fstream>
+#include <iostream>
+#include <opencv2/opencv.hpp>
+#include <string>
+#include <vector>
 #include "Image.hpp"
 
 typedef struct _TIMER {
@@ -15,10 +20,10 @@ typedef enum _err {
 };
 
 typedef struct _PARAM {
+    int ground;    
     int dim;
     int* region; //half size 
-    int ground;
-};
+} dparam;
 
 typedef enum groundtype
 {

@@ -8,6 +8,11 @@ import genesis as gn
 class Handler(object):
     instance = None
     data = None
+    instance = None
+    ground = None
+    imageset = None
+    region = []
+    dim = None
 
     @staticmethod
     def getInstance():
@@ -15,22 +20,22 @@ class Handler(object):
             Handler.instance = Handler()
         return Handler.instance
 
+    def ExecuteExtract(self) :
+        print("Execute Extract")
+        gn.Calibrator.getInstance().extract(self.ground, self.imageset, self.region)
 
-    class ParamHolder():
-        instance = None
-        ground = None
-        imageset = None
-        region = []
-        
-        def setGround(self, ground):
-            self.ground = ground
-            print("setGround is called ", self.ground)
+    def setGround(self, ground):
+        self.ground = ground
+        print("setGround is called ", self.ground)
 
-        def setRegionData(self, imageset, region):
-            self.imageset = imageset
-            self.region = region
-            print("setRegionData is called ", self.region)
-            #gn.Calibrator.getInstance()
+    def setRegion(self, region):
+        self.region.append(region)
+        self.dim = len(region)
+        print(self.dim, self.region)
+
+    def setImgData(self, imageset):
+        self.imageset = imageset
+        print("setRegionData is called ")
 
 
     class BaseData() : 
