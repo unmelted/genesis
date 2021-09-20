@@ -6,7 +6,7 @@
 #include <string>
 #include <vector>
 #include "TimeUtil.hpp"
-
+#include "Image.hpp"
 
 typedef enum _err {
     ERR_NONE = 0,
@@ -18,7 +18,7 @@ typedef struct _PARAM {
     int ground;    
     int dim;
     int* region; //half size 
-} dparam;
+} PARAM;
 
 typedef enum groundtype
 {
