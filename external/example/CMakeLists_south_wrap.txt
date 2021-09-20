@@ -1,0 +1,29 @@
+
+#$ sudo cmake CMakeLists.txt
+#$ sudo make
+
+set(DBG ${DEBUG})
+message("DBG = ${DEBUG}")
+
+cmake_minimum_required(VERSION 3.7)
+
+project(southbox)
+
+if (${DBG})
+   add_definitions(-D_DEBUG)
+   #set(CMAKE_CXXFLAGS "-D_DEBUG")
+endif()
+
+set(CMAKE_CXX_STANDARD 14)   
+set(CMAKE_CXX_FLAGS " -std=c++14 -pthread -Wno-invalid-source-encoding -Wno-deprecated-register -Wno-writable-strings -Wno-parentheses -O3 -g")
+
+set(CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR}/cmake/modules
+        ${CMAKE_MODULE_PATH})
+
+set(LIB_INCLUDE_DIR "/usr/local/include")
+
+include_directories(${LIB_INCLUDE_DIR} ${LIB_SQL_INCLUDE_DIR} ${OpenCV_INCLUDE_DIRS})
+file(GLOB _SRC ${CMAKE_CURRENT_SOURCE_DIR}/src/*)
+
+add_executable(southbox ${_SRC})
+target_link_libraries(southbox)

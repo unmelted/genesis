@@ -1,0 +1,59 @@
+## http://cmake.org/runningcmake
+## http://doc.qt.io/qt-5/cmake-manual.html
+
+cmake_minimum_required(VERSION 3.7)
+
+project(NepesStacker)
+
+set(CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR}/cmake/modules
+        ${CMAKE_MODULE_PATH})
+
+SET(CMAKE_CXX_STANDARD 14)
+SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++14 -pthread")
+
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+set(CMAKE_INCLUDE_CURRENT_DIR ON)
+set(CMAKE_AUTOMOC ON)
+set(CMAKE_AUTORCC ON)
+set(CMAKE_AUTOUIC_SEARCH_PATHS ${CMAKE_CURRENT_SOURCE_DIR} / ui)
+set(CMAKE_AUTOUIC ON)
+set(AUTOGEN_BUILD_DIR ${CMAKE_CURRENT_SOURCE_DIR} / autogen)
+find_package(Qt5 5.10 REQUIRED COMPONENTS Core Gui Widgets Network Multimedia REQUIRED)
+
+find_package(PythonInterp 3.7 REQUIRED)
+find_package(PythonLibs 3.7 REQUIRED)
+message(STATUS "Python version: ${PYTHONLIBS_VERSION_STRING}")
+
+file(WRITE ${CMAKE_CURRENT_BINARY_DIR}/findumpyh.py "try:\n\timport numpy; print(numpy.get_include())\nexcept: pass\n")
+exec_program("${PYTHON_EXECUTABLE}"
+             ARGS "\"${CMAKE_CURRENT_BINARY_DIR}/findumpyh.py\""
+             OUTPUT_VARIABLE NUMPY_PATH)
+
+find_path(PYTHON_NUMPY_HEADER arrayobject.h ${NUMPY_PATH}/numpy)
+
+if(NOT PYTHON_NUMPY_HEADER)
+    message(FATAL_ERROR "NumPy header not found")
+endif()
+
+message(STATUS "PYTHON_INCLUDE_DIR: ${PYTHON_INCLUDE_DIR}")
+message(STATUS "NUMPYP_INCLUDE_DIR: ${NUMPY_PATH}")
+
+set(EXECUTABLE_OUTPUT_PATH ${CMAKE_SOURCE_DIR}/bin) # http://stackoverflow.com/questions/18826789/cmake-output-build-directory
+if (APPLE)
+    set(LIB_INCLUDE_DIR "/usr/local/include")
+    set(nmengine /usr/local/lib/libnmengine.dylib)
+elseif (NOT APPLE)
+    set(LIB_INCLUDE_DIR "/usr/include")
+    set(LIB_LIBRARY_DIR "/usr/lib/arm-linux-gnueabihf")
+    set(nmengine /usr/local/lib/libnmengine.so)
+endif ()
+
+find_package(OpenCV 4.0 REQUIRED COMPONENTS opencv_core opencv_imgproc opencv_highgui opencv_objdetect opencv_videoio REQUIRED)
+include_directories(${Qt5_INCLUDE_DIRS} ${LIB_INCLUDE_DIR} ${OpenCV_INCLUDE_DIRS} ${PYTHON_INCLUDE_DIR} ${NUMPY_PATH})
+
+file(GLOB NepesStacker_src ${CMAKE_CURRENT_SOURCE_DIR}/src/*)
+file(GLOB NepesStacker_ui ${CMAKE_CURRENT_SOURCE_DIR}/ui/*)
+
+add_executable(NepesStacker ${NepesStacker_src} ${NepesStacker_ui} res.qrc)
+
+target_link_libraries(NepesStacker ${nmengine} Qt5::Core Qt5::Widgets Qt5::Network Qt5::Multimedia ${OpenCV_LIBS} ${LIB_LIBRARY_DIR} ${PYTHON_LIBRARY})

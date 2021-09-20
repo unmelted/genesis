@@ -1,0 +1,37 @@
+
+#$ sudo cmake CMakeLists.txt
+#$ sudo make
+
+set(DBG ${DEBUG})
+message("DBG = ${DEBUG}")
+
+cmake_minimum_required(VERSION 3.7)
+
+project(mediator)
+
+if (${DBG})
+   add_definitions(-D_DEBUG)
+   #set(CMAKE_CXXFLAGS "-D_DEBUG")
+endif()
+
+set(CMAKE_CXX_STANDARD 14)   
+set(CMAKE_CXX_FLAGS " -std=c++14 -pthread -Wno-invalid-source-encoding -Wno-deprecated-register -Wno-writable-strings -Wno-parentheses -O3 -g ")
+
+set(CMAKE_MODULE_PATH ${CMAKE_SsOURCE_DIR}/cmake/modules
+        ${CMAKE_MODULE_PATH})
+
+if(APPLE)
+    set(LIB_SQL_INCLUDE_DIR "/usr/local/Cellar/mysql-connector-c++/8.0.18_1/include")
+    set(sqllib /usr/local/Cellar/mysql-connector-c++/8.0.21/lib/libmysqlcppconn8.dylib)
+    set(LIB_INCLUDE_DIR "/usr/local/include")
+else ()
+       set(LIB_SQL_INCLUDE_DIR "/usr/include/mysql-cppconn-8")
+       set(sqllib /usr/lib/x86_64-linux-gnu/libmysqlcppconn8.so)
+       set(LIB_INCLUDE_DIR "/usr/local/include")
+endif()       
+
+include_directories(${LIB_INCLUDE_DIR} ${LIB_SQL_INCLUDE_DIR})
+file(GLOB _SRC ${CMAKE_CURRENT_SOURCE_DIR}/src/*)
+
+add_executable(mediator ${_SRC})
+target_link_libraries(mediator ${sqllib})

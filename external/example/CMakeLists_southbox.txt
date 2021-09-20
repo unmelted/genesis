@@ -1,0 +1,152 @@
+cmake_minimum_required(VERSION 3.7)
+
+project(southbox)
+
+set(DBG ${DEBUG})
+set(WDW ${WINDOW})
+set(UBNN ${BNN})
+message("DBG = ${DEBUG}")
+message("WDW = ${WINDOW}")
+message("UBNN = ${BNN}")
+
+if (${DBG})
+   add_definitions(-D_DEBUG)
+   #set(CMAKE_CXXFLAGS "-D_DEBUG")
+endif()
+
+if (${WDW})
+   add_definitions(-DWINDOW)
+   #set(CMAKE_CXXFLAGS "-D_DEBUG")
+endif()
+
+if (${UBNN})
+else ()
+	add_definitions(-DUSE_CNN)
+endif()
+
+set(CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR}/cmake/modules
+        ${CMAKE_MODULE_PATH})
+
+SET(CMAKE_CXX_STANDARD 14)
+SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++14 -pthread -g -O3 -Wno-invalid-source-encoding -Wno-deprecated-register -Wno-writable-strings -Wno-parentheses -Wdeprecated -Wno-deprecated")
+add_definitions(-DBSD=1 -O -DSOCKLEN_T=socklen_t -DHAVE_SOCKADDR_LEN=1 -DTIME_BASE=int -DNEED_XLOCALE_H=1 -DNO_OPENSSL=1)
+
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+set(CMAKE_INCLUDE_CURRENT_DIR ON)
+
+if(NOT (${UBNN}))
+   find_package(PythonInterp 3.7 REQUIRED)
+   find_package(PythonLibs 3.7 REQUIRED)
+   message(STATUS "Python version: ${PYTHONLIBS_VERSION_STRING}")
+
+    file(WRITE ${CMAKE_CURRENT_BINARY_DIR}/findumpyh.py "try:\n\timport numpy; print(numpy.get_include())\nexcept: pass\n")
+    exec_program("${PYTHON_EXECUTABLE}"
+    ARGS "\"${CMAKE_CURRENT_BINARY_DIR}/findumpyh.py\""
+    OUTPUT_VARIABLE NUMPY_PATH)
+
+    find_path(PYTHON_NUMPY_HEADER arrayobject.h ${NUMPY_PATH}/numpy)
+
+    if(NOT PYTHON_NUMPY_HEADER)
+        message(FATAL_ERROR "NumPy header not found")
+    endif()
+    
+    message(STATUS "PYTHON_INCLUDE_DIR: ${PYTHON_INCLUDE_DIR}")
+    message(STATUS "NUMPYP_INCLUDE_DIR: ${NUMPY_PATH}")
+    
+endif()
+
+set(EXECUTABLE_OUTPUT_PATH ${CMAKE_SOURCE_DIR})
+
+if (APPLE)
+   set(LIB_INCLUDE_DIR "/usr/local/include")
+   set(MPEG_LIB_INCLUDE_DIR "/usr/local/Cellar/ffmpeg/4.1.3_1/include")
+
+elseif (NOT APPLE)
+    set(LIB_INCLUDE_DIR "/usr/include")
+    set(LIB_LIBRARY_DIR "/usr/lib/arm-linux-gnueabihf")
+    set(nmengine /usr/local/lib/libnmengine.so)
+endif ()
+
+set(PRJ_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/src/)
+set(STHWRAP_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/src/southwrap/)
+set(CMN_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/src/common/)
+set(SURVEIL_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/src/surveil)
+
+set(LIVE_INCLUDE_DIR ${CMN_INCLUDE_DIR}/live555/include)
+
+
+if (APPLE)
+   FIND_PACKAGE(PkgConfig)
+    if (PkgConfig_FOUND)
+        PKG_CHECK_MODULES(GTK3 gtk+-3.0)
+        if (GTK3_FOUND)
+        	message("GTK3 is installed")   
+        	set(GTK3_INCLUDE_DIRS ${GTK+-3.0_INCLUDE_DIRS}) 
+        	ADD_DEFINITIONS(${GTK3_CFLAGS_OTHER})
+        else ()
+        	message("GTK3 is not installed") 
+        	set(GTK3_INCLUDE_DIRS $ENV{GTK3_INCLUDE_DIRS})
+        	set(GTK3_LIBRARY_DIRS $ENV{GTK3_LIBRARY_DIRS})
+        	set(GTK3_LIBRARIES $ENV{GTK3_LIBRARIES} $ENV{ADDITIONAL_LIB})
+        endif ()
+    else ()
+        message("pkgconfig not found") 
+        set(GTK3_INCLUDE_DIRS $ENV{GTK3_INCLUDE_DIRS})
+        set(GTK3_LIBRARY_DIRS $ENV{GTK3_LIBRARY_DIRS})
+        set(GTK3_LIBRARIES $ENV{GTK3_LIBRARIES} $ENV{ADDITIONAL_LIB})
+    endif ()
+else ()
+#For Rockchip
+     message("RocChip")
+     set(GTK3_INCLUDE_DIRS $ENV{GTK3_INCLUDE_DIRS})
+     set(GTK3_LIBRARY_DIRS $ENV{GTK3_LIBRARY_DIRS})
+     set(GTK3_LIBRARIES $ENV{GTK3_LIBRARIES} $ENV{ADDITIONAL_LIB})
+#end 
+endif ()
+
+INCLUDE_DIRECTORIES(${GTK3_INCLUDE_DIRS})
+LINK_DIRECTORIES(${GTK3_LIBRARY_DIRS})
+
+INCLUDE_DIRECTORIES(${LIB_INCLUDE_DIR} ${MPEG_LIB_INCLUDE_DIR} ${LIVE_INCLUDE_DIR} ${PYTHON_INCLUDE_DIR} ${NUMPY_PATH} ${PRJ_INCLUDE_DIR} ${STHWRAP_INCLUDE_DIR} ${CMN_INCLUDE_DIR} ${SURVEIL_INCLUDE_DIR} ${GTK3_INCLUDE_DIRS} )
+
+file(GLOB southbox_src ${CMAKE_CURRENT_SOURCE_DIR}/src/*
+                       ${CMAKE_CURRENT_SOURCE_DIR}/src/southwrap/*
+                       ${CMAKE_CURRENT_SOURCE_DIR}/src/surveil/*
+                       ${CMAKE_CURRENT_SOURCE_DIR}/src/common/*)
+if (${UBNN})
+   list(REMOVE_ITEM southbox_src ${CMAKE_CURRENT_SOURCE_DIR}/src/surveil/CtClassifier.cpp)
+endif()
+if (NOT (${WDW}))
+   message("no window..")
+   list(REMOVE_ITEM southbox_src ${CMAKE_CURRENT_SOURCE_DIR}/src/Window.cpp)
+endif()
+
+if (CPPCHECK_FOUND)
+    add_custom_target(analysis)
+    set_target_properties(analysis PROPERTIES EXCLUDE_FROM_ALL TRUE)
+    message("analysis analysis targets are ${ALL_ANALYSIS_TARGETS}")
+endif()
+
+find_library(MPEG_LIB_AVF avformat)
+find_library(MPEG_LIB_AVC avcodec)
+find_library(MPEG_LIB_SWR swresample)
+find_library(MPEG_LIB_SWS swscale)
+find_library(MPEG_LIB_AVU avutil)
+
+find_library(LIVE_LIB_BAS BasicUsageEnvironment "src/common/live555/lib")
+find_library(LIVE_LIB_USA UsageEnvironment "src/common/live555/lib")
+find_library(LIVE_LIB_GRO groupsock "src/common/live555/lib")
+find_library(LIVE_LIB_LIV liveMedia "src/common/live555/lib")
+#find_library(SDL_LIB SDL2)
+
+add_executable(southbox ${southbox_src} )
+
+if (${UBNN})
+   TARGET_LINK_LIBRARIES(southbox  ${PYTHON_LIBRARY}
+                                ${MPEG_LIB_AVF} ${MPEG_LIB_AVC} ${MPEG_LIB_SWR} ${MPEG_LIB_SWS} ${MPEG_LIB_AVU}
+                                ${LIVE_LIB_LIV} ${LIVE_LIB_GRO} ${LIVE_LIB_BAS} ${LIVE_LIB_USA} ${GTK3_LIBRARIES} stdc++fs)
+else ()
+    TARGET_LINK_LIBRARIES(southbox  ${PYTHON_LIBRARY}
+                                ${MPEG_LIB_AVF} ${MPEG_LIB_AVC} ${MPEG_LIB_SWR} ${MPEG_LIB_SWS} ${MPEG_LIB_AVU}
+                                ${LIVE_LIB_LIV} ${LIVE_LIB_GRO} ${LIVE_LIB_BAS} ${LIVE_LIB_USA} ${GTK3_LIBRARIES})
+endif()
