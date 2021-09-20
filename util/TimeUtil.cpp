@@ -120,7 +120,7 @@ string getSerial()
 
 void Logger(const char *format, ...)
 {
-    string filePath = "logd_"+getCurrentDateTime("date")+".txt";
+    string filePath = "log/logd_"+getCurrentDateTime("date")+".txt";
     va_list ap;
     char buf[4096];
     va_start(ap, format);
@@ -129,7 +129,7 @@ void Logger(const char *format, ...)
 
     string now = getCurrentDateTime("now");
     ofstream ofs(filePath.c_str(), std::ios_base::out | std::ios_base::app );
-    ofs << now << '\t' << buf;
+    ofs << now << '\t' << buf << endl;
 
 #ifdef _DEBUG
      printf("[%s]\t%s", now.c_str(), buf); fflush(stdout);

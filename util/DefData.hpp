@@ -1,17 +1,12 @@
+#pragma once
+
 #include <fstream>
 #include <iostream>
 #include <opencv2/opencv.hpp>
 #include <string>
 #include <vector>
-#include "Image.hpp"
+#include "TimeUtil.hpp"
 
-typedef struct _TIMER {
-    unsigned int expire;
-    void* routine;
-    void* arg;
-    short timer_id;
-    bool last_check = 0;
-} TIMER;
 
 typedef enum _err {
     ERR_NONE = 0,

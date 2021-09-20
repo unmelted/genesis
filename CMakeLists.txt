@@ -8,11 +8,12 @@ cmake_minimum_required(VERSION 3.7)
 
 project(Genesis)
 set (PLATFROM MAC) # available : WIN, ARM, LINUX
-SET(CMAKE_CXX_STANDARD 14)
+set(CMAKE_CXX_STANDARD 14)
+find_package( OpenCV REQUIRED )
 
 set(CMAKE_CXX_FLAGS "-Wno-invalid-source-encoding -Wno-deprecated-register -Wno-writable-strings -Wno-parentheses -O2 -g")
 #set(LIB_INCLUDE_DIR "/usr/local/include")
-
+#set(OPENCV_INCLUDE_DIRS "/usr/local/include/opencv4/opencv2/")
 
 set(PRJ_PATH        ${CMAKE_CURRENT_SOURCE_DIR})
 file(GLOB PRJ_SRC      ${PRJ_PATH}/src/*.cpp
@@ -26,11 +27,11 @@ file(GLOB PRJ_INC      ${PRJ_PATH}/src/*.hpp
                             ${PRJ_PATH}/include/*.hpp
                             )
 
-
-include_directories(${PRJ_INC})
+set(CMAKE_INCLUDE_CURRENT_DIR ON)
+include_directories(${PRJ_INC} ${OpenCV_INCLUDE_DIRS})
 message(${PRJ_INC})
 add_library(genesis SHARED ${PRJ_SRC})
-target_link_libraries(genesis)
+target_link_libraries(genesis ${OpenCV_LIBS})
 
 #add_executable(runtest ${PRJ_SRC})
 #target_link_libraries(runtest)

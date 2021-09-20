@@ -1,9 +1,8 @@
 import os
 import cv2
-import ctypes
+import ctypes as c
 import pathlib
 import numpy as np
-import connector as cn
 
 
 """ imglist = os.listdir(datapath)
@@ -24,9 +23,7 @@ for i in imglist :
 
 class Calibrator(object) :
     instance = None
-    bd = cn.Handler.BaseData()    
-    clib = ctypes.CDLL(bd.libname)
-    print(bd.libname, clib)
+    clib = None
 
     @staticmethod
     def getInstance():
@@ -34,11 +31,14 @@ class Calibrator(object) :
             Calibrator.instance = Calibrator()
         return Calibrator.instance
 
-    def extract(self, ground, imgset, region) :
-"""         
-        dstruc = c_int * (self.bd.dim * 2 + 1)
-        dd = dstruc(ground, region)
-        self.clib.Extract(byref(dd))
-        print("Calibrator is called ")
- """        
-        pass
+    def setLib(self, libname):
+        self.clib = c.CDLL(libname)
+        print(self.clib)
+
+
+    def extract(self, dim, arr, img_path):
+        d = (c.c_int * (dim * 4 + 1))(*arr)
+        #ch = c.create_string_buffer(img_path)
+        print("Calibrator is called ")        
+        self.clib.Extract(c.byref(d), bytes(img_path, encoding='utf-8'))
+

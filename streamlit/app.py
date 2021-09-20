@@ -25,11 +25,9 @@ import connector as cn
 
 def main():
     handle = cn.Handler.getInstance()
-    base = handle.BaseData()    
-    playground = st.sidebar.selectbox("Type", options=list(base.getGroundType().keys()))
+    playground = st.sidebar.selectbox("Type", options=list(handle.bd.getGroundType().keys()))
     
     print(playground)
-    handle = cn.Handler.getInstance()
     handle.setGround(playground)
 
     if 'button_id' not in st.session_state:
@@ -66,8 +64,7 @@ def color_annotation_app():
     groundtype = None
     region = []
     handle = cn.Handler.getInstance()
-    base = handle.BaseData()
-    img_list = base.getImageList()
+    img_list = handle.bd.getImageList()
     bg_image = Image.open(img_list[0])
     w, h = bg_image.size[:2]
     print("image size : ", h , w)

@@ -12,7 +12,7 @@
 #include "os_api.hpp"
 #include "bitmap.hpp"
 #include "lodepng.hpp"
-
+#include "DefData.hpp"
 
 
 using namespace std;

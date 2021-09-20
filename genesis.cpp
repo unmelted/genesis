@@ -10,6 +10,7 @@
 #include <vector>
 #include "util/DefData.hpp"
 
+using namespace std;
 #define VER "0.1.0"
 
 int TestFeature(unsigned char* framedata);
@@ -81,7 +82,7 @@ int main(int n, char **argv)
     return 1;
 }
 
-int TestFeature(unsigned char* framedata)
+/* int TestFeature(unsigned char* framedata)
 {
     printf("Enter! \n");
     static int index = 0;    
@@ -97,6 +98,7 @@ int TestFeature(unsigned char* framedata)
     printf(" 4 \n");
     DestroyImage(bframe);
 }
+ */
 
 int ExtractFeature()
 {
@@ -110,13 +112,22 @@ void GetVersion()
 }
 
 extern "C" {
-    void Feature(unsigned char* buffers) {
+/*     void Feature(unsigned char* buffers) {
         TestFeature(buffers);
     }
+ */    
     void GetVerion() {
         GetVersion();
     }
-    int Extract(unsigned char* beffers) {
-        printf("first step");
+    int Extract(int* buffers, char* img_path) {
+        int dim = buffers[0];
+        int* r = (int*)malloc(sizeof(int) * (dim * 4));
+
+        for (int i = 1 ; i < dim * 4 +1 ; i ++)
+        {
+            r[i- 1] = buffers[i];
+            Logger(" %d", r[i -1]);            
+        } 
+        Logger( "received path %s", img_path);
     }
 }

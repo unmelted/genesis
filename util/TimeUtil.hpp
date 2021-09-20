@@ -6,12 +6,21 @@
  *
  */
 #pragma once
+
 #include <iostream>
 #include <fstream>
 #include <string>
 #include <stdarg.h>
 #include <chrono>
-#include "DefData.hpp"
+
+typedef struct _TIMER {
+    unsigned int expire;
+    void* routine;
+    void* arg;
+    short timer_id;
+    bool last_check = 0;
+} TIMER;
+
 
 void InitTimer(TIMER *times);
 void SetTimer(TIMER *times, unsigned int expire, void (*func)(void *), void *arg, int id);
