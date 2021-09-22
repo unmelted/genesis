@@ -1,6 +1,6 @@
 
 rm libgenesis.dylib
-make
+make -j4
 
 FILE=libgenesis.dylib
 if [ -f "$FILE" ];then

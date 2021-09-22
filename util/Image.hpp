@@ -51,7 +51,7 @@ typedef struct _imgdata
     int remain_cnt;
 }IMG;
 
-IMG* CreateImage(int width, int height, int ch);
+IMG *CreateImage(int width, int height, int ch = 0);
 IMG* CreateImage(int width, int height, int ch, unsigned char* data);
 int CopyImage(IMG* in, IMG* out);
 void DestroyImage(IMG* target);

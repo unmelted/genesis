@@ -22,7 +22,6 @@ import SessionState
 import connector as cn
 
 
-
 def main():
     handle = cn.Handler.getInstance()
     playground = st.sidebar.selectbox("Type", options=list(handle.bd.getGroundType().keys()))
@@ -34,13 +33,7 @@ def main():
         st.session_state['button_id'] = ''
     if 'color_to_label' not in st.session_state:
         st.session_state['color_to_label'] = {}
-    """ 
-    PAGES = {
-        "Calibration": color_annotation_app,
-        "Basic example": full_app,
-    }
-    page = st.sidebar.selectbox("Page:", options=list(PAGES.keys())) """
-    #PAGES[page]()
+
     color_annotation_app()
 
     with st.sidebar:
@@ -49,7 +42,7 @@ def main():
             '<h6>Made by Kelly @4D </h6>',
             unsafe_allow_html=True,
         )
-
+        
 
 def color_annotation_app():
     st.markdown(
@@ -62,12 +55,14 @@ def color_annotation_app():
     """
     )
     groundtype = None
+    scale = 5
     region = []
     handle = cn.Handler.getInstance()
     img_list = handle.bd.getImageList()
     bg_image = Image.open(img_list[0])
     w, h = bg_image.size[:2]
-    print("image size : ", h , w)
+    bg_image = bg_image.resize((int(h/scale), int(w/scale)), Image.BILINEAR)
+    print(w, h, bg_image.size[:2])
 
     label_color = (
         st.sidebar.color_picker("Annotation color: ", "#EA1010") + "77"
@@ -79,8 +74,8 @@ def color_annotation_app():
         fill_color=label_color,
         stroke_width=1,
         background_image=bg_image,
-        height=h/2,
-        width=w/2,
+        height=h/scale,
+        width=w/scale,
         drawing_mode=mode,
         key="color_annotation_app",
     )
@@ -109,6 +104,14 @@ def color_annotation_app():
     with st.expander("Color to label mapping"):
         st.json(st.session_state["color_to_label"])
     
+    if st.button('Load Result'):
+        path = "saved/"
+        ilist = os.listdir(path)
+        for i in ilist:
+            if 'save' not in i and 'png' in i:
+                ii = Image.open(path + i)
+                st.image(ii)
+
 
 def png_export():
     st.markdown(

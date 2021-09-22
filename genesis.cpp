@@ -1,86 +1,33 @@
-/*
- *  2021.09.15 created by Kelly @4DREPLAY KOREA
- */
 
+/*****************************************************************************
+*                                                                            *
+*                            Genesis          								 *
+*                                                                            *
+*   Copyright (C) 2021 By 4dreplay, Incoporated. All Rights Reserved.        *
+******************************************************************************
+
+    File Name       : genesis.pp
+    Author(S)       : Me Eunkyung
+    Created         : 21 Sep 2021
+
+    Description     : genesis.cpp
+    Notes           : Python - C library connector.
+*/
+
+#include <filesystem>
+#include <fstream>
+#include <iostream>
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
 #include <unistd.h>
-#include <termios.h>
 #include <vector>
 #include "util/DefData.hpp"
+#include "src/Extractor.hpp"
 
 using namespace std;
+
 #define VER "0.1.0"
-
-int TestFeature(unsigned char* framedata);
-
-char getcha()
-{
-        char buf = 0;
-        struct termios old = {0};
-        if (tcgetattr(0, &old) < 0)
-                perror("tcsetattr()");
-        old.c_lflag &= ~ICANON;
-        old.c_lflag &= ~ECHO;
-        old.c_cc[VMIN] = 1;
-        old.c_cc[VTIME] = 0;
-        if (tcsetattr(0, TCSANOW, &old) < 0)
-                perror("tcsetattr ICANON");
-        if (read(0, &buf, 1) < 0)
-                perror ("read()");
-        old.c_lflag |= ICANON;
-        old.c_lflag |= ECHO;
-        if (tcsetattr(0, TCSADRAIN, &old) < 0)
-                perror ("tcsetattr ~ICANON");
-        printf("%d\n",buf);
-        return (buf);
-}
-
-
-int main(int n, char **argv)
-{
-    bool exit = false;
-    int c;
-    int result = -1;
-    printf(" ::::: GENESIS ::::: \n");
-    //printf(" argv config %c \n", argv[1]);
-    c = 1;
-
-    //while(!exit)
-    {
-    
-        //c = getcha();
-        //printf("c %d \n", c);
-
-        switch(c)
-        {
-        case 1 : 
-            printf("Start \n");
-            break;
-            
-        case 99: //c
-            TestFeature((unsigned char*)argv[1]);
-            break;
-
-        case 105: //i
-            break;
-
-        case 113://q
-            exit = true;
-            break;
-        case 115://s
-
-            break;
-        default:
-            break;
-
-        }
-    }
-
-    printf("main While loop terminated. \n");
-    return 1;
-}
 
 /* int TestFeature(unsigned char* framedata)
 {
@@ -99,17 +46,7 @@ int main(int n, char **argv)
     DestroyImage(bframe);
 }
  */
-
-int ExtractFeature()
-{
-    printf(" Extract Feature is called \n");
-
-}
-
-void GetVersion()
-{
-    cout<< "Cur Version : " << VER << endl;
-}
+void Process(int cnt, int* region, char* img_path);
 
 extern "C" {
 /*     void Feature(unsigned char* buffers) {
@@ -117,17 +54,27 @@ extern "C" {
     }
  */    
     void GetVerion() {
-        GetVersion();
+        cout<< "Cur Version : " << VER << endl;        
     }
-    int Extract(int* buffers, char* img_path) {
-        int dim = buffers[0];
-        int* r = (int*)malloc(sizeof(int) * (dim * 4));
 
-        for (int i = 1 ; i < dim * 4 +1 ; i ++)
+    int Extract(int* buffers, char* img_path) {
+        int cnt = buffers[0];
+        int* r = (int*)g_os_malloc(sizeof(int) * (cnt * 4));
+
+        for (int i = 1 ; i < cnt * 4 +1 ; i ++)
         {
             r[i- 1] = buffers[i];
-            Logger(" %d", r[i -1]);            
+//            Logger(" %d", r[i -1]);            
         } 
         Logger( "received path %s", img_path);
+        Process(cnt, buffers, img_path);
     }
+}
+
+void Process(int cnt, int* region, char* img_path)
+{
+        string imgset(img_path);    
+        Extractor* ext = new Extractor(imgset);
+        ext->Execute();
+        ext->DrawInfo();
 }
