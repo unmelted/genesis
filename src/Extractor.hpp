@@ -42,10 +42,11 @@ public :
     vector<SCENE> cal_group;
 
 private :
-    const int blur_ksize = 9;
-    const float blur_sigma = 1.5;
+    const int blur_ksize = 7;
+    const float blur_sigma = 1.0;
     const int desc_byte = 32;
     const bool use_ori = true;
+    int p_scale = 0;
 
     void SaveImageSet(vector<Mat>& images);
 

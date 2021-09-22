@@ -39,7 +39,7 @@ void Extractor::DrawInfo() {
         Mat dst;
         char filename[30] = {0, };
         drawKeypoints(each.img, each.ip, dst);
-        sprintf(filename, "feature__%d.png", index);
+        sprintf(filename, "saved/feature__%d.png", index);
         imwrite(filename, dst);
         index++;
     }
@@ -71,7 +71,7 @@ void Extractor::SaveImageSet(vector<Mat>& images) {
     char filename[30] = {0, };
     int index = 0;
     for (const auto& img : images) {
-        sprintf(filename, "saveimg__%d.png", index);
+        sprintf(filename, "saved/saveimg__%d.png", index);
         imwrite(filename, img);
         index++;
     }
@@ -88,10 +88,27 @@ vector<Mat> Extractor::LoadImages(const string& path) {
         }
     }
 
+    if (p_scale == 0 ) {
+        Mat sample = imread(image_paths[0]);
+        if (sample.cols > 3600 ) {
+            p_scale = 4;
+        } else if (sample.cols > 1900) {
+            p_scale = 2;
+        } else {
+            p_scale = 1;
+        }
+    }
+
     sort(begin(image_paths), end(image_paths), less<string>());
     vector<Mat> images;
     for (const auto& ip : image_paths) {
-        images.push_back(imread(ip));
+        if ( p_scale == 1) {
+            images.push_back(imread(ip));
+        } else {
+            Mat t = imread(ip);
+            resize(t, t, Size(int(t.cols/p_scale), int(t.rows/p_scale)), 0, 0, 1);
+            images.push_back(t);
+        }
     }
     return images;
 }
@@ -114,5 +131,6 @@ vector<KeyPoint> Extractor::Fast(const Mat& image)
     vector<KeyPoint> keypoints;
     feature_detector->detect(image, keypoints);
     Logger("extracted keypoints count : %d", keypoints.size());
+    
     return keypoints;
 }
