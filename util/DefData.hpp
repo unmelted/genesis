@@ -8,11 +8,19 @@
 #include "TimeUtil.hpp"
 #include "Image.hpp"
 
+using namespace cv;
+using namespace std;
+
 typedef enum _err {
     ERR_NONE = 0,
 
 
 };
+typedef struct _maindata {
+    Mat img;
+    vector<KeyPoint> ip;
+    Mat desc;
+} SCENE;
 
 typedef struct _PARAM {
     int ground;    

@@ -18,7 +18,12 @@
 #include <iostream>
 #include <string>
 #include <vector>
+#include <stdio.h>
 #include <opencv2/opencv.hpp>
+#include <opencv2/highgui/highgui.hpp>
+#include <opencv2/features2d/features2d.hpp>
+#include <opencv2/xfeatures2d.hpp>
+#include <opencv2/calib3d/calib3d.hpp>
 #include "../util/DefData.hpp"
 
 
@@ -29,11 +34,22 @@ class Extractor {
 
 public :
     Extractor(string& imgset);
+    ~Extractor();
+    int Execute();
+    void DrawInfo();
+
     vector<Mat> imgs;
-    vector<KeyPoint> imgkeys;
+    vector<SCENE> cal_group;
 
 private :
-    vector<Mat> load_images(const string& path);
-    vector<Mat>blur_images(const vector<Mat>& images, int ksize, double sigma);
+    const int blur_ksize = 9;
+    const float blur_sigma = 1.5;
+    const int desc_byte = 32;
+    const bool use_ori = true;
+
+    void SaveImageSet(vector<Mat>& images);
+
+    vector<Mat>LoadImages(const string& path);
+    vector<Mat>BlurImages(const vector<Mat>& images, int ksize, double sigma);
     vector<KeyPoint>Fast(const Mat& image);
 };

@@ -21,10 +21,63 @@ using namespace cv;
 
 Extractor::Extractor(string& imgset)
 {
+    imgs = LoadImages(imgset);
+    imgs = BlurImages(imgs, blur_ksize, blur_sigma);
 
+#ifdef _IMGDEBUG    
+        SaveImageSet(imgs);
+#endif
 }
 
-vector<Mat> Extractor::load_images(const string& path) {
+Extractor::~Extractor()
+{
+
+}
+void Extractor::DrawInfo() {
+    int index = 0;
+    for( const auto& each : cal_group) {
+        Mat dst;
+        char filename[30] = {0, };
+        drawKeypoints(each.img, each.ip, dst);
+        sprintf(filename, "feature__%d.png", index);
+        imwrite(filename, dst);
+        index++;
+    }
+}
+
+int Extractor::Execute()
+{
+    Ptr<xfeatures2d::BriefDescriptorExtractor> dscr;
+    dscr = xfeatures2d::BriefDescriptorExtractor::create(desc_byte, use_ori);
+
+    for (const auto& img : imgs) {
+        Mat desc;
+        SCENE sc;        
+        vector<KeyPoint>ip = Fast(img);
+        dscr->compute(img, ip, desc);
+        Logger("desc..? width : %d height : %d ", desc.size().width, desc.size().height);
+        sc.img = img;
+        sc.ip = ip;
+        sc.desc = desc;
+        cal_group.push_back(sc);
+    }
+
+    return ERR_NONE;
+}
+
+void Extractor::SaveImageSet(vector<Mat>& images) {
+
+    Logger("Save Image Set is called ");
+    char filename[30] = {0, };
+    int index = 0;
+    for (const auto& img : images) {
+        sprintf(filename, "saveimg__%d.png", index);
+        imwrite(filename, img);
+        index++;
+    }
+}
+
+vector<Mat> Extractor::LoadImages(const string& path) {
     namespace fs = std::__fs::filesystem;
 
     vector<string> image_paths;
@@ -36,14 +89,14 @@ vector<Mat> Extractor::load_images(const string& path) {
     }
 
     sort(begin(image_paths), end(image_paths), less<string>());
-    vector<cv::Mat> images;
+    vector<Mat> images;
     for (const auto& ip : image_paths) {
-        images.push_back(cv::imread(ip));
+        images.push_back(imread(ip));
     }
     return images;
 }
 
-vector<Mat> Extractor::blur_images(const vector<Mat>& images, int ksize, double sigma) 
+vector<Mat> Extractor::BlurImages(const vector<Mat>& images, int ksize, double sigma) 
 {
     vector<Mat> blurred_images;
     for (const auto& img : images) {
@@ -57,8 +110,9 @@ vector<Mat> Extractor::blur_images(const vector<Mat>& images, int ksize, double 
 
 vector<KeyPoint> Extractor::Fast(const Mat& image) 
 {
-    auto feature_detector = cv::FastFeatureDetector::create();
-    vector<cv::KeyPoint> keypoints;
+    auto feature_detector = FastFeatureDetector::create();
+    vector<KeyPoint> keypoints;
     feature_detector->detect(image, keypoints);
+    Logger("extracted keypoints count : %d", keypoints.size());
     return keypoints;
 }

@@ -46,7 +46,7 @@ using namespace std;
     DestroyImage(bframe);
 }
  */
-void Process(int* region, char* img_path);
+void Process(int cnt, int* region, char* img_path);
 
 extern "C" {
 /*     void Feature(unsigned char* buffers) {
@@ -56,16 +56,18 @@ extern "C" {
     void GetVerion() {
         cout<< "Cur Version : " << VER << endl;        
     }
-    int Extract(int* buffers, char* img_path) {
-        int dim = buffers[0];
-        int* r = (int*)g_os_malloc(sizeof(int) * (dim * 4));
 
-        for (int i = 1 ; i < dim * 4 +1 ; i ++)
+    int Extract(int* buffers, char* img_path) {
+        int cnt = buffers[0];
+        int* r = (int*)g_os_malloc(sizeof(int) * (cnt * 4));
+
+        for (int i = 1 ; i < cnt * 4 +1 ; i ++)
         {
             r[i- 1] = buffers[i];
-            Logger(" %d", r[i -1]);            
+//            Logger(" %d", r[i -1]);            
         } 
         Logger( "received path %s", img_path);
+        Process(cnt, buffers, img_path);
     }
 }
 
@@ -73,5 +75,6 @@ void Process(int cnt, int* region, char* img_path)
 {
         string imgset(img_path);    
         Extractor* ext = new Extractor(imgset);
-
+        ext->Execute();
+        ext->DrawInfo();
 }
