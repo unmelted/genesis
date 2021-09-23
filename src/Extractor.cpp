@@ -21,19 +21,21 @@ using namespace cv;
 
 Extractor::Extractor(string& imgset, int cnt, int* roi)
 {
+    Logger("Param set start ..  count %d ", cnt);
+    p = (PARAM*)g_os_malloc(sizeof(PARAM));
+    p->count = cnt/2 - 1;
+    p->region = (Pt *)g_os_malloc(sizeof(Pt)* p->count);
+
     imgs = LoadImages(imgset);
     imgs = BlurImages(imgs, blur_ksize, blur_sigma);
 
-    Logger("Param set start ..  count %d ", cnt);
-    p = (PARAM*)g_os_malloc(sizeof(PARAM));
-    p->count = cnt/2;
-    p->region = (Pt *)g_os_malloc(sizeof(Pt)* p->count);
-
-    for(int i = 0; i < p->count; i++) {
-        int j = (i*2) + 1;
-        p->region[i].x = roi[j];
-        p->region[i].y = roi[j+1];
-        //Logger("insert %d %d ", roi[j], roi[j+1]);
+    if(p_scale != 1 ){
+        for(int i = 0; i < p->count; i++) {
+            int j = (i*2) + 1;
+            p->region[i].x = int(roi[j]/p_scale);
+            p->region[i].y = int(roi[j+1]/p_scale);
+            //Logger("insert %d %d ", roi[j], roi[j+1]);
+        }
     }
 
 #ifdef _IMGDEBUG    
@@ -71,9 +73,11 @@ int Extractor::Execute()
         SCENE sc;        
         sc.img = img;        
         vector<KeyPoint>ip = Fast(img);
+        int r = MaskKeypointWithROI(&ip);          
+        Logger("masekd ip %d ", ip.size());
         dscr->compute(img, ip, desc);
-        int r = MaskKeypointWithROI(&ip);        
-        Logger("desc..? width : %d height : %d ", desc.size().width, desc.size().height);
+        Logger("desc..? width : %d height : %d, final ip count %d ",
+             desc.size().width, desc.size().height, ip.size());
 
         sc.ip = ip;
         sc.desc = desc;
@@ -157,16 +161,27 @@ vector<KeyPoint> Extractor::Fast(const Mat& image)
 int Extractor::MaskKeypointWithROI(vector<KeyPoint>* oip) {
 
     Logger("Before masking %d ", oip->size());
+    int left = 0;
+    int total = 0;
+    int del = 0;
 
     for(auto it = oip->begin(); it != oip->end(); it++) {
+        total ++;
         Pt cp(int(it->pt.x), int(it->pt.y));
-        bool ret = isInside(p->region, p->count, cp);
-        //Logger(" %f, %f inside ? %d ", it->pt.x, it->pt.y, ret);
+        int ret = isInside(p->region, p->count, cp);
+        //Logger(" %d, %d inside ? %d ", int(it->pt.x), int(it->pt.y), ret);
 
-        if (ret == false) {
-            oip->erase(it);
-            //Logger("Erase!! ");
+        if (ret == 0 && it != oip->end()) {
+            //Logger("Erase!! %d, %d ", int(it->pt.x), int(it->pt.y));            
+            //oip->erase(it);
+            del ++;
         }
+        else
+            left ++;
+
+        if ( it == oip->end())
+            break;
     }
-    Logger("After masking %d ", oip->size());
+
+    Logger("After masking %d. left %d  del %d / total ip %d ", oip->size(), left, del, total);
 }
