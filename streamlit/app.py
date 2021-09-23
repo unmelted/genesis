@@ -57,6 +57,7 @@ def color_annotation_app():
     groundtype = None
     scale = 5
     region = []
+    obj = None
     handle = cn.Handler.getInstance()
     img_list = handle.bd.getImageList()
     bg_image = Image.open(img_list[0])
@@ -68,7 +69,6 @@ def color_annotation_app():
         st.sidebar.color_picker("Annotation color: ", "#EA1010") + "77"
     )  # for alpha from 00 to FF
     label = st.sidebar.text_input("Label", "Default")
-    mode = "transform" if st.sidebar.checkbox("Move ROIs", False) else "rect"
 
     canvas_result = st_canvas(
         fill_color=label_color,
@@ -76,30 +76,43 @@ def color_annotation_app():
         background_image=bg_image,
         height=h/scale,
         width=w/scale,
-        drawing_mode=mode,
+        drawing_mode='polygon',
         key="color_annotation_app",
     )
     if st.button('Select Complete. GO!'):
         st.write('')
-        handle.ExecuteExtract()        
-    else:
-        st.write('Will calculate images')
+        handle.ExecuteExtract()   
+        region.clear()     
 
-    if canvas_result.json_data is not None:
-        df = pd.json_normalize(canvas_result.json_data["objects"])
-        if len(df) == 0:
-            return
+    if canvas_result.json_data is not None :
+        obj = canvas_result.json_data['objects']
+
+    if  obj is not None and len(obj)> 0:
+        print(canvas_result.json_data['objects'])
+        print("outer if .....")
+        if 'path' in obj[0] : 
+            print("inner if..... ")
+            print(obj[0]['path'])
+            #df = pd.json_normalize(obj[0]["path"])
+            #print(df)
+            #if len(df) == 0:
+            #    return
+            df = obj[0]['path']
+            for i in df :
+                idx = 0
+                for j in i :
+                    if idx != 0 :
+                        region.append(int(float(j) * scale))
+                    idx += 1
+
+            #df["label"] = df["fill"].map(st.session_state["color_to_label"])
+            #st.dataframe(df[["top", "left", "width", "height", "fill", "label"]])        
+
+            print(region)
+            handle.setRegion(region)
+
         st.session_state["color_to_label"][label_color] = label
-        df["label"] = df["fill"].map(st.session_state["color_to_label"])
-        st.dataframe(df[["top", "left", "width", "height", "fill", "label"]])
-        
-        region.append([canvas_result.json_data["objects"][len(df)-1]["left"],
-                        canvas_result.json_data["objects"][len(df)-1]["top"],        
-                        canvas_result.json_data["objects"][len(df)-1]["width"],
-                        canvas_result.json_data["objects"][len(df)-1]["height"]])
-
-
-        handle.setRegion(region)
+        st.text(region)
 
     with st.expander("Color to label mapping"):
         st.json(st.session_state["color_to_label"])
@@ -107,9 +120,11 @@ def color_annotation_app():
     if st.button('Load Result'):
         path = "saved/"
         ilist = os.listdir(path)
+        ilist.sort()
         for i in ilist:
             if 'save' not in i and 'png' in i:
                 ii = Image.open(path + i)
+                st.text(path + i)
                 st.image(ii)
 
 

@@ -19,10 +19,22 @@
 using namespace std;
 using namespace cv;
 
-Extractor::Extractor(string& imgset)
+Extractor::Extractor(string& imgset, int cnt, int* roi)
 {
     imgs = LoadImages(imgset);
     imgs = BlurImages(imgs, blur_ksize, blur_sigma);
+
+    Logger("Param set start ..  count %d ", cnt);
+    p = (PARAM*)g_os_malloc(sizeof(PARAM));
+    p->count = cnt/2;
+    p->region = (Pt *)g_os_malloc(sizeof(Pt)* p->count);
+
+    for(int i = 0; i < p->count; i++) {
+        int j = (i*2) + 1;
+        p->region[i].x = roi[j];
+        p->region[i].y = roi[j+1];
+        //Logger("insert %d %d ", roi[j], roi[j+1]);
+    }
 
 #ifdef _IMGDEBUG    
         SaveImageSet(imgs);
@@ -39,9 +51,13 @@ void Extractor::DrawInfo() {
         Mat dst;
         char filename[30] = {0, };
         drawKeypoints(each.img, each.ip, dst);
-        sprintf(filename, "saved/feature__%d.png", index);
+        sprintf(filename, "saved/%2d_feature.png", index);
         imwrite(filename, dst);
         index++;
+    }
+
+    for(int i = 0; i < p->count; i++) {
+        Logger("roi pt : %d %d ", p->region[i].x, p->region[i].y );
     }
 }
 
@@ -53,10 +69,12 @@ int Extractor::Execute()
     for (const auto& img : imgs) {
         Mat desc;
         SCENE sc;        
+        sc.img = img;        
         vector<KeyPoint>ip = Fast(img);
         dscr->compute(img, ip, desc);
+        int r = MaskKeypointWithROI(&ip);        
         Logger("desc..? width : %d height : %d ", desc.size().width, desc.size().height);
-        sc.img = img;
+
         sc.ip = ip;
         sc.desc = desc;
         cal_group.push_back(sc);
@@ -71,7 +89,7 @@ void Extractor::SaveImageSet(vector<Mat>& images) {
     char filename[30] = {0, };
     int index = 0;
     for (const auto& img : images) {
-        sprintf(filename, "saved/saveimg__%d.png", index);
+        sprintf(filename, "saved/%2d_saveimg.png", index);
         imwrite(filename, img);
         index++;
     }
@@ -101,7 +119,8 @@ vector<Mat> Extractor::LoadImages(const string& path) {
 
     sort(begin(image_paths), end(image_paths), less<string>());
     vector<Mat> images;
-    for (const auto& ip : image_paths) {
+    for (const string& ip : image_paths) {
+        Logger("Read image : %s ", ip.c_str());        
         if ( p_scale == 1) {
             images.push_back(imread(ip));
         } else {
@@ -133,4 +152,21 @@ vector<KeyPoint> Extractor::Fast(const Mat& image)
     Logger("extracted keypoints count : %d", keypoints.size());
     
     return keypoints;
+}
+
+int Extractor::MaskKeypointWithROI(vector<KeyPoint>* oip) {
+
+    Logger("Before masking %d ", oip->size());
+
+    for(auto it = oip->begin(); it != oip->end(); it++) {
+        Pt cp(int(it->pt.x), int(it->pt.y));
+        bool ret = isInside(p->region, p->count, cp);
+        //Logger(" %f, %f inside ? %d ", it->pt.x, it->pt.y, ret);
+
+        if (ret == false) {
+            oip->erase(it);
+            //Logger("Erase!! ");
+        }
+    }
+    Logger("After masking %d ", oip->size());
 }

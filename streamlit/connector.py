@@ -74,8 +74,7 @@ class Handler(object):
         temp.append(self.dim)
         print("Execute Extract", len(self.region))
         for i in self.region :
-            for j in i:
-                temp.append(j)
+            temp.append(i)
         gn.Calibrator.getInstance().extract(self.dim, temp, self.bd.img_path)
 
     def setGround(self, ground):

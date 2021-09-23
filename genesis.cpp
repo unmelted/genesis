@@ -59,14 +59,8 @@ extern "C" {
 
     int Extract(int* buffers, char* img_path) {
         int cnt = buffers[0];
-        int* r = (int*)g_os_malloc(sizeof(int) * (cnt * 4));
 
-        for (int i = 1 ; i < cnt * 4 +1 ; i ++)
-        {
-            r[i- 1] = buffers[i];
-//            Logger(" %d", r[i -1]);            
-        } 
-        Logger( "received path %s", img_path);
+        Logger( "received count %d path %s", cnt, img_path);
         Process(cnt, buffers, img_path);
     }
 }
@@ -74,7 +68,7 @@ extern "C" {
 void Process(int cnt, int* region, char* img_path)
 {
         string imgset(img_path);    
-        Extractor* ext = new Extractor(imgset);
+        Extractor* ext = new Extractor(imgset, cnt, region);
         ext->Execute();
         ext->DrawInfo();
 }

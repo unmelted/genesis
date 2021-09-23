@@ -31,7 +31,7 @@ file(GLOB PRJ_INC      ${PRJ_PATH}/src/*.hpp
 
 set(CMAKE_INCLUDE_CURRENT_DIR ON)
 include_directories(${PRJ_INC} ${OpenCV_INCLUDE_DIRS})
-message(${PRJ_INC})
+###message(${PRJ_INC})
 add_library(genesis SHARED ${PRJ_SRC})
 target_link_libraries(genesis ${OpenCV_LIBS})
 
