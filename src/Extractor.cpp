@@ -27,7 +27,7 @@ Extractor::Extractor(string& imgset, int cnt, int* roi)
     p->region = (Pt *)g_os_malloc(sizeof(Pt)* p->count);
 
     imgs = LoadImages(imgset);
-    imgs = BlurImages(imgs, blur_ksize, blur_sigma);
+    imgs = ProcessImages(imgs, blur_ksize, blur_sigma);
 
     if(p_scale != 1 ){
         for(int i = 0; i < p->count; i++) {
@@ -56,11 +56,13 @@ void Extractor::DrawInfo() {
         sprintf(filename, "saved/%2d_feature.png", index);
         imwrite(filename, dst);
         index++;
-    }
+/* 
+        for(int i = 0; i < each.ip.size(); i++) {
+            Logger("%d, %d  oct %d class %d resp %lf size %lf angle %lf", int(each.ip[i].pt.x), int(each.ip[i].pt.y), each.ip[i].class_id,
+            each.ip[i].class_id, each.ip[i].response, each.ip[i].size , each.ip[i].angle);
+        }
+ */    }
 
-    for(int i = 0; i < p->count; i++) {
-        Logger("roi pt : %d %d ", p->region[i].x, p->region[i].y );
-    }
 }
 
 int Extractor::Execute()
@@ -73,17 +75,16 @@ int Extractor::Execute()
         SCENE sc;        
         sc.img = img;        
         vector<KeyPoint>ip = Fast(img);
-        int r = MaskKeypointWithROI(&ip);          
-        Logger("masekd ip %d ", ip.size());
-        dscr->compute(img, ip, desc);
+        sc.ip = MaskKeypointWithROI(&ip);      
+        dscr->compute(img, sc.ip, desc);
         Logger("desc..? width : %d height : %d, final ip count %d ",
-             desc.size().width, desc.size().height, ip.size());
+             desc.size().width, desc.size().height, sc.ip.size());
 
-        sc.ip = ip;
         sc.desc = desc;
         cal_group.push_back(sc);
     }
 
+    MakeMatchPair();
     return ERR_NONE;
 }
 
@@ -113,7 +114,7 @@ vector<Mat> Extractor::LoadImages(const string& path) {
     if (p_scale == 0 ) {
         Mat sample = imread(image_paths[0]);
         if (sample.cols > 3600 ) {
-            p_scale = 4;
+            p_scale = 2;
         } else if (sample.cols > 1900) {
             p_scale = 2;
         } else {
@@ -136,13 +137,14 @@ vector<Mat> Extractor::LoadImages(const string& path) {
     return images;
 }
 
-vector<Mat> Extractor::BlurImages(const vector<Mat>& images, int ksize, double sigma) 
+vector<Mat> Extractor::ProcessImages(const vector<Mat>& images, int ksize, double sigma) 
 {
     vector<Mat> blurred_images;
     for (const auto& img : images) {
-        Mat blur_img;
+        Mat blur_img; Mat dst;
         cvtColor(img, blur_img, cv::COLOR_RGBA2GRAY);
-        GaussianBlur(blur_img, blur_img, {ksize, ksize}, sigma, sigma);
+        normalize(blur_img, dst, 0, 255, NORM_MINMAX,-1, noArray());        
+        GaussianBlur(dst, blur_img, {ksize, ksize}, sigma, sigma);
         blurred_images.push_back(blur_img);
     }
     return blurred_images;
@@ -150,7 +152,7 @@ vector<Mat> Extractor::BlurImages(const vector<Mat>& images, int ksize, double s
 
 vector<KeyPoint> Extractor::Fast(const Mat& image) 
 {
-    auto feature_detector = FastFeatureDetector::create();
+    auto feature_detector = FastFeatureDetector::create(28, true, FastFeatureDetector::TYPE_9_16);
     vector<KeyPoint> keypoints;
     feature_detector->detect(image, keypoints);
     Logger("extracted keypoints count : %d", keypoints.size());
@@ -158,9 +160,10 @@ vector<KeyPoint> Extractor::Fast(const Mat& image)
     return keypoints;
 }
 
-int Extractor::MaskKeypointWithROI(vector<KeyPoint>* oip) {
-
-    Logger("Before masking %d ", oip->size());
+vector<KeyPoint> Extractor::MaskKeypointWithROI(vector<KeyPoint>* oip) {
+    
+    vector<KeyPoint> ip;
+    //Logger("Before masking %d ", oip->size());
     int left = 0;
     int total = 0;
     int del = 0;
@@ -172,16 +175,50 @@ int Extractor::MaskKeypointWithROI(vector<KeyPoint>* oip) {
         //Logger(" %d, %d inside ? %d ", int(it->pt.x), int(it->pt.y), ret);
 
         if (ret == 0 && it != oip->end()) {
-            //Logger("Erase!! %d, %d ", int(it->pt.x), int(it->pt.y));            
-            //oip->erase(it);
             del ++;
         }
-        else
+        else {
+            ip.push_back(*it);
             left ++;
-
-        if ( it == oip->end())
-            break;
+        }
     }
 
-    Logger("After masking %d. left %d  del %d / total ip %d ", oip->size(), left, del, total);
+    Logger("new vector  %d. left %d  del %d / total ip %d ", ip.size(), left, del, total);
+    return ip;
+}
+
+int Extractor::MakeMatchPair() {
+
+    Ptr<DescriptorMatcher> matcher = DescriptorMatcher::create(DescriptorMatcher::FLANNBASED);
+    int index = 1; //cal_group.size();
+
+
+    while(index < cal_group.size() ) 
+    {
+        vector<DMatch> matches;
+        SetCurTrainScene(&cal_group[index - 1]);
+        SetCurQueryScene(&cal_group[index]);
+
+        if( cur_train->desc.type() != CV_32F || cur_query->desc.type() != CV_32F) {
+            cur_train->desc.convertTo(cur_train->desc, CV_32F);
+            cur_query->desc.convertTo(cur_query->desc, CV_32F);
+        }
+        matcher->match(cur_train->desc, cur_query->desc, matches);
+        Logger("matchees %d  ", matches.size());
+
+#if defined _DEBUG
+/*         for (int i = 0 ; i < matches.size(); i ++) {
+            Logger("Distance %f ", matches[i].distance);
+        }
+ */
+        Mat outputImg = cur_query->img.clone(); 
+        drawMatches(cur_train->img, cur_train->ip, cur_query->img, cur_query->ip,
+                    matches, outputImg, Scalar::all(-1), Scalar::all(-1), vector<char>(), DrawMatchesFlags::DRAW_RICH_KEYPOINTS);
+
+        char filename[30] = {0, };
+        sprintf(filename, "saved/%2d_matchimg.png", index);
+        imwrite(filename, outputImg);
+#endif
+        index ++;
+    }
 }

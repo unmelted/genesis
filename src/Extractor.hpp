@@ -46,14 +46,20 @@ private :
     const float blur_sigma = 1.0;
     const int desc_byte = 32;
     const bool use_ori = true;
+    const int nms_k = 9;
+
     int p_scale = 0;
     SCENE* cur_train = 0;
+    SCENE* cur_query = 0;
 
     void SaveImageSet(vector<Mat>& images);
-    int MaskKeypointWithROI(vector<KeyPoint>* oip);
+    vector<KeyPoint> MaskKeypointWithROI(vector<KeyPoint>* oip);
     void SetCurTrainScene(SCENE* sc) { cur_train = sc; };
+    void SetCurQueryScene(SCENE* sc) { cur_query = sc; };
 
     vector<Mat>LoadImages(const string& path);
-    vector<Mat>BlurImages(const vector<Mat>& images, int ksize, double sigma);
+    vector<Mat>ProcessImages(const vector<Mat>& images, int ksize, double sigma);
     vector<KeyPoint>Fast(const Mat& image);
+
+    int MakeMatchPair();
 };
