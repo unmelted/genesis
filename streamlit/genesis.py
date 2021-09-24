@@ -37,7 +37,7 @@ class Calibrator(object) :
 
 
     def extract(self, dim, arr, img_path):
-        d = (c.c_int * (dim * 4 + 1))(*arr)
+        d = (c.c_int * (dim + 1))(*arr)
         #ch = c.create_string_buffer(img_path)
         print("Calibrator is called ")        
         self.clib.Extract(c.byref(d), bytes(img_path, encoding='utf-8'))

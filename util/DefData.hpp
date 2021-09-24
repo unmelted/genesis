@@ -1,10 +1,11 @@
 #pragma once
 
-#include <fstream>
 #include <iostream>
 #include <opencv2/opencv.hpp>
 #include <string>
 #include <vector>
+#include <stdio.h>
+#include <string.h>
 #include "TimeUtil.hpp"
 #include "Image.hpp"
 
@@ -16,16 +17,29 @@ typedef enum _err {
 
 
 };
+
+
+typedef struct Pt
+{    
+    int x;
+    int y;
+    Pt(int a, int b ) {
+        x = a; y = b;
+    };
+};
+
 typedef struct _maindata {
     Mat img;
+    int dim;
+    Pt* roi;
     vector<KeyPoint> ip;
     Mat desc;
 } SCENE;
 
 typedef struct _PARAM {
     int ground;    
-    int dim;
-    int* region; //half size 
+    int count;
+    Pt* region;
 } PARAM;
 
 typedef enum groundtype

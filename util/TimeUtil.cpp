@@ -132,7 +132,7 @@ void Logger(const char *format, ...)
     ofs << now << '\t' << buf << endl;
 
 #ifdef _DEBUG
-     printf("[%s]\t%s", now.c_str(), buf); fflush(stdout);
+     printf("[%s]\t%s \n", now.c_str(), buf); fflush(stdout);
 #endif
 
     ofs.close();
