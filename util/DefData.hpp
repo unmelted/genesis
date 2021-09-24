@@ -30,10 +30,13 @@ typedef struct Pt
 
 typedef struct _maindata {
     Mat img;
+    Mat ori_img;
+
     int dim;
     Pt* roi;
     vector<KeyPoint> ip;
     Mat desc;
+    Mat matrix;
 } SCENE;
 
 typedef struct _PARAM {

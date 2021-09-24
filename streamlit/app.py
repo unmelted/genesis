@@ -83,6 +83,7 @@ def color_annotation_app():
         st.write('')
         handle.ExecuteExtract()   
         region.clear()     
+        canvas_result.json_data = None
         time.sleep(10) 
 
     if canvas_result.json_data is not None :

@@ -27,7 +27,13 @@ Extractor::Extractor(string& imgset, int cnt, int* roi)
     p->region = (Pt *)g_os_malloc(sizeof(Pt)* p->count);
 
     imgs = LoadImages(imgset);
-    imgs = ProcessImages(imgs, blur_ksize, blur_sigma);
+    RoiScale(roi);
+
+#ifdef _IMGDEBUG    
+        //SaveImageSet(imgs);
+#endif
+}
+void Extractor::RoiScale(int* roi) {
 
     if(p_scale != 1 ){
         for(int i = 0; i < p->count; i++) {
@@ -37,10 +43,6 @@ Extractor::Extractor(string& imgset, int cnt, int* roi)
             //Logger("insert %d %d ", roi[j], roi[j+1]);
         }
     }
-
-#ifdef _IMGDEBUG    
-        //SaveImageSet(imgs);
-#endif
 }
 
 Extractor::~Extractor()
@@ -107,45 +109,30 @@ vector<Mat> Extractor::LoadImages(const string& path) {
     vector<Mat> images;
     for (const string& ip : image_paths) {
         Logger("Read image : %s ", ip.c_str());        
-
-        if ( p_scale == 1) {
-            images.push_back(imread(ip));
-        } else {
-            Mat t = imread(ip);
-            resize(t, t, Size(int(t.cols/p_scale), int(t.rows/p_scale)), 0, 0, 1);
-            images.push_back(t);
-        }
+        images.push_back(imread(ip));
     }
     return images;
-}
-
-vector<Mat> Extractor::ProcessImages(const vector<Mat>& images, int ksize, double sigma) 
-{
-    vector<Mat> blurred_images;
-    for (const auto& img : images) {
-        Mat blur_img; Mat dst;
-        cvtColor(img, blur_img, cv::COLOR_RGBA2GRAY);
-        normalize(blur_img, dst, 0, 255, NORM_MINMAX,-1, noArray());        
-        GaussianBlur(dst, blur_img, {ksize, ksize}, sigma, sigma);
-        blurred_images.push_back(blur_img);
-    }
-
-    return blurred_images;
 }
 
 int Extractor::Execute()
 {
     int index = 0;
-    for (const auto& img : imgs) {
+    for (Mat& img : imgs) {
         SCENE sc;        
-        sc.img = img;        
-        int ret = Feature(&sc);
+        sc.ori_img = img;        
+        sc.img = ProcessImages(img, blur_ksize, blur_sigma);
+
+        int ret = GetFeature(&sc);
         cal_group.push_back(sc);
 
         if(index > 0) {
             SetCurTrainScene(&cal_group[index - 1]);
             SetCurQueryScene(&cal_group[index]);
-            MakeMatchPair();
+            int ret = MakeMatchPair();
+
+            if( ret > 0) {
+                PostProcess(&sc);
+            }
         }
 
         index++;
@@ -159,11 +146,34 @@ int Extractor::Execute()
     return ERR_NONE;
 }
 
-int Extractor::Feature(SCENE* sc) 
+
+Mat Extractor::ProcessImages(Mat& img, int ksize, double sigma) 
 {
-    auto feature_detector = FastFeatureDetector::create(fast_k, true, FastFeatureDetector::TYPE_9_16);
+    Mat blur_img; Mat dst;
+    if ( p_scale != 1) {
+        resize(img, img, Size(int(img.cols/p_scale), int(img.rows/p_scale)), 0, 0, 1);
+    }
+
+    cvtColor(img, blur_img, cv::COLOR_RGBA2GRAY);
+    normalize(blur_img, dst, 0, 255, NORM_MINMAX,-1, noArray());        
+    GaussianBlur(dst, blur_img, {ksize, ksize}, sigma, sigma);
+
+    return blur_img;
+}
+
+int Extractor::GetFeature(SCENE* sc) 
+{
+    // FAST + BRIEF
+    //auto feature_detector = FastFeatureDetector::create(fast_k, true, FastFeatureDetector::TYPE_9_16);
+    //auto feature_detector = AgastFeatureDetector::create(); //AGAST
+    Ptr<xfeatures2d::MSDDetector>feature_detector = xfeatures2d::MSDDetector::create(9,11,15); //MSDETECTOR
     Ptr<xfeatures2d::BriefDescriptorExtractor> dscr;
     dscr = xfeatures2d::BriefDescriptorExtractor::create(desc_byte, use_ori);
+ 
+    //AKAZE
+/*     auto feature_detector = KAZE::create(false, false, 0.001f, 2, 2, KAZE::DIFF_PM_G1);
+    Ptr<KAZE>dscr = feature_detector;
+ */
     Mat desc;    
     vector<KeyPoint> kpt;
     vector<KeyPoint> f_kpt;
@@ -233,6 +243,8 @@ int Extractor::MakeMatchPair() {
 
 
     int min, max = 0;
+    float max_score = in[0].distance * 3;
+    Logger("max score %f ", max_score);
     if( cur_train->ip.size() >= cur_query->ip.size()) {
         max = cur_train->ip.size();
         min = cur_query->ip.size();        
@@ -251,7 +263,7 @@ int Extractor::MakeMatchPair() {
 
     min = 12;
     int is = 0;
-    for (int t = 0 ; t < max ; t ++) {
+    for (int t = 0 ; t < min ; t ++) {
         if(t_hist[in[t].trainIdx] == 0 && q_hist[in[t].queryIdx] == 0) {
             matches.push_back(in[t]);
 
@@ -295,10 +307,12 @@ int Extractor::MakeMatchPair() {
         }
     }
 
-    //Mat _h = findHomography(query_pt, train_pt, FM_RANSAC);
+    //Mat _h = findHomography(train_pt, query_pt, FM_RANSAC);
     //Mat _h = getAffineTransform(query_pt, train_pt);   
-    Mat _h = estimateRigidTransform(query_pt, train_pt, false);
+    Mat _h = estimateAffine2D(query_pt, train_pt);
+    //Mat _h = estimateRigidTransform(query_pt, train_pt, false);
 
+    cur_query->matrix = _h;
     Logger(" h shape : %d %d ", _h.cols, _h.rows);
     
 
@@ -322,14 +336,23 @@ int Extractor::MakeMatchPair() {
         }
     }
 
-    Mat fin;
-    //warpPerspective(cur_query->img, fin, _h, Size(cur_train->img.cols, cur_train->img.rows));
-    warpAffine(cur_train->img, fin, _h, Size(cur_train->img.cols, cur_train->img.rows));
-
+    Mat fin, fin2;
+    //warpPerspective(cur_train->img, fin, _h, Size(cur_train->img.cols, cur_train->img.rows));
+    warpAffine(cur_query->ori_img, fin, _h, Size(cur_query->img.cols*p_scale, cur_train->img.rows*p_scale));
+    //cur_query->img = fin;
     sprintf(filename, "saved/%2d_perspective.png", index);
     imwrite(filename, fin);
 
+    warpAffine(cur_query->img, fin2, _h, Size(cur_query->img.cols, cur_train->img.rows));
+    sprintf(filename, "saved/%2d_perspective_pp.png", index);
+    imwrite(filename, fin2);
+
     index ++;
 #endif         
+    return matches.size();
+}
 
+int Extractor::PostProcess(SCENE* sc) {
+
+    return ERR_NONE;
 }
