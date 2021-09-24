@@ -1,12 +1,12 @@
 
 /*****************************************************************************
 *                                                                            *
-*                            pnp              								 *
+*                            Pip              								 *
 *                                                                            *
 *   Copyright (C) 2021 By 4dreplay, Incoporated. All Rights Reserved.        *
 ******************************************************************************
 
-    File Name       : pnp.cpp
+    File Name       : Pip.cpp
     Author(S)       : Me Eunkyung
     Created         : 23 Sep 2021
 
@@ -14,7 +14,7 @@
     Notes           : 
 */
 
-#include "pnp.hpp"
+#include "Pip.hpp"
 
 using namespace std;
  
