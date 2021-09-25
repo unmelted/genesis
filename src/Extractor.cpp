@@ -295,6 +295,7 @@ int Extractor::MakeMatchPair() {
 #endif
 
     vector<Point2f> train_pt, query_pt;
+#if 0    
     for (vector<DMatch>::const_iterator it = matches.begin() ; it != matches.end(); it++ ) {
         float tx = cur_train->ip[it->trainIdx].pt.x;
         float ty = cur_train->ip[it->trainIdx].pt.y;
@@ -310,9 +311,19 @@ int Extractor::MakeMatchPair() {
             query_pt.push_back(Point2f(qx, qy));
         }
     }
+#else
+            train_pt.push_back(Point2f(365, ));            
+            query_pt.push_back(Point2f(qx, qy));
 
-    Mat _h = findHomography(train_pt, query_pt, FM_RANSAC);
-    //Mat _h = getAffineTransform(query_pt, train_pt);   
+            train_pt.push_back(Point2f(tx, ty));            
+            query_pt.push_back(Point2f(qx, qy));
+
+            train_pt.push_back(Point2f(tx, ty));            
+            query_pt.push_back(Point2f(qx, qy));
+
+#endif
+    //Mat _h = findHomography(train_pt, query_pt, FM_RANSAC);
+    Mat _h = getAffineTransform(query_pt, train_pt);   
     //Mat _h = estimateAffine2D(query_pt, train_pt);
     //Mat _h = estimateRigidTransform(query_pt, train_pt, false);
 
