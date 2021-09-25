@@ -166,14 +166,14 @@ int Extractor::GetFeature(SCENE* sc)
     // FAST + BRIEF
     //auto feature_detector = FastFeatureDetector::create(fast_k, true, FastFeatureDetector::TYPE_9_16);
     //auto feature_detector = AgastFeatureDetector::create(); //AGAST
-    Ptr<xfeatures2d::MSDDetector>feature_detector = xfeatures2d::MSDDetector::create(9,11,15); //MSDETECTOR
-    Ptr<xfeatures2d::BriefDescriptorExtractor> dscr;
-    dscr = xfeatures2d::BriefDescriptorExtractor::create(desc_byte, use_ori);
+    //Ptr<xfeatures2d::MSDDetector>feature_detector = xfeatures2d::MSDDetector::create(9,11,15); //MSDETECTOR
+    //Ptr<xfeatures2d::BriefDescriptorExtractor> dscr;
+    //dscr = xfeatures2d::BriefDescriptorExtractor::create(desc_byte, use_ori);
  
     //AKAZE
-/*     auto feature_detector = KAZE::create(false, false, 0.001f, 2, 2, KAZE::DIFF_PM_G1);
+    auto feature_detector = KAZE::create(false, false, 0.001f, 4, 4, KAZE::DIFF_PM_G1);
     Ptr<KAZE>dscr = feature_detector;
- */
+
     Mat desc;    
     vector<KeyPoint> kpt;
     vector<KeyPoint> f_kpt;
@@ -212,7 +212,11 @@ vector<KeyPoint> Extractor::MaskKeypointWithROI(vector<KeyPoint>* oip) {
         if (ret == 0 && it != oip->end()) {
             del ++;
         }
-        else {
+/*         else if (it->pt.x > 900 && it->pt.x < 1040 &&
+                it->pt.y > 365 && it->pt.y < 490) {
+                    Logger("except special case .. ");
+        }
+ */        else {
             ip.push_back(*it);
             left ++;
         }
@@ -261,7 +265,7 @@ int Extractor::MakeMatchPair() {
     for(int b = 0 ; b < cur_query->ip.size() ; b ++)
         q_hist[b] = 0;
 
-    min = 12;
+    //min = 3;
     int is = 0;
     for (int t = 0 ; t < min ; t ++) {
         if(t_hist[in[t].trainIdx] == 0 && q_hist[in[t].queryIdx] == 0) {
@@ -307,9 +311,9 @@ int Extractor::MakeMatchPair() {
         }
     }
 
-    //Mat _h = findHomography(train_pt, query_pt, FM_RANSAC);
+    Mat _h = findHomography(train_pt, query_pt, FM_RANSAC);
     //Mat _h = getAffineTransform(query_pt, train_pt);   
-    Mat _h = estimateAffine2D(query_pt, train_pt);
+    //Mat _h = estimateAffine2D(query_pt, train_pt);
     //Mat _h = estimateRigidTransform(query_pt, train_pt, false);
 
     cur_query->matrix = _h;
