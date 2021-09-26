@@ -26,8 +26,27 @@ Extractor::Extractor(string& imgset, int cnt, int* roi)
     p->count = cnt/2 - 1;
     p->region = (Pt *)g_os_malloc(sizeof(Pt)* p->count);
 
+    p->world[0].x = 330;
+    p->world[0].y = 602;    
+    p->world[1].x = 473;
+    p->world[1].y = 602;    
+    p->world[2].x = 600;
+    p->world[2].y = 602;    
+    p->world[3].x = 311;
+    p->world[3].y = 711;    
+    p->world_center.x = 400;
+    p->world_center.y = 656;
+
     imgs = LoadImages(imgset);
-    imgs = ProcessImages(imgs, blur_ksize, blur_sigma);
+    InitializeData(roi);
+
+#ifdef _IMGDEBUG    
+        //SaveImageSet(imgs);
+#endif
+}
+
+void Extractor::InitializeData(int* roi) {
+    NormalizePoint(p->world, 100);
 
     if(p_scale != 1 ){
         for(int i = 0; i < p->count; i++) {
@@ -36,18 +55,61 @@ Extractor::Extractor(string& imgset, int cnt, int* roi)
             p->region[i].y = int(roi[j+1]/p_scale);
             //Logger("insert %d %d ", roi[j], roi[j+1]);
         }
+    }    
+    p->normal[0][0] = 50.0;
+    p->normal[0][1] = 50.0;
+    p->normal[0][2] = 0.0;
+
+    p->normal[1][0] = 50.0;
+    p->normal[1][1] = 50.0;
+    p->normal[1][2] = -100.0;                    
+}
+
+void Extractor::NormalizePoint(Pt* fpt, int maxrange) {
+
+    float minx = fpt[0].x;
+    float miny = fpt[0].y;
+    float maxx = fpt[0].x;
+    float maxy = fpt[0].y;
+
+    for(int i = 0 ; i < 4; i ++) {
+        if (minx > fpt[i].x) 
+            minx = fpt[i].x;
+        if (miny > fpt[i].y) 
+            miny = fpt[i].y;
+        if (maxx < fpt[i].x) 
+            maxx = fpt[i].x;
+        if (maxy < fpt[i].y) 
+            maxy = fpt[i].y;
+
     }
 
-#ifdef _IMGDEBUG    
-        SaveImageSet(imgs);
-#endif
+    float range = 0;
+    float marginx = 0;
+    float marginy = 0;
+
+    if( (maxx - minx) > (maxy - miny)) {
+        range = maxrange / (maxx - minx);
+        marginy = (maxrange - ((maxy - miny) * range)) / 2.0;
+    } 
+    else {
+        range = maxrange / (maxy - miny);
+        marginx = (maxrange - ((maxx- minx) * range)) / 2.0;
+    }
+
+    for(int i = 0 ; i < 4 ; i ++) {
+        fpt[i].x = (fpt[i].x - minx) *range + marginx;
+        fpt[i].y = (fpt[i].y - miny) *range + marginy;
+    }
 }
 
 Extractor::~Extractor()
 {
 
 }
+
 void Extractor::DrawInfo() {
+
     int index = 0;
     for( const auto& each : cal_group) {
         Mat dst;
@@ -65,29 +127,6 @@ void Extractor::DrawInfo() {
 
 }
 
-int Extractor::Execute()
-{
-    Ptr<xfeatures2d::BriefDescriptorExtractor> dscr;
-    dscr = xfeatures2d::BriefDescriptorExtractor::create(desc_byte, use_ori);
-
-    for (const auto& img : imgs) {
-        Mat desc;
-        SCENE sc;        
-        sc.img = img;        
-        vector<KeyPoint>ip = Fast(img);
-        sc.ip = MaskKeypointWithROI(&ip);      
-        dscr->compute(img, sc.ip, desc);
-        Logger("desc..? width : %d height : %d, final ip count %d ",
-             desc.size().width, desc.size().height, sc.ip.size());
-
-        sc.desc = desc;
-        cal_group.push_back(sc);
-    }
-
-    MakeMatchPair();
-    return ERR_NONE;
-}
-
 void Extractor::SaveImageSet(vector<Mat>& images) {
 
     Logger("Save Image Set is called ");
@@ -101,6 +140,9 @@ void Extractor::SaveImageSet(vector<Mat>& images) {
 }
 
 vector<Mat> Extractor::LoadImages(const string& path) {
+    const int FK = 3500;
+    const int FHD = 1900;
+
     namespace fs = std::__fs::filesystem;
 
     vector<string> image_paths;
@@ -113,9 +155,9 @@ vector<Mat> Extractor::LoadImages(const string& path) {
 
     if (p_scale == 0 ) {
         Mat sample = imread(image_paths[0]);
-        if (sample.cols > 3600 ) {
+        if (sample.cols > FK ) {
             p_scale = 2;
-        } else if (sample.cols > 1900) {
+        } else if (sample.cols > FHD) {
             p_scale = 2;
         } else {
             p_scale = 1;
@@ -126,38 +168,115 @@ vector<Mat> Extractor::LoadImages(const string& path) {
     vector<Mat> images;
     for (const string& ip : image_paths) {
         Logger("Read image : %s ", ip.c_str());        
-        if ( p_scale == 1) {
-            images.push_back(imread(ip));
-        } else {
-            Mat t = imread(ip);
-            resize(t, t, Size(int(t.cols/p_scale), int(t.rows/p_scale)), 0, 0, 1);
-            images.push_back(t);
-        }
+        images.push_back(imread(ip));
     }
     return images;
 }
 
-vector<Mat> Extractor::ProcessImages(const vector<Mat>& images, int ksize, double sigma) 
-{
-    vector<Mat> blurred_images;
-    for (const auto& img : images) {
-        Mat blur_img; Mat dst;
-        cvtColor(img, blur_img, cv::COLOR_RGBA2GRAY);
-        normalize(blur_img, dst, 0, 255, NORM_MINMAX,-1, noArray());        
-        GaussianBlur(dst, blur_img, {ksize, ksize}, sigma, sigma);
-        blurred_images.push_back(blur_img);
+int Extractor::Execute() {
+    int index = 0;
+    for (Mat& img : imgs) {
+        SCENE sc;        
+        sc.ori_img = img;        
+        sc.img = ProcessImages(img, blur_ksize, blur_sigma);
+
+        if(index == 0 ){
+            sc.four_pt[0].x = 372;
+            sc.four_pt[0].y = 558;
+            sc.four_pt[1].x = 1035;
+            sc.four_pt[1].y = 404;
+            sc.four_pt[2].x = 1528;
+            sc.four_pt[2].y = 291;
+            sc.four_pt[3].x = 776;
+            sc.four_pt[3].y = 741; 
+            sc.center.x = 968;
+            sc.center.y = 537;
+
+            GetPreCalibraitonData(&sc);
+        }
+
+        int ret = GetFeature(&sc);
+        cal_group.push_back(sc);
+
+        if(index > 0) {
+            SetCurTrainScene(&cal_group[index - 1]);
+            SetCurQueryScene(&cal_group[index]);
+            int ret = MakeMatchPair();
+
+            if( ret > 0) {
+                PostProcess(&sc);
+            }
+        }
+
+        index++;
+#if _DEBUG
+        if (index > 2)
+        break;
+#endif
+
     }
-    return blurred_images;
+
+    return ERR_NONE;
 }
 
-vector<KeyPoint> Extractor::Fast(const Mat& image) 
+int Extractor::GetPreCalibraitonData(SCENE* sc) {
+
+    double dnorm = 0;
+    double ddegree = 0;
+    Mat mmrot; // = Getrotationmtrix2d();
+
+    sc->norm = dnorm;
+    sc->degree = ddegree;
+    sc->rot_matrix = mmrot;
+}
+
+Mat Extractor::ProcessImages(Mat& img, int ksize, double sigma) 
 {
-    auto feature_detector = FastFeatureDetector::create(28, true, FastFeatureDetector::TYPE_9_16);
-    vector<KeyPoint> keypoints;
-    feature_detector->detect(image, keypoints);
-    Logger("extracted keypoints count : %d", keypoints.size());
-    
-    return keypoints;
+    Mat blur_img; Mat dst;
+    if ( p_scale != 1) {
+        resize(img, img, Size(int(img.cols/p_scale), int(img.rows/p_scale)), 0, 0, 1);
+    }
+
+    cvtColor(img, blur_img, cv::COLOR_RGBA2GRAY);
+    normalize(blur_img, dst, 0, 255, NORM_MINMAX,-1, noArray());        
+    GaussianBlur(dst, blur_img, {ksize, ksize}, sigma, sigma);
+
+    return blur_img;
+}
+
+int Extractor::GetFeature(SCENE* sc) 
+{
+    // FAST + BRIEF
+    //auto feature_detector = FastFeatureDetector::create(fast_k, true, FastFeatureDetector::TYPE_9_16);
+    //auto feature_detector = AgastFeatureDetector::create(); //AGAST
+    //Ptr<xfeatures2d::MSDDetector>feature_detector = xfeatures2d::MSDDetector::create(9,11,15); //MSDETECTOR
+    //Ptr<xfeatures2d::BriefDescriptorExtractor> dscr;
+    //dscr = xfeatures2d::BriefDescriptorExtractor::create(desc_byte, use_ori);
+ 
+    //AKAZE
+    auto feature_detector = KAZE::create(false, false, 0.001f, 4, 4, KAZE::DIFF_PM_G1);
+    Ptr<KAZE>dscr = feature_detector;
+
+    Mat desc;    
+    vector<KeyPoint> kpt;
+    vector<KeyPoint> f_kpt;
+
+    feature_detector->detect(sc->img, kpt);
+    Logger("extracted keypoints count : %d", kpt.size());
+    f_kpt = MaskKeypointWithROI(&kpt);
+    dscr->compute(sc->img, f_kpt, desc);
+
+    sc->ip = f_kpt;
+    sc->desc = desc;
+
+#if _DEBUG
+/*     for (int i = 0 ; i < sc->ip.size(); i ++) {
+        Logger("Keypoint index %2d id %3d, x %f y %f ",i, sc->ip[i].class_id, 
+                            sc->ip[i].pt.x, sc->ip[i].pt.y);
+    }
+ */#endif
+
+    return ERR_NONE;
 }
 
 vector<KeyPoint> Extractor::MaskKeypointWithROI(vector<KeyPoint>* oip) {
@@ -172,12 +291,15 @@ vector<KeyPoint> Extractor::MaskKeypointWithROI(vector<KeyPoint>* oip) {
         total ++;
         Pt cp(int(it->pt.x), int(it->pt.y));
         int ret = isInside(p->region, p->count, cp);
-        //Logger(" %d, %d inside ? %d ", int(it->pt.x), int(it->pt.y), ret);
 
         if (ret == 0 && it != oip->end()) {
             del ++;
         }
-        else {
+/*         else if (it->pt.x > 900 && it->pt.x < 1040 &&
+                it->pt.y > 365 && it->pt.y < 490) {
+                    Logger("except special case .. ");
+        }
+ */        else {
             ip.push_back(*it);
             left ++;
         }
@@ -186,39 +308,149 @@ vector<KeyPoint> Extractor::MaskKeypointWithROI(vector<KeyPoint>* oip) {
     Logger("new vector  %d. left %d  del %d / total ip %d ", ip.size(), left, del, total);
     return ip;
 }
-
 int Extractor::MakeMatchPair() {
 
     Ptr<DescriptorMatcher> matcher = DescriptorMatcher::create(DescriptorMatcher::FLANNBASED);
-    int index = 1; //cal_group.size();
+
+    vector<DMatch> in;
+    vector<DMatch> matches;    
+
+    if( cur_train->desc.type() != CV_32F || cur_query->desc.type() != CV_32F) {
+        cur_train->desc.convertTo(cur_train->desc, CV_32F);
+        cur_query->desc.convertTo(cur_query->desc, CV_32F);
+    }
+
+    matcher->match(cur_query->desc, cur_train->desc, in);
+    sort(in.begin(), in.end());
+    Logger("matchees before cut %d  ", in.size());
+    for (int i = 0 ; i < in.size(); i ++) {
+        Logger("Distance %f imgidx %d trainidx %d queryidx %d", in[i].distance,
+        in[i].imgIdx, in[i].trainIdx, in[i].queryIdx);
+    }
 
 
-    while(index < cal_group.size() ) 
-    {
-        vector<DMatch> matches;
-        SetCurTrainScene(&cal_group[index - 1]);
-        SetCurQueryScene(&cal_group[index]);
+    int min, max = 0;
+    float max_score = in[0].distance * 3;
+    Logger("max score %f ", max_score);
+    if( cur_train->ip.size() >= cur_query->ip.size()) {
+        max = cur_train->ip.size();
+        min = cur_query->ip.size();        
+    }
+    else {
+        max = cur_query->ip.size();        
+        min = cur_train->ip.size();
+    }
 
-        if( cur_train->desc.type() != CV_32F || cur_query->desc.type() != CV_32F) {
-            cur_train->desc.convertTo(cur_train->desc, CV_32F);
-            cur_query->desc.convertTo(cur_query->desc, CV_32F);
+    int* t_hist = (int *)g_os_malloc(sizeof(int) * cur_train->ip.size());
+    int* q_hist = (int *)g_os_malloc(sizeof(int) * cur_query->ip.size());
+    for(int a = 0 ; a < cur_train->ip.size() ; a ++)
+        t_hist[a] = 0;
+    for(int b = 0 ; b < cur_query->ip.size() ; b ++)
+        q_hist[b] = 0;
+
+    //min = 3;
+    int is = 0;
+    for (int t = 0 ; t < min ; t ++) {
+        if(t_hist[in[t].trainIdx] == 0 && q_hist[in[t].queryIdx] == 0) {
+            matches.push_back(in[t]);
+
+            t_hist[in[t].trainIdx]++;
+            q_hist[in[t].queryIdx]++;
+            is ++;
+            if(is >= min)
+                break;
         }
-        matcher->match(cur_train->desc, cur_query->desc, matches);
-        Logger("matchees %d  ", matches.size());
+        else
+            Logger("double check %d %d ", in[t].trainIdx, in[t].queryIdx );
+    }
+
+    g_os_free(t_hist);
+    g_os_free(q_hist);
+
+#if defined _DEBUG
+
+    Logger("matchees after cut %d  ", matches.size());
+    for (int i = 0 ; i < matches.size(); i ++) {
+        Logger("Distance %f imgidx %d trainidx %d queryidx %d", matches[i].distance,
+        matches[i].imgIdx, matches[i].trainIdx, matches[i].queryIdx);
+    }
+
+#endif
+
+    vector<Point2f> train_pt, query_pt;
+#if 0    
+    for (vector<DMatch>::const_iterator it = matches.begin() ; it != matches.end(); it++ ) {
+        float tx = cur_train->ip[it->trainIdx].pt.x;
+        float ty = cur_train->ip[it->trainIdx].pt.y;
+
+        float qx = cur_query->ip[it->queryIdx].pt.x;
+        float qy = cur_query->ip[it->queryIdx].pt.y;
+        
+        Logger("_pt push %f %f %f %f ", tx, ty, qx, qy);
+
+        if((tx > 0 && ty > 0) && (tx < cur_train->img.cols && ty < cur_train->img.rows) &&
+            (qx > 0 && qy > 0 ) && (qx < cur_query->img.cols && qy < cur_query->img.rows )) {
+            train_pt.push_back(Point2f(tx, ty));            
+            query_pt.push_back(Point2f(qx, qy));
+        }
+    }
+#else
+            train_pt.push_back(Point2f(365, 559));            
+            query_pt.push_back(Point2f(348, 575));
+
+            train_pt.push_back(Point2f(777, 740));            
+            query_pt.push_back(Point2f(813, 748));
+
+            train_pt.push_back(Point2f(1529, 287));            
+            query_pt.push_back(Point2f(1460, 279));
+
+#endif
+    //Mat _h = findHomography(train_pt, query_pt, FM_RANSAC);
+    Mat _h = getAffineTransform(query_pt, train_pt);   
+    //Mat _h = estimateAffine2D(query_pt, train_pt);
+    //Mat _h = estimateRigidTransform(query_pt, train_pt, false);
+
+    cur_query->matrix_fromimg = _h;
+    Logger(" h shape : %d %d ", _h.cols, _h.rows);
+    
 
 #if defined _DEBUG
 /*         for (int i = 0 ; i < matches.size(); i ++) {
-            Logger("Distance %f ", matches[i].distance);
-        }
- */
-        Mat outputImg = cur_query->img.clone(); 
-        drawMatches(cur_train->img, cur_train->ip, cur_query->img, cur_query->ip,
-                    matches, outputImg, Scalar::all(-1), Scalar::all(-1), vector<char>(), DrawMatchesFlags::DRAW_RICH_KEYPOINTS);
-
-        char filename[30] = {0, };
-        sprintf(filename, "saved/%2d_matchimg.png", index);
-        imwrite(filename, outputImg);
-#endif
-        index ++;
+        Logger("Distance %f ", matches[i].distance);
     }
+*/
+    static int index = 0;
+    Mat outputImg = cur_train->img.clone(); 
+    drawMatches(cur_query->img, cur_query->ip, cur_train->img, cur_train->ip,
+                matches, outputImg, Scalar::all(-1), Scalar::all(-1), vector<char>(), DrawMatchesFlags::DRAW_RICH_KEYPOINTS);
+
+    char filename[30] = {0, };
+    sprintf(filename, "saved/%2d_matchimg.png", index);
+    imwrite(filename, outputImg);
+
+    for (int i = 0 ; i < _h.rows ; i ++ ){
+        for (int j = 0 ; j < _h.cols ; j ++) {
+            Logger("[%d][%d] %lf ",i, j, _h.at<double>(i,j));
+        }
+    }
+
+    Mat fin, fin2;
+    //warpPerspective(cur_train->img, fin, _h, Size(cur_train->img.cols, cur_train->img.rows));
+    warpAffine(cur_query->ori_img, fin, _h, Size(cur_query->img.cols*p_scale, cur_train->img.rows*p_scale));
+    //cur_query->img = fin;
+    sprintf(filename, "saved/%2d_perspective.png", index);
+    imwrite(filename, fin);
+
+    warpAffine(cur_query->img, fin2, _h, Size(cur_query->img.cols, cur_train->img.rows));
+    sprintf(filename, "saved/%2d_perspective_pp.png", index);
+    imwrite(filename, fin2);
+
+    index ++;
+#endif         
+    return matches.size();
+}
+
+int Extractor::PostProcess(SCENE* sc) {
+
+    return ERR_NONE;
 }

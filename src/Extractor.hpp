@@ -22,7 +22,7 @@
 #include <opencv2/xfeatures2d.hpp>
 #include <opencv2/calib3d/calib3d.hpp>
 #include "../util/DefData.hpp"
-#include "../util/pnp.hpp"
+#include "../util/Pip.hpp"
 
 
 using namespace std;
@@ -42,24 +42,30 @@ public :
 
 
 private :
-    const int blur_ksize = 7;
-    const float blur_sigma = 1.0;
+    const int blur_ksize = 9;
+    const float blur_sigma = 0.9;
     const int desc_byte = 32;
     const bool use_ori = true;
     const int nms_k = 9;
+    const int fast_k = 24;
+    const int minx = 0;
 
     int p_scale = 0;
     SCENE* cur_train = 0;
     SCENE* cur_query = 0;
 
+    vector<Mat>LoadImages(const string& path);
     void SaveImageSet(vector<Mat>& images);
+    void InitializeData(int* roi);
+    void NormalizePoint(Pt* fpt, int maxrange);
+
+    int GetPreCalibraitonData(SCENE* sc);
+    Mat ProcessImages(Mat& img, int ksize, double sigma);
+    int GetFeature(SCENE* sc);
     vector<KeyPoint> MaskKeypointWithROI(vector<KeyPoint>* oip);
     void SetCurTrainScene(SCENE* sc) { cur_train = sc; };
     void SetCurQueryScene(SCENE* sc) { cur_query = sc; };
-
-    vector<Mat>LoadImages(const string& path);
-    vector<Mat>ProcessImages(const vector<Mat>& images, int ksize, double sigma);
-    vector<KeyPoint>Fast(const Mat& image);
-
     int MakeMatchPair();
+    int PostProcess(SCENE* sc);
+
 };

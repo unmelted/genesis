@@ -71,4 +71,5 @@ void Process(int cnt, int* region, char* img_path)
         Extractor* ext = new Extractor(imgset, cnt, region);
         ext->Execute();
         ext->DrawInfo();
+        
 }
