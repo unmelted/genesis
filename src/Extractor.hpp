@@ -56,8 +56,10 @@ private :
 
     vector<Mat>LoadImages(const string& path);
     void SaveImageSet(vector<Mat>& images);
-    void RoiScale(int* roi);
+    void InitializeData(int* roi);
+    void NormalizePoint(Pt* fpt, int maxrange);
 
+    int GetPreCalibraitonData(SCENE* sc);
     Mat ProcessImages(Mat& img, int ksize, double sigma);
     int GetFeature(SCENE* sc);
     vector<KeyPoint> MaskKeypointWithROI(vector<KeyPoint>* oip);
@@ -65,4 +67,5 @@ private :
     void SetCurQueryScene(SCENE* sc) { cur_query = sc; };
     int MakeMatchPair();
     int PostProcess(SCENE* sc);
+
 };

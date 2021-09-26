@@ -26,14 +26,27 @@ Extractor::Extractor(string& imgset, int cnt, int* roi)
     p->count = cnt/2 - 1;
     p->region = (Pt *)g_os_malloc(sizeof(Pt)* p->count);
 
+    p->world[0].x = 330;
+    p->world[0].y = 602;    
+    p->world[1].x = 473;
+    p->world[1].y = 602;    
+    p->world[2].x = 600;
+    p->world[2].y = 602;    
+    p->world[3].x = 311;
+    p->world[3].y = 711;    
+    p->world_center.x = 400;
+    p->world_center.y = 656;
+
     imgs = LoadImages(imgset);
-    RoiScale(roi);
+    InitializeData(roi);
 
 #ifdef _IMGDEBUG    
         //SaveImageSet(imgs);
 #endif
 }
-void Extractor::RoiScale(int* roi) {
+
+void Extractor::InitializeData(int* roi) {
+    NormalizePoint(p->world, 100);
 
     if(p_scale != 1 ){
         for(int i = 0; i < p->count; i++) {
@@ -42,6 +55,51 @@ void Extractor::RoiScale(int* roi) {
             p->region[i].y = int(roi[j+1]/p_scale);
             //Logger("insert %d %d ", roi[j], roi[j+1]);
         }
+    }    
+    p->normal[0][0] = 50.0;
+    p->normal[0][1] = 50.0;
+    p->normal[0][2] = 0.0;
+
+    p->normal[1][0] = 50.0;
+    p->normal[1][1] = 50.0;
+    p->normal[1][2] = -100.0;                    
+}
+
+void Extractor::NormalizePoint(Pt* fpt, int maxrange) {
+
+    float minx = fpt[0].x;
+    float miny = fpt[0].y;
+    float maxx = fpt[0].x;
+    float maxy = fpt[0].y;
+
+    for(int i = 0 ; i < 4; i ++) {
+        if (minx > fpt[i].x) 
+            minx = fpt[i].x;
+        if (miny > fpt[i].y) 
+            miny = fpt[i].y;
+        if (maxx < fpt[i].x) 
+            maxx = fpt[i].x;
+        if (maxy < fpt[i].y) 
+            maxy = fpt[i].y;
+
+    }
+
+    float range = 0;
+    float marginx = 0;
+    float marginy = 0;
+
+    if( (maxx - minx) > (maxy - miny)) {
+        range = maxrange / (maxx - minx);
+        marginy = (maxrange - ((maxy - miny) * range)) / 2.0;
+    } 
+    else {
+        range = maxrange / (maxy - miny);
+        marginx = (maxrange - ((maxx- minx) * range)) / 2.0;
+    }
+
+    for(int i = 0 ; i < 4 ; i ++) {
+        fpt[i].x = (fpt[i].x - minx) *range + marginx;
+        fpt[i].y = (fpt[i].y - miny) *range + marginy;
     }
 }
 
@@ -49,6 +107,7 @@ Extractor::~Extractor()
 {
 
 }
+
 void Extractor::DrawInfo() {
 
     int index = 0;
@@ -114,13 +173,27 @@ vector<Mat> Extractor::LoadImages(const string& path) {
     return images;
 }
 
-int Extractor::Execute()
-{
+int Extractor::Execute() {
     int index = 0;
     for (Mat& img : imgs) {
         SCENE sc;        
         sc.ori_img = img;        
         sc.img = ProcessImages(img, blur_ksize, blur_sigma);
+
+        if(index == 0 ){
+            sc.four_pt[0].x = 372;
+            sc.four_pt[0].y = 558;
+            sc.four_pt[1].x = 1035;
+            sc.four_pt[1].y = 404;
+            sc.four_pt[2].x = 1528;
+            sc.four_pt[2].y = 291;
+            sc.four_pt[3].x = 776;
+            sc.four_pt[3].y = 741; 
+            sc.center.x = 968;
+            sc.center.y = 537;
+
+            GetPreCalibraitonData(&sc);
+        }
 
         int ret = GetFeature(&sc);
         cal_group.push_back(sc);
@@ -146,6 +219,16 @@ int Extractor::Execute()
     return ERR_NONE;
 }
 
+int Extractor::GetPreCalibraitonData(SCENE* sc) {
+
+    double dnorm = 0;
+    double ddegree = 0;
+    Mat mmrot; // = Getrotationmtrix2d();
+
+    sc->norm = dnorm;
+    sc->degree = ddegree;
+    sc->rot_matrix = mmrot;
+}
 
 Mat Extractor::ProcessImages(Mat& img, int ksize, double sigma) 
 {
@@ -312,14 +395,14 @@ int Extractor::MakeMatchPair() {
         }
     }
 #else
-            train_pt.push_back(Point2f(365, ));            
-            query_pt.push_back(Point2f(qx, qy));
+            train_pt.push_back(Point2f(365, 559));            
+            query_pt.push_back(Point2f(348, 575));
 
-            train_pt.push_back(Point2f(tx, ty));            
-            query_pt.push_back(Point2f(qx, qy));
+            train_pt.push_back(Point2f(777, 740));            
+            query_pt.push_back(Point2f(813, 748));
 
-            train_pt.push_back(Point2f(tx, ty));            
-            query_pt.push_back(Point2f(qx, qy));
+            train_pt.push_back(Point2f(1529, 287));            
+            query_pt.push_back(Point2f(1460, 279));
 
 #endif
     //Mat _h = findHomography(train_pt, query_pt, FM_RANSAC);
@@ -327,7 +410,7 @@ int Extractor::MakeMatchPair() {
     //Mat _h = estimateAffine2D(query_pt, train_pt);
     //Mat _h = estimateRigidTransform(query_pt, train_pt, false);
 
-    cur_query->matrix = _h;
+    cur_query->matrix_fromimg = _h;
     Logger(" h shape : %d %d ", _h.cols, _h.rows);
     
 
