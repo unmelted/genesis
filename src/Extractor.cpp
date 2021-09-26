@@ -229,6 +229,24 @@ int Extractor::GetPreCalibraitonData(SCENE* sc) {
     sc->degree = ddegree;
     sc->rot_matrix = mmrot;
 }
+int Extractor::CalculateCenter(SCENE* sc1, SCENE* sc2) {
+    vector<Point2f>pset1;
+    vector<Point2f>pset2;
+    for( int i = 0 ; i < 4 ; i ++) {
+        pset1.push_back(Point2f(float(sc1->four_pt[i].x), float(sc1->four_pt[i].y)));
+        pset2.push_back(Point2f(float(sc2->four_pt[i].x), float(sc2->four_pt[i].y)));
+    }
+
+    Mat h = findHomography(pset1, pset2);
+    Mat nCenter = Mat(Size(3,1), CV_32F);
+    nCenter.at<double>(0) = sc2->center.x;
+    nCenter.at<double>(1) = sc2->center.y;
+    nCenter.at<double>(2) = 1;    
+
+    Mat mResult = h * nCenter;
+    sc2->center.x = mResult.at<double>(0) / mResult.at<double>(2);
+    sc2->center.y = mResult.at<double>(1) / mResult.at<double>(2);
+}
 
 Mat Extractor::ProcessImages(Mat& img, int ksize, double sigma) 
 {

@@ -58,6 +58,8 @@ private :
     void SaveImageSet(vector<Mat>& images);
     void InitializeData(int* roi);
     void NormalizePoint(Pt* fpt, int maxrange);
+    int CalculateCenter(SCENE* sc1, SCENE* sc2);
+
 
     int GetPreCalibraitonData(SCENE* sc);
     Mat ProcessImages(Mat& img, int ksize, double sigma);
