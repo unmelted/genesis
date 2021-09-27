@@ -26,19 +26,8 @@ Extractor::Extractor(string& imgset, int cnt, int* roi)
     p->count = cnt/2 - 1;
     p->region = (Pt *)g_os_malloc(sizeof(Pt)* p->count);
 
-    p->world[0].x = 330;
-    p->world[0].y = 602;    
-    p->world[1].x = 473;
-    p->world[1].y = 602;    
-    p->world[2].x = 600;
-    p->world[2].y = 602;    
-    p->world[3].x = 311;
-    p->world[3].y = 711;    
-    p->world_center.x = 400;
-    p->world_center.y = 656;
-
-    imgs = LoadImages(imgset);
     InitializeData(roi);
+    imgs = LoadImages(imgset);
 
 #ifdef _IMGDEBUG    
         //SaveImageSet(imgs);
@@ -46,7 +35,7 @@ Extractor::Extractor(string& imgset, int cnt, int* roi)
 }
 
 void Extractor::InitializeData(int* roi) {
-    NormalizePoint(p->world, 100);
+    NormalizePoint(p->world.four_pt, 100);
 
     if(p_scale != 1 ){
         for(int i = 0; i < p->count; i++) {
@@ -56,13 +45,44 @@ void Extractor::InitializeData(int* roi) {
             //Logger("insert %d %d ", roi[j], roi[j+1]);
         }
     }    
-    p->normal[0][0] = 50.0;
-    p->normal[0][1] = 50.0;
-    p->normal[0][2] = 0.0;
 
-    p->normal[1][0] = 50.0;
-    p->normal[1][1] = 50.0;
-    p->normal[1][2] = -100.0;                    
+    p->world.four_pt[0].x = 330;
+    p->world.four_pt[0].y = 602;    
+    p->world.four_pt[1].x = 473;
+    p->world.four_pt[1].y = 602;    
+    p->world.four_pt[2].x = 600;
+    p->world.four_pt[2].y = 602;    
+    p->world.four_pt[3].x = 311;
+    p->world.four_pt[3].y = 711;    
+    p->world.center.x = 400;
+    p->world.center.y = 656;
+
+
+    p->world.normal[0][0] = 50.0;
+    p->world.normal[0][1] = 50.0;
+    p->world.normal[0][2] = 0.0;
+
+    p->world.normal[1][0] = 50.0;
+    p->world.normal[1][1] = 50.0;
+    p->world.normal[1][2] = -100.0;                    
+
+
+    // 1st camera manual data input
+    SCENE sc;        
+    sc.id = 0;
+    sc.four_pt[0].x = 372;
+    sc.four_pt[0].y = 558;
+    sc.four_pt[1].x = 1035;
+    sc.four_pt[1].y = 404;
+    sc.four_pt[2].x = 1528;
+    sc.four_pt[2].y = 291;
+    sc.four_pt[3].x = 776;
+    sc.four_pt[3].y = 741; 
+    sc.center.x = 968;
+    sc.center.y = 537;
+
+    cal_group.push_back(sc);
+
 }
 
 void Extractor::NormalizePoint(Pt* fpt, int maxrange) {
@@ -177,23 +197,14 @@ int Extractor::Execute() {
     int index = 0;
     for (Mat& img : imgs) {
         SCENE sc;        
-        sc.ori_img = img;        
-        sc.img = ProcessImages(img, blur_ksize, blur_sigma);
 
-        if(index == 0 ){
-            sc.four_pt[0].x = 372;
-            sc.four_pt[0].y = 558;
-            sc.four_pt[1].x = 1035;
-            sc.four_pt[1].y = 404;
-            sc.four_pt[2].x = 1528;
-            sc.four_pt[2].y = 291;
-            sc.four_pt[3].x = 776;
-            sc.four_pt[3].y = 741; 
-            sc.center.x = 968;
-            sc.center.y = 537;
-
+        if(index == 0 ) {
+            sc = cal_group[0];
             GetPreCalibraitonData(&sc);
         }
+        sc.id = index;
+        sc.ori_img = img;        
+        sc.img = ProcessImages(img, blur_ksize, blur_sigma);
 
         int ret = GetFeature(&sc);
         cal_group.push_back(sc);
@@ -202,13 +213,15 @@ int Extractor::Execute() {
             SetCurTrainScene(&cal_group[index - 1]);
             SetCurQueryScene(&cal_group[index]);
             int ret = MakeMatchPair();
-
-            if( ret > 0) {
-                PostProcess(&sc);
-            }
         }
 
+        if( ret > 0 || sc.id == 0) {
+            PostProcess(&sc);
+        } else {
+            Logger("Match Pari Fail. Can't keep going.");
+        }
         index++;
+
 #if _DEBUG
         if (index > 2)
         break;
@@ -225,9 +238,9 @@ int Extractor::GetPreCalibraitonData(SCENE* sc) {
     double ddegree = 0;
     Mat mmrot; // = Getrotationmtrix2d();
 
-    sc->norm = dnorm;
-    sc->degree = ddegree;
-    sc->rot_matrix = mmrot;
+    sc->rod_norm = dnorm;
+    sc->rod_degree = ddegree;
+    sc->rod_rotation_matrix = mmrot;
 }
 int Extractor::CalculateCenter(SCENE* sc1, SCENE* sc2) {
     vector<Point2f>pset1;
@@ -265,15 +278,15 @@ Mat Extractor::ProcessImages(Mat& img, int ksize, double sigma)
 int Extractor::GetFeature(SCENE* sc) 
 {
     // FAST + BRIEF
-    //auto feature_detector = FastFeatureDetector::create(fast_k, true, FastFeatureDetector::TYPE_9_16);
+    auto feature_detector = FastFeatureDetector::create(fast_k, true, FastFeatureDetector::TYPE_9_16);
     //auto feature_detector = AgastFeatureDetector::create(); //AGAST
     //Ptr<xfeatures2d::MSDDetector>feature_detector = xfeatures2d::MSDDetector::create(9,11,15); //MSDETECTOR
-    //Ptr<xfeatures2d::BriefDescriptorExtractor> dscr;
-    //dscr = xfeatures2d::BriefDescriptorExtractor::create(desc_byte, use_ori);
+    Ptr<xfeatures2d::BriefDescriptorExtractor> dscr;
+    dscr = xfeatures2d::BriefDescriptorExtractor::create(desc_byte, use_ori);
  
     //AKAZE
-    auto feature_detector = KAZE::create(false, false, 0.001f, 4, 4, KAZE::DIFF_PM_G1);
-    Ptr<KAZE>dscr = feature_detector;
+    //auto feature_detector = KAZE::create(false, false, 0.001f, 4, 4, KAZE::DIFF_PM_G1);
+    //Ptr<KAZE>dscr = feature_detector;
 
     Mat desc;    
     vector<KeyPoint> kpt;
@@ -313,11 +326,11 @@ vector<KeyPoint> Extractor::MaskKeypointWithROI(vector<KeyPoint>* oip) {
         if (ret == 0 && it != oip->end()) {
             del ++;
         }
-/*         else if (it->pt.x > 900 && it->pt.x < 1040 &&
+/*          else if (it->pt.x > 900 && it->pt.x < 1040 &&
                 it->pt.y > 365 && it->pt.y < 490) {
                     Logger("except special case .. ");
         }
- */        else {
+ */         else {
             ip.push_back(*it);
             left ++;
         }
@@ -396,7 +409,7 @@ int Extractor::MakeMatchPair() {
 #endif
 
     vector<Point2f> train_pt, query_pt;
-#if 0    
+#if 1
     for (vector<DMatch>::const_iterator it = matches.begin() ; it != matches.end(); it++ ) {
         float tx = cur_train->ip[it->trainIdx].pt.x;
         float ty = cur_train->ip[it->trainIdx].pt.y;
@@ -424,9 +437,9 @@ int Extractor::MakeMatchPair() {
 
 #endif
     //Mat _h = findHomography(train_pt, query_pt, FM_RANSAC);
-    Mat _h = getAffineTransform(query_pt, train_pt);   
+    //Mat _h = getAffineTransform(query_pt, train_pt);   
     //Mat _h = estimateAffine2D(query_pt, train_pt);
-    //Mat _h = estimateRigidTransform(query_pt, train_pt, false);
+    Mat _h = estimateRigidTransform(query_pt, train_pt, false);
 
     cur_query->matrix_fromimg = _h;
     Logger(" h shape : %d %d ", _h.cols, _h.rows);
@@ -470,5 +483,33 @@ int Extractor::MakeMatchPair() {
 
 int Extractor::PostProcess(SCENE* sc) {
 
-    return ERR_NONE;
+    GetVirtualRod(sc);
+}
+
+int Extractor::GetVirtualRod(SCENE* sc) {
+
+    if(sc->id == 0 ) {
+        FirstSolvePnp(p->world ,sc->four_pt);
+    }
+}
+
+int Extractor::FirstSolvePnP(Pt* set1, Pt* set2) {
+
+    vector<Point2f>pset1;
+    vector<Point2f>pset2;
+
+    for( int i = 0 ; i < 4 ; i ++) {
+        pset1.push_back(Point2f(float(sc1->four_pt[i].x), float(sc1->four_pt[i].y)));
+        pset2.push_back(Point2f(float(sc2->four_pt[i].x), float(sc2->four_pt[i].y)));
+    }
+
+    Mat h = SolvePnP(pset1, pset2,
+    Mat nCenter = Mat(Size(3,1), CV_32F);
+    nCenter.at<double>(0) = sc2->center.x;
+    nCenter.at<double>(1) = sc2->center.y;
+    nCenter.at<double>(2) = 1;    
+
+    Mat mResult = h * nCenter;
+    sc2->center.x = mResult.at<double>(0) / mResult.at<double>(2);
+    sc2->center.y = mResult.at<double>(1) / mResult.at<double>(2);
 }

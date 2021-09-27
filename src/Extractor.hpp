@@ -69,5 +69,6 @@ private :
     void SetCurQueryScene(SCENE* sc) { cur_query = sc; };
     int MakeMatchPair();
     int PostProcess(SCENE* sc);
-
+    int GetVirtualRod(SCENE* sc);
+    int FirstSolvePnP(Pt* set1, Pt* set2);
 };

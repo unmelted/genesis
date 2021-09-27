@@ -31,15 +31,20 @@ typedef struct Pt
 };
 
 typedef struct _maindata {
+    int id = 0;
     Mat img;
     Mat ori_img;
     
     Pt four_pt[4];
     Pt center;
-    
-    double norm;
-    double degree;
+    float normal[2][3] = { 0, };
+
     Mat rot_matrix;
+    Mat trans_matrix;
+    
+    double rod_norm;
+    double rod_degree;
+    Mat rod_rotation_matrix;
 
     int dim;
     Pt* roi;
@@ -55,10 +60,9 @@ typedef struct _PARAM {
 
     float sensor_size = 17.30 / 1.35;
     float focal = 3840;
-    float normal[2][3] = { 0, };
 
-    Pt world[4];    // World Coord 4 point
-    Pt world_center;
+    SCENE world;    // World Coord 4 point
+
     Pt* region;     // Point array
 
 } PARAM;
