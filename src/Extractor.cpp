@@ -58,13 +58,33 @@ void Extractor::InitializeData(int* roi) {
     p->world.center.y = 656;
 
 
-    p->world.normal[0][0] = 50.0;
-    p->world.normal[0][1] = 50.0;
-    p->world.normal[0][2] = 0.0;
+    p->world.normal[0] = 50.0;
+    p->world.normal[1] = 50.0;
+    p->world.normal[2] = 0.0;
 
-    p->world.normal[1][0] = 50.0;
-    p->world.normal[1][1] = 50.0;
-    p->world.normal[1][2] = -100.0;                    
+    p->world.normal[3] = 50.0;
+    p->world.normal[4] = 50.0;
+    p->world.normal[5] = -100.0;                    
+
+    p->world.rod_norm = 0;
+
+    p->camera_matrix[0] = p->focal;
+    p->camera_matrix[1] = 0;
+    p->camera_matrix[2] = p->pwidth/2;
+
+    p->camera_matrix[3] = 0;
+    p->camera_matrix[4] = p->focal;    
+    p->camera_matrix[5] = p->pheight/2;
+
+    p->camera_matrix[6] = 0;
+    p->camera_matrix[7] = 0;    
+    p->camera_matrix[8] = 1;
+
+    p->skew_coeff[0] = 0;
+    p->skew_coeff[1] = 0;
+    p->skew_coeff[2] = 0;        
+    p->skew_coeff[3] = 0;            
+    
 
 
     // 1st camera manual data input
@@ -209,17 +229,24 @@ int Extractor::Execute() {
         int ret = GetFeature(&sc);
         cal_group.push_back(sc);
 
-        if(index > 0) {
+        if(index == 0) {
+            is_first = true;
+            SetCurTrainScene(&p->world);
+            SetCurQueryScene(&cal_group[index]);
+
+        }
+        else {
             SetCurTrainScene(&cal_group[index - 1]);
             SetCurQueryScene(&cal_group[index]);
             int ret = MakeMatchPair();
         }
 
         if( ret > 0 || sc.id == 0) {
-            PostProcess(&sc);
+            PostProcess();
         } else {
             Logger("Match Pari Fail. Can't keep going.");
         }
+        is_first = false;
         index++;
 
 #if _DEBUG
@@ -481,35 +508,73 @@ int Extractor::MakeMatchPair() {
     return matches.size();
 }
 
-int Extractor::PostProcess(SCENE* sc) {
+int Extractor::PostProcess() {
 
-    GetVirtualRod(sc);
+    CalVirtualRod();
+    Warping();
+
 }
 
-int Extractor::GetVirtualRod(SCENE* sc) {
+int Extractor::CalVirtualRod() {
 
-    if(sc->id == 0 ) {
-        FirstSolvePnp(p->world ,sc->four_pt);
-    }
+    if(is_first)
+        SolvePnP(); 
+    else
+
 }
 
-int Extractor::FirstSolvePnP(Pt* set1, Pt* set2) {
+int Extractor::SolvePnP() {
 
     vector<Point2f>pset1;
     vector<Point2f>pset2;
 
     for( int i = 0 ; i < 4 ; i ++) {
-        pset1.push_back(Point2f(float(sc1->four_pt[i].x), float(sc1->four_pt[i].y)));
-        pset2.push_back(Point2f(float(sc2->four_pt[i].x), float(sc2->four_pt[i].y)));
+        pset1.push_back(Point2f(float(cur_train->four_pt[i].x), float(cur_train->four_pt[i].y)));
+        pset2.push_back(Point2f(float(cur_query->four_pt[i].x), float(cur_query->four_pt[i].y)));
     }
 
-    Mat h = SolvePnP(pset1, pset2,
-    Mat nCenter = Mat(Size(3,1), CV_32F);
-    nCenter.at<double>(0) = sc2->center.x;
-    nCenter.at<double>(1) = sc2->center.y;
-    nCenter.at<double>(2) = 1;    
+    solvePnP(pset1, pset2, 
+            p->camera_matrix, p->skew_coeff,
+            cur_query->rot_matrix, cur_query->trans_matrix,
+            false, SOLVEPNP_EPNP );
 
-    Mat mResult = h * nCenter;
-    sc2->center.x = mResult.at<double>(0) / mResult.at<double>(2);
-    sc2->center.y = mResult.at<double>(1) / mResult.at<double>(2);
+    Mat projectedNormal;
+    projectPoints(cur_train->normal, cur_query->rot_matrix, cur_query->trans_matrix,
+                p->camera_matrix, p->skew_coeff,
+                projectedNormal);
+ 
+    Vec2f v0 = projectedNormal.at<Vec2f>(0);
+    Vec2f v1 = projectedNormal.at<Vec2f>(1);   
+    Point2f angle_vec = Point2f(v1[0]- v0[0], v1[1] - v0[1]);
+    double degree = fastAtan2(angle_vec.x, angle_vec.y);
+    double dnorm = norm(v0, v1);
+
+    if(v1[1] > v0[1]) {
+        degree = 360 - degree;
+        if( degree >= 360) degree -= 360;
+    }
+    else {
+        degree = 180 - degree;
+    }
+
+    cur_query->rod_norm = norm(v0, v1);
+    cur_query->rod_degree = degree;
+    if (is_first)
+        cur_query->rod_rotation_matrix = getRotationMatrix2D(Point2f(cur_query->center.x, cur_query->center.y), degree, 1);
+    else {
+        cur_query->rod_rotation_matrix = getRotationMatrix2D(Point2f(cur_query->center.x, cur_query->center.y), degree, (cur_train->rod_norm/cur_query->rod_norm));
+    }
+
+}
+
+int Extractor::SolveRnRbyH() {
+
+    perpectiveTransfor(cur_train->nomal, cur_query->normal, cur_query->matrix_fromimg);
+}
+
+int Extractor::Warping() {
+    //Image Warping
+
+
+    //ROI Warping 
 }

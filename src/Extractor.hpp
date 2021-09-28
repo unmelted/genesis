@@ -50,6 +50,7 @@ private :
     const int fast_k = 24;
     const int minx = 0;
 
+    bool is_first;
     int p_scale = 0;
     SCENE* cur_train = 0;
     SCENE* cur_query = 0;
@@ -68,7 +69,8 @@ private :
     void SetCurTrainScene(SCENE* sc) { cur_train = sc; };
     void SetCurQueryScene(SCENE* sc) { cur_query = sc; };
     int MakeMatchPair();
-    int PostProcess(SCENE* sc);
-    int GetVirtualRod(SCENE* sc);
-    int FirstSolvePnP(Pt* set1, Pt* set2);
+    int PostProcess();
+    int CalVirtualRod();
+    int SolvePnP();
+    int Warping();
 };
