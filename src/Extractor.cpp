@@ -25,52 +25,54 @@ Extractor::Extractor(string& imgset, int cnt, int* roi)
     p = (PARAM*)g_os_malloc(sizeof(PARAM));
     p->count = cnt/2 - 1;
     p->region = (Pt *)g_os_malloc(sizeof(Pt)* p->count);
-
+    p->p_scale = 1;
     InitializeData(roi);
     imgs = LoadImages(imgset);
 
+    Logger("Constructor ok ");
 #ifdef _IMGDEBUG    
         //SaveImageSet(imgs);
 #endif
 }
 
 void Extractor::InitializeData(int* roi) {
-    NormalizePoint(p->world.four_pt, 100);
 
-    if(p_scale != 1 ){
-        for(int i = 0; i < p->count; i++) {
-            int j = (i*2) + 1;
-            p->region[i].x = int(roi[j]/p_scale);
-            p->region[i].y = int(roi[j+1]/p_scale);
-            //Logger("insert %d %d ", roi[j], roi[j+1]);
-        }
-    }    
+    Logger("p_scale %d ", p->p_scale);
+    for(int i = 0; i < p->count; i++) {
+        int j = (i*2) + 1;
+        p->region[i].x = int(roi[j]/p->p_scale);
+        p->region[i].y = int(roi[j+1]/p->p_scale);
+    }
 
     p->world.four_pt[0].x = 330;
     p->world.four_pt[0].y = 602;    
     p->world.four_pt[1].x = 473;
     p->world.four_pt[1].y = 602;    
-    p->world.four_pt[2].x = 600;
-    p->world.four_pt[2].y = 602;    
-    p->world.four_pt[3].x = 311;
-    p->world.four_pt[3].y = 711;    
+    p->world.four_pt[2].x = 490;
+    p->world.four_pt[2].y = 709;    
+    p->world.four_pt[3].x = 310;
+    p->world.four_pt[3].y = 709;    
     p->world.center.x = 400;
     p->world.center.y = 656;
-
-
-    p->world.normal[0] = 50.0;
-    p->world.normal[1] = 50.0;
-    p->world.normal[2] = 0.0;
-
-    p->world.normal[3] = 50.0;
-    p->world.normal[4] = 50.0;
-    p->world.normal[5] = -100.0;                    
-
+    Logger("mid in init 1");    
+    p->world.normal = Mat(Size(2, 3), CV_64F);    
+    Logger("mid in init 2 %p", &(p->world.normal));        
+    Mat t = p->world.normal;
+    t.at<double>(0,0) = 50;
+    /* p->world.normal.at<float>(0,1)= 50.0;    
+    p->world.normal.at<float>(0,2)= 50.0;    
+    Logger("mid in init 2");    
+    p->world.normal.at<float>(1,0)= 50.0;
+    p->world.normal.at<float>(1,1)= 50.0;    
+    p->world.normal.at<float>(1,2)= -100.0;    
+ */
+    Logger("mid in init 3");    
     p->world.rod_norm = 0;
-
-    p->camera_matrix[0] = p->focal;
-    p->camera_matrix[1] = 0;
-    p->camera_matrix[2] = p->pwidth/2;
+    Logger("mid in init 4");        
+    NormalizePoint(p->world.four_pt, 100);
+    p->camera_matrix.push_back(p->focal);
+    p->camera_matrix.push_back(0);
+    p->camera_matrix.push_back(p->pwidth/2);
 
     p->camera_matrix[3] = 0;
     p->camera_matrix[4] = p->focal;    
@@ -90,16 +92,16 @@ void Extractor::InitializeData(int* roi) {
     // 1st camera manual data input
     SCENE sc;        
     sc.id = 0;
-    sc.four_pt[0].x = 372;
-    sc.four_pt[0].y = 558;
-    sc.four_pt[1].x = 1035;
-    sc.four_pt[1].y = 404;
-    sc.four_pt[2].x = 1528;
-    sc.four_pt[2].y = 291;
-    sc.four_pt[3].x = 776;
-    sc.four_pt[3].y = 741; 
-    sc.center.x = 968;
-    sc.center.y = 537;
+    sc.four_pt[0].x = 960;
+    sc.four_pt[0].y = 830;
+    sc.four_pt[1].x = 2638;
+    sc.four_pt[1].y = 720;
+    sc.four_pt[2].x = 3094;
+    sc.four_pt[2].y = 1466;
+    sc.four_pt[3].x = 1002;
+    sc.four_pt[3].y = 1438; 
+    sc.center.x = 1908;
+    sc.center.y = 1078;
 
     cal_group.push_back(sc);
 
@@ -193,14 +195,14 @@ vector<Mat> Extractor::LoadImages(const string& path) {
         }
     }
 
-    if (p_scale == 0 ) {
+    if (p->p_scale == 0 ) {
         Mat sample = imread(image_paths[0]);
         if (sample.cols > FK ) {
-            p_scale = 2;
+            p->p_scale = 1; //origin scale test first
         } else if (sample.cols > FHD) {
-            p_scale = 2;
+            p->p_scale = 1;
         } else {
-            p_scale = 1;
+            p->p_scale = 1;
         }
     }
 
@@ -218,16 +220,10 @@ int Extractor::Execute() {
     for (Mat& img : imgs) {
         SCENE sc;        
 
-        if(index == 0 ) {
-            sc = cal_group[0];
-            GetPreCalibraitonData(&sc);
-        }
         sc.id = index;
         sc.ori_img = img;        
-        sc.img = ProcessImages(img, blur_ksize, blur_sigma);
-
+        sc.img = ProcessImages(img);
         int ret = GetFeature(&sc);
-        cal_group.push_back(sc);
 
         if(index == 0) {
             is_first = true;
@@ -236,6 +232,7 @@ int Extractor::Execute() {
 
         }
         else {
+            cal_group.push_back(sc);            
             SetCurTrainScene(&cal_group[index - 1]);
             SetCurQueryScene(&cal_group[index]);
             int ret = MakeMatchPair();
@@ -246,6 +243,7 @@ int Extractor::Execute() {
         } else {
             Logger("Match Pari Fail. Can't keep going.");
         }
+
         is_first = false;
         index++;
 
@@ -259,16 +257,6 @@ int Extractor::Execute() {
     return ERR_NONE;
 }
 
-int Extractor::GetPreCalibraitonData(SCENE* sc) {
-
-    double dnorm = 0;
-    double ddegree = 0;
-    Mat mmrot; // = Getrotationmtrix2d();
-
-    sc->rod_norm = dnorm;
-    sc->rod_degree = ddegree;
-    sc->rod_rotation_matrix = mmrot;
-}
 int Extractor::CalculateCenter(SCENE* sc1, SCENE* sc2) {
     vector<Point2f>pset1;
     vector<Point2f>pset2;
@@ -278,7 +266,7 @@ int Extractor::CalculateCenter(SCENE* sc1, SCENE* sc2) {
     }
 
     Mat h = findHomography(pset1, pset2);
-    Mat nCenter = Mat(Size(3,1), CV_32F);
+    Mat nCenter = Mat(3,1, CV_32F);
     nCenter.at<double>(0) = sc2->center.x;
     nCenter.at<double>(1) = sc2->center.y;
     nCenter.at<double>(2) = 1;    
@@ -288,16 +276,16 @@ int Extractor::CalculateCenter(SCENE* sc1, SCENE* sc2) {
     sc2->center.y = mResult.at<double>(1) / mResult.at<double>(2);
 }
 
-Mat Extractor::ProcessImages(Mat& img, int ksize, double sigma) 
+Mat Extractor::ProcessImages(Mat& img) 
 {
     Mat blur_img; Mat dst;
-    if ( p_scale != 1) {
-        resize(img, img, Size(int(img.cols/p_scale), int(img.rows/p_scale)), 0, 0, 1);
+    if ( p->p_scale != 1) {
+        resize(img, img, Size(int(img.cols/p->p_scale), int(img.rows/p->p_scale)), 0, 0, 1);
     }
 
     cvtColor(img, blur_img, cv::COLOR_RGBA2GRAY);
     normalize(blur_img, dst, 0, 255, NORM_MINMAX,-1, noArray());        
-    GaussianBlur(dst, blur_img, {ksize, ksize}, sigma, sigma);
+    GaussianBlur(dst, blur_img, {p->blur_ksize, p->blur_ksize}, p->blur_sigma, p->blur_sigma);
 
     return blur_img;
 }
@@ -305,11 +293,11 @@ Mat Extractor::ProcessImages(Mat& img, int ksize, double sigma)
 int Extractor::GetFeature(SCENE* sc) 
 {
     // FAST + BRIEF
-    auto feature_detector = FastFeatureDetector::create(fast_k, true, FastFeatureDetector::TYPE_9_16);
+    auto feature_detector = FastFeatureDetector::create(p->fast_k, true, FastFeatureDetector::TYPE_9_16);
     //auto feature_detector = AgastFeatureDetector::create(); //AGAST
     //Ptr<xfeatures2d::MSDDetector>feature_detector = xfeatures2d::MSDDetector::create(9,11,15); //MSDETECTOR
     Ptr<xfeatures2d::BriefDescriptorExtractor> dscr;
-    dscr = xfeatures2d::BriefDescriptorExtractor::create(desc_byte, use_ori);
+    dscr = xfeatures2d::BriefDescriptorExtractor::create(p->desc_byte, p->use_ori);
  
     //AKAZE
     //auto feature_detector = KAZE::create(false, false, 0.001f, 4, 4, KAZE::DIFF_PM_G1);
@@ -494,7 +482,7 @@ int Extractor::MakeMatchPair() {
 
     Mat fin, fin2;
     //warpPerspective(cur_train->img, fin, _h, Size(cur_train->img.cols, cur_train->img.rows));
-    warpAffine(cur_query->ori_img, fin, _h, Size(cur_query->img.cols*p_scale, cur_train->img.rows*p_scale));
+    warpAffine(cur_query->ori_img, fin, _h, Size(cur_query->img.cols*p->p_scale, cur_train->img.rows*p->p_scale));
     //cur_query->img = fin;
     sprintf(filename, "saved/%2d_perspective.png", index);
     imwrite(filename, fin);
@@ -511,6 +499,7 @@ int Extractor::MakeMatchPair() {
 int Extractor::PostProcess() {
 
     CalVirtualRod();
+    CalAdjustData();
     Warping();
 
 }
@@ -520,7 +509,7 @@ int Extractor::CalVirtualRod() {
     if(is_first)
         SolvePnP(); 
     else
-
+        SolveRnRbyH();
 }
 
 int Extractor::SolvePnP() {
@@ -569,8 +558,53 @@ int Extractor::SolvePnP() {
 
 int Extractor::SolveRnRbyH() {
 
-    perpectiveTransfor(cur_train->nomal, cur_query->normal, cur_query->matrix_fromimg);
+    //homogeneous matrix multiply
+    Mat output;
+    multiply(cur_train->rod_rotation_matrix, cur_query->matrix_fromimg, output);
+    int cnt = decomposeHomographyMat(output, p->camera_matrix,
+                cur_query->rot_matrix, cur_query->trans_matrix, cur_query->normal);
+
+    if (cnt > 1 ){
+        Logger("Multiple soulution is occurred ..");        
+    }
+
+    Mat projectedNormal;
+    projectPoints(p->world.normal, cur_query->rot_matrix, cur_query->trans_matrix,
+                p->camera_matrix, p->skew_coeff,
+                projectedNormal);
+ 
+    Vec2f v0 = projectedNormal.at<Vec2f>(0);
+    Vec2f v1 = projectedNormal.at<Vec2f>(1);   
+    Point2f angle_vec = Point2f(v1[0]- v0[0], v1[1] - v0[1]);
+    double degree = fastAtan2(angle_vec.x, angle_vec.y);
+    double dnorm = norm(v0, v1);
+
+    if(v1[1] > v0[1]) {
+        degree = 360 - degree;
+        if( degree >= 360) degree -= 360;
+    }
+    else {
+        degree = 180 - degree;
+    }
+
+    cur_query->rod_norm = norm(v0, v1);
+    cur_query->rod_degree = degree;
+    if (is_first)
+        cur_query->rod_rotation_matrix = getRotationMatrix2D(Point2f(cur_query->center.x, cur_query->center.y), degree, 1);
+    else {
+        cur_query->rod_rotation_matrix = getRotationMatrix2D(Point2f(cur_query->center.x, cur_query->center.y), degree, (cur_train->rod_norm/cur_query->rod_norm));
+    }
+
+#if 0
+    //normal vector or grain trasform by homography
+    perspectiveTransform(cur_train->normal, cur_query->normal, cur_query->matrix_fromimg);
+#endif    
 }
+
+int Extractor::CalAdjustData() {
+
+}
+
 
 int Extractor::Warping() {
     //Image Warping

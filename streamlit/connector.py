@@ -7,7 +7,7 @@ class BaseData(object) :
     cur_path = os.getcwd() +'/'
     os.chdir('../')
     prj_path = os.getcwd() +'/'
-    img_path = prj_path + 'image/calib_soccer/'
+    img_path = prj_path + 'image/new/'
     libname = prj_path + 'libgenesis.dylib'
     print(cur_path, prj_path, img_path)
 

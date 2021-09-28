@@ -37,7 +37,7 @@ typedef struct _maindata {
     
     Pt four_pt[4];
     Pt center;
-    vector<float>normal;
+    Mat normal;
 
     Mat rot_matrix;
     Mat trans_matrix;
@@ -57,6 +57,16 @@ typedef struct _maindata {
 typedef struct _PARAM {
     int ground;     //Groud type
     int count;      // Region point count
+
+    const int blur_ksize = 19;
+    const float blur_sigma = 1;
+    const int desc_byte = 32;
+    const bool use_ori = true;
+    const int nms_k = 23;
+    const int fast_k = 24;
+    const int minx = 0;
+    int p_scale = 1;
+    
 
     int pwidth = 3840;  //4K width
     int pheight = 2160; //4K height
