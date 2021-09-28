@@ -42,15 +42,8 @@ public :
 
 
 private :
-    const int blur_ksize = 9;
-    const float blur_sigma = 0.9;
-    const int desc_byte = 32;
-    const bool use_ori = true;
-    const int nms_k = 9;
-    const int fast_k = 24;
-    const int minx = 0;
 
-    int p_scale = 0;
+    bool is_first;
     SCENE* cur_train = 0;
     SCENE* cur_query = 0;
 
@@ -58,14 +51,20 @@ private :
     void SaveImageSet(vector<Mat>& images);
     void InitializeData(int* roi);
     void NormalizePoint(Pt* fpt, int maxrange);
+    int CalculateCenter(SCENE* sc1, SCENE* sc2);
 
-    int GetPreCalibraitonData(SCENE* sc);
-    Mat ProcessImages(Mat& img, int ksize, double sigma);
+
+    Mat ProcessImages(Mat& img);
     int GetFeature(SCENE* sc);
     vector<KeyPoint> MaskKeypointWithROI(vector<KeyPoint>* oip);
     void SetCurTrainScene(SCENE* sc) { cur_train = sc; };
     void SetCurQueryScene(SCENE* sc) { cur_query = sc; };
     int MakeMatchPair();
-    int PostProcess(SCENE* sc);
+    int PostProcess();
+    int CalVirtualRod();
+    int SolvePnP();
+    int SolveRnRbyH();
+    int CalAdjustData();
+    int Warping();
 
 };

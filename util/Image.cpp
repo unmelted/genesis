@@ -650,4 +650,5 @@ int CheckTheImageGrayscale(IMG* img)
         result = 1;
 
     return result;
+
 }

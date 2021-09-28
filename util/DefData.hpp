@@ -16,30 +16,35 @@ typedef enum _err {
     ERR_NONE = 0,
 
 
-};
+} ERR;
 
 
-typedef struct Pt
+typedef struct _Pt
 {    
     int x;
     int y;
     int z;
-    Pt(int a, int b ) {
+    _Pt(int a, int b ) {
         x = a; y = b; z = 0;
     };
-    Pt() { x = 0, y = 0; z = 0;};
-};
+    _Pt() { x = 0, y = 0; z = 0;};
+} Pt;
 
 typedef struct _maindata {
+    int id = 0;
     Mat img;
     Mat ori_img;
     
     Pt four_pt[4];
     Pt center;
-    
-    double norm;
-    double degree;
+    Mat normal;
+
     Mat rot_matrix;
+    Mat trans_matrix;
+    
+    double rod_norm;
+    double rod_degree;
+    Mat rod_rotation_matrix;
 
     int dim;
     Pt* roi;
@@ -53,12 +58,25 @@ typedef struct _PARAM {
     int ground;     //Groud type
     int count;      // Region point count
 
+    const int blur_ksize = 19;
+    const float blur_sigma = 1;
+    const int desc_byte = 32;
+    const bool use_ori = true;
+    const int nms_k = 23;
+    const int fast_k = 24;
+    const int minx = 0;
+    int p_scale = 1;
+    
+
+    int pwidth = 3840;  //4K width
+    int pheight = 2160; //4K height
     float sensor_size = 17.30 / 1.35;
     float focal = 3840;
-    float normal[2][3] = { 0, };
+    vector<float>camera_matrix;
+    vector<float>skew_coeff;
 
-    Pt world[4];    // World Coord 4 point
-    Pt world_center;
+    SCENE world;    // World Coord 4 point
+
     Pt* region;     // Point array
 
 } PARAM;
@@ -81,4 +99,4 @@ typedef enum groundtype
     VolleyballHalf,
     VolleyballGround,
     Football
-};
+} GDT;
