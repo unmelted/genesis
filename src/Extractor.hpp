@@ -49,8 +49,9 @@ private :
 
     vector<Mat>LoadImages(const string& path);
     void SaveImageSet(vector<Mat>& images);
-    void InitializeData(int* roi);
-    void NormalizePoint(Pt* fpt, int maxrange);
+    void InitializeData(int cnt, int* roi);
+    int UpdateConfig();
+    void NormalizePoint(SCENE* sc, int maxrange);
     int CalculateCenter(SCENE* sc1, SCENE* sc2);
 
 
