@@ -326,7 +326,7 @@ int Extractor::Execute()
         }
         else
         {
-            Logger("Match Pari Fail. Can't keep going.");
+            Logger("Match Pair Fail. Can't keep going.");
         }
 
         is_first = false;
@@ -557,6 +557,7 @@ int Extractor::MakeMatchPair()
     //Mat _h = findHomography(train_pt, query_pt, FM_RANSAC);
     //Mat _h = getAffineTransform(query_pt, train_pt);
     //Mat _h = estimateAffine2D(query_pt, train_pt);
+    // solvePnp();
     Mat _h = estimateRigidTransform(query_pt, train_pt, false);
 
     cur_query->matrix_fromimg = _h;
@@ -604,15 +605,16 @@ int Extractor::MakeMatchPair()
 
 int Extractor::PostProcess()
 {
-
     CalVirtualRod();
-    //CalAdjustData();
+    if(is_first)
+        return ERR_NONE;
+
+    CalAdjustData();
     //Warping();
 }
 
 int Extractor::CalVirtualRod()
 {
-
     if (is_first)
         SolvePnP();
     else
@@ -692,7 +694,7 @@ int Extractor::SolvePnP()
 
     Point2f angle_vec = Point2f(pnormal[1].x - pnormal[0].x, pnormal[1].y - pnormal[1].x);
     double degree = fastAtan2(angle_vec.x, angle_vec.y);
-    double dnorm = norm(pnormal[0], pnormal[1]);
+    double dnorm = norm(pnormal[0] - pnormal[1]);
 
     if (pnormal[1].y > pnormal[0].y)
     {
@@ -708,6 +710,8 @@ int Extractor::SolvePnP()
     cur_query->rod_norm = dnorm;
     cur_query->rod_degree = degree;
 
+    Logger("dnorm %f degree %f", cur_query->rod_norm, cur_query->rod_degree);
+
     if (is_first)
         cur_query->rod_rotation_matrix = getRotationMatrix2D(Point2f(cur_query->center.x, cur_query->center.y), degree, 1);
     else
@@ -716,23 +720,54 @@ int Extractor::SolvePnP()
     }
 }
 
+int Extractor::CalAdjustData()
+{
+    double interval = cur_query->rod_norm - cur_train->rod_norm;
+    double agvx = (cur_train->center.x + cur_query->center.x)/2;
+    double agvy = (cur_train->center.y + cur_query->center.y)/2;
+
+}
+
+int Extractor::Warping()
+{
+    //Image Warping
+
+    //ROI Warping
+}
+
 int Extractor::SolveRnRbyH()
 {
 
     //homogeneous matrix multiply
-    Mat output;
-    Mat cm(3, 3, CV_32F, &p->camera_matrix);
-    Mat sc(1, 4, CV_32F, &p->skew_coeff);
-    Mat tvec(2, 3, CV_32F, &p->world->normal);
-    Mat result_normal;
+    Mat output, result_normal;
+    Mat cm(3, 3, CV_32F, p->camera_matrix);
+    Mat sc(1, 4, CV_32F, p->skew_coeff);
+    Mat tvec(2, 3, CV_32F, p->train->normal);
+    Mat ret1(3, 1, CV_32F);
+    Mat ret2(3, 1, CV_32F);
+
     multiply(cur_train->rod_rotation_matrix, cur_query->matrix_fromimg, output);
-    int cnt = decomposeHomographyMat(output, cm,
-                                     cur_query->rot_matrix, cur_query->trans_matrix, result_normal);
+
+    Logger(" SolveRnR output -- %d %d", output.rows, output.cols);
+    for( int i = 0 ; i < output.rows; i ++)
+        for(int j = 0 ; j < output.cols; j ++)
+            Logger("[%d][%d] %f ", i, j , output.at<float>(i,j));
+
+    int cnt = Decomposehomographymat(output, cm,
+                        ret1, ret2, result_normal);
+
+    cur_query->rot_matrix = ret1;
+    cur_query->trans_matrix = ret2;
+
+    Logger(" SolveRnR result_normal -- %d %d", result_normal.rows, result_normal.cols);
+    for( int i = 0 ; i < result_normal.rows; i ++)
+        for(int j = 0 ; j < resulit_normal.cols; j ++)
+            Logger("[%d][%d] %f ", i, j , result_normal.at<float>(i,j));
+
 
     if (cnt > 1)
-    {
         Logger("Multiple soulution is occurred ..");
-    }
+
 
     Mat projectedNormal;
     projectPoints(tvec, cur_query->rot_matrix, cur_query->trans_matrix,
@@ -769,15 +804,4 @@ int Extractor::SolveRnRbyH()
     //normal vector or grain trasform by homography
     perspectiveTransform(cur_train->normal, cur_query->normal, cur_query->matrix_fromimg);
 #endif
-}
-
-int Extractor::CalAdjustData()
-{
-}
-
-int Extractor::Warping()
-{
-    //Image Warping
-
-    //ROI Warping
 }
