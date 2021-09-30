@@ -44,6 +44,8 @@ public :
 private :
 
     bool is_first;
+    bool verify_mode = false;
+
     SCENE* cur_train = 0;
     SCENE* cur_query = 0;
 
@@ -67,5 +69,7 @@ private :
     int SolveRnRbyH();
     int CalAdjustData();
     int Warping();
+
+    int VerifyNumeric();
 
 };

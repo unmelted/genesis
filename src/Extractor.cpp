@@ -307,7 +307,7 @@ int Extractor::Execute()
         int ret = GetFeature(&sc);
 
         if (index == 0)
-        {
+         {
             is_first = true;
             SetCurTrainScene(p->world);
             SetCurQueryScene(&cal_group[index]);
@@ -615,7 +615,7 @@ int Extractor::PostProcess()
 
 int Extractor::CalVirtualRod()
 {
-    if (is_first)
+    if (is_first || verify_mode)
         SolvePnP();
     else
         SolveRnRbyH();
@@ -728,13 +728,6 @@ int Extractor::CalAdjustData()
 
 }
 
-int Extractor::Warping()
-{
-    //Image Warping
-
-    //ROI Warping
-}
-
 int Extractor::SolveRnRbyH()
 {
 
@@ -746,6 +739,7 @@ int Extractor::SolveRnRbyH()
     Mat ret1(3, 1, CV_32F);
     Mat ret2(3, 1, CV_32F);
 
+//method 1. calculate homogeneous matrix
     multiply(cur_train->rod_rotation_matrix, cur_query->matrix_fromimg, output);
 
     Logger(" SolveRnR output -- %d %d", output.rows, output.cols);
@@ -804,4 +798,82 @@ int Extractor::SolveRnRbyH()
     //normal vector or grain trasform by homography
     perspectiveTransform(cur_train->normal, cur_query->normal, cur_query->matrix_fromimg);
 #endif
+}
+
+void Extractor::VerifyNumeric() {
+
+    verify_mode = true;
+    
+   int index = 0;
+    for (Mat &img : imgs)
+    {
+        SCENE sc;
+
+        sc.id = index;
+        sc.ori_img = img;
+
+        if( index == 1) {
+            sc.id = 0;
+            sc.four_pt[0].x = 1056;
+            sc.four_pt[0].y = 807;
+            sc.four_pt[1].x = 2754;
+            sc.four_pt[1].y = 735;
+            sc.four_pt[2].x = 2990;
+            sc.four_pt[2].y = 1495;
+            sc.four_pt[3].x = 915;
+            sc.four_pt[3].y = 1410;
+            sc.center.x = 1917;
+            sc.center.y = 1080;
+
+        }
+
+        if (index == 0)
+            is_first = true;
+        else
+            cal_group.push_back(sc);
+
+        if (index > 0 ) {
+            SetCurTrainScene(&cal_group[index-1]);
+            SetCurQueryScene(&cal_group[index]);
+
+            //PostProcess();
+            Warping();
+
+        }
+
+        is_first = false;
+        index++;
+    }
+
+    Logger("Verify Done.");
+}
+
+int Extractor::Warping()
+{   
+    //Test
+    //Image Warping
+    Mat t_pset(4, 2, CV_32F);
+    Mat q_pset(4, 2, CV_32F);
+    for (int i = 0; i < 4; i++)
+    {
+        t_pset.at<float>(i, 0) = (float)cur_train->four_fpt[i].x;
+        t_pset.at<float>(i, 1) = (float)cur_train->four_fpt[i].y;
+
+        q_pset.at<float>(i, 0) = (float)cur_query->four_pt[i].x;
+        q_pset.at<float>(i, 1) = (float)cur_query->four_pt[i].y;
+
+        Logger("t_pset %f %f  -- t_qset %f %f", t_pset.at<float>(i, 0), t_pset.at<float>(i, 1),
+               q_pset.at<float>(i, 0), q_pset.at<float>(i, 1));
+    }
+
+    Mat _h = findHomography(q_pset, t_pset);
+
+    Mat final;
+    warpAffine(cur_query->ori_img, final, _h, Size(cur_query->ori_img.cols, cur_train->ori_img.rows);
+    //cur_query->img = fin;
+    char filename[30] = { 0, };        
+    sprintf(filename, "saved/%2d_perspective.png", index);
+    imwrite(filename, final);
+
+    //ROI Warping
 }
