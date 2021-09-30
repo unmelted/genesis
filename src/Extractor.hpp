@@ -34,6 +34,7 @@ public :
     Extractor(string& imgset, int cnt , int* roi);
     ~Extractor();
     int Execute();
+    int VerifyNumeric();
     void DrawInfo();
     PARAM* p;
 
@@ -69,7 +70,7 @@ private :
     int SolveRnRbyH();
     int CalAdjustData();
     int Warping();
+    int WarpingStep1();
 
-    int VerifyNumeric();
 
 };

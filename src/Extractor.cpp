@@ -110,7 +110,7 @@ void Extractor::InitializeData(int cnt, int *roi)
     p->skew_coeff[3] = 0;
 
     // 1st camera manual data input
-    SCENE sc;
+/*     SCENE sc;
     sc.id = 0;
     sc.four_pt[0].x = 960;
     sc.four_pt[0].y = 830;
@@ -123,7 +123,7 @@ void Extractor::InitializeData(int cnt, int *roi)
     sc.center.x = 1908;
     sc.center.y = 1078;
 
-    cal_group.push_back(sc);
+    cal_group.push_back(sc); */
     Logger("Data Initalize complete .. ");
 }
 
@@ -735,7 +735,7 @@ int Extractor::SolveRnRbyH()
     Mat output, result_normal;
     Mat cm(3, 3, CV_32F, p->camera_matrix);
     Mat sc(1, 4, CV_32F, p->skew_coeff);
-    Mat tvec(2, 3, CV_32F, p->train->normal);
+    Mat tvec(2, 3, CV_32F, cur_train->normal);
     Mat ret1(3, 1, CV_32F);
     Mat ret2(3, 1, CV_32F);
 
@@ -747,7 +747,7 @@ int Extractor::SolveRnRbyH()
         for(int j = 0 ; j < output.cols; j ++)
             Logger("[%d][%d] %f ", i, j , output.at<float>(i,j));
 
-    int cnt = Decomposehomographymat(output, cm,
+    int cnt = decomposeHomographyMat(output, cm,
                         ret1, ret2, result_normal);
 
     cur_query->rot_matrix = ret1;
@@ -755,7 +755,7 @@ int Extractor::SolveRnRbyH()
 
     Logger(" SolveRnR result_normal -- %d %d", result_normal.rows, result_normal.cols);
     for( int i = 0 ; i < result_normal.rows; i ++)
-        for(int j = 0 ; j < resulit_normal.cols; j ++)
+        for(int j = 0 ; j < result_normal.cols; j ++)
             Logger("[%d][%d] %f ", i, j , result_normal.at<float>(i,j));
 
 
@@ -800,7 +800,7 @@ int Extractor::SolveRnRbyH()
 #endif
 }
 
-void Extractor::VerifyNumeric() {
+int Extractor::VerifyNumeric() {
 
     verify_mode = true;
     
@@ -808,12 +808,24 @@ void Extractor::VerifyNumeric() {
     for (Mat &img : imgs)
     {
         SCENE sc;
-
         sc.id = index;
         sc.ori_img = img;
-
-        if( index == 1) {
+        if( index == 0 ){
             sc.id = 0;
+            sc.four_pt[0].x = 960;
+            sc.four_pt[0].y = 830;
+            sc.four_pt[1].x = 2638;
+            sc.four_pt[1].y = 720;
+            sc.four_pt[2].x = 3094;
+            sc.four_pt[2].y = 1466;
+            sc.four_pt[3].x = 1002;
+            sc.four_pt[3].y = 1438;
+            sc.center.x = 1908;
+            sc.center.y = 1078;
+
+        }
+        else if( index == 1) {
+            sc.id = 1;
             sc.four_pt[0].x = 1056;
             sc.four_pt[0].y = 807;
             sc.four_pt[1].x = 2754;
@@ -829,17 +841,33 @@ void Extractor::VerifyNumeric() {
 
         if (index == 0)
             is_first = true;
-        else
-            cal_group.push_back(sc);
 
+        cal_group.push_back(sc);
+
+#if 0
         if (index > 0 ) {
             SetCurTrainScene(&cal_group[index-1]);
             SetCurQueryScene(&cal_group[index]);
 
             //PostProcess();
+            WarpingStep1();
+        }
+#endif
+
+#if 1
+        if (index == 0 ) {
+            SetCurTrainScene(&p->world);
+            SetCurQueryScene(&cal_group[index]);
+        }
+        else if (index > 0 ) {
+            SetCurTrainScene(&cal_group[index-1]);
+            SetCurQueryScene(&cal_group[index]);
+
+            SolvePnP();
             Warping();
 
         }
+#endif
 
         is_first = false;
         index++;
@@ -848,32 +876,48 @@ void Extractor::VerifyNumeric() {
     Logger("Verify Done.");
 }
 
-int Extractor::Warping()
+int Extractor::WarpingStep1()
 {   
     //Test
     //Image Warping
-    Mat t_pset(4, 2, CV_32F);
-    Mat q_pset(4, 2, CV_32F);
+    vector<Point2f>t_pset;
+    vector<Point2f>q_pset;
+
     for (int i = 0; i < 4; i++)
     {
-        t_pset.at<float>(i, 0) = (float)cur_train->four_fpt[i].x;
-        t_pset.at<float>(i, 1) = (float)cur_train->four_fpt[i].y;
+        t_pset.push_back(Point2f(cur_train->four_pt[i].x, cur_train->four_pt[i].y));
+        q_pset.push_back(Point2f(cur_query->four_pt[i].x, cur_query->four_pt[i].y));
 
-        q_pset.at<float>(i, 0) = (float)cur_query->four_pt[i].x;
-        q_pset.at<float>(i, 1) = (float)cur_query->four_pt[i].y;
-
-        Logger("t_pset %f %f  -- t_qset %f %f", t_pset.at<float>(i, 0), t_pset.at<float>(i, 1),
-               q_pset.at<float>(i, 0), q_pset.at<float>(i, 1));
+        Logger("t_pset %f %f  -- t_qset %f %f", t_pset[i].x, t_pset[i].y,
+               q_pset[i].x, q_pset[i].y);
     }
+    Logger(" Start find homography ");
 
-    Mat _h = findHomography(q_pset, t_pset);
+    Mat _h = findHomography(q_pset, t_pset, 0);
+    Logger(" Get homography " );
+
+    for (int i = 0; i < _h.rows; i++)
+        for (int j = 0; j < _h.cols; j++)
+            Logger("[%d][%d] %lf ", i, j, _h.at<double>(i, j));
+
+    Logger("ori image size %d %d ", cur_query->ori_img.cols, cur_query->ori_img.rows);
 
     Mat final;
-    warpAffine(cur_query->ori_img, final, _h, Size(cur_query->ori_img.cols, cur_train->ori_img.rows);
-    //cur_query->img = fin;
+    warpPerspective(cur_query->ori_img, final, _h, Size(cur_query->ori_img.cols, cur_query->ori_img.rows));
+
+    static int index = 0;
     char filename[30] = { 0, };        
     sprintf(filename, "saved/%2d_perspective.png", index);
     imwrite(filename, final);
 
+    Mat mcenter(3, 1, CV_64F);
+    mcenter.at<double>(0) = cur_train->center.x;
+    mcenter.at<double>(1) = cur_train->center.y;    
+    mcenter.at<double>(2) = 1;
+
+    Mat mresult = _h * mcenter;
+
+    Logger("estimated center point %f %f ", mresult.at<double>(0), mresult.at<double>(1));
+    Logger("error  %f %f ", cur_query->center.x - mresult.at<double>(0), cur_query->center.y - mresult.at<double>(1));
     //ROI Warping
 }
