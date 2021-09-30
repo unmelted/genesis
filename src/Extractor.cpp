@@ -78,6 +78,7 @@ void Extractor::InitializeData(int cnt, int *roi)
     p->world->four_pt[3].y = 709;
     p->world->center.x = 400;
     p->world->center.y = 656;
+    p->world->rod_norm = 10000;
 
     //p->world->normal = (float *)g_os_malloc(sizeof(float)* 6);
     p->camera_matrix = (float *)g_os_malloc(sizeof(float) * 9);
@@ -692,6 +693,7 @@ int Extractor::SolvePnP()
         }
     }
 
+
     Point2f angle_vec = Point2f(pnormal[1].x - pnormal[0].x, pnormal[1].y - pnormal[1].x);
     double degree = fastAtan2(angle_vec.x, angle_vec.y);
     double dnorm = norm(pnormal[0] - pnormal[1]);
@@ -711,7 +713,7 @@ int Extractor::SolvePnP()
     cur_query->rod_degree = degree;
 
     Logger("dnorm %f degree %f", cur_query->rod_norm, cur_query->rod_degree);
-
+    Logger(" ---- ");
     if (is_first)
         cur_query->rod_rotation_matrix = getRotationMatrix2D(Point2f(cur_query->center.x, cur_query->center.y), degree, 1);
     else
@@ -720,13 +722,113 @@ int Extractor::SolvePnP()
     }
 }
 
-int Extractor::CalAdjustData()
+ADJST Extractor::CalAdjustData()
 {
-    double interval = cur_query->rod_norm - cur_train->rod_norm;
-    double agvx = (cur_train->center.x + cur_query->center.x)/2;
-    double agvy = (cur_train->center.y + cur_query->center.y)/2;
-    
+    ADJST newadj;
 
+    double interval = cur_query->rod_norm - cur_train->rod_norm;
+/*     double agvx = (cur_train->center.x + cur_query->center.x)/2;
+    double agvy = (cur_train->center.y + cur_query->center.y)/2;
+ */    
+    double angle = -cur_query->rod_degree;
+    if (angle >= -180)
+        angle +=90;
+    else angle += -270;
+
+    double scale = cur_train->rod_norm / cur_query->rod_norm;
+    double adjustx = cur_train->center.x - cur_query->center.x;
+    double adjusty = cur_train->center.y - cur_query->center.y;
+    double rotatex = cur_query->center.x;
+    double rotatey = cur_query->center.y;
+
+    double angleadjust = -1 * (angle + 90);
+    double radian = angleadjust * M_PI / 180;
+    double width = cur_query->ori_img.cols;
+    double height = cur_query->ori_img.rows;
+
+    Point2f pt1, pt2, pt3, pt4, ptR1, ptR2, ptR3, ptR4;
+    pt1.x = (float)(cur_query->center.x * (1 - scale));
+    pt1.y = (float)(cur_query->center.y * (1 - scale));
+    
+    pt2.x = (float)(pt1.x + width * scale);
+    pt2.y = pt1.y;
+
+    pt3.x = pt2.x;
+    pt3.y = (float)(pt1.y + height * scale);
+
+    pt4.x = pt1.x;
+    pt4.y = pt3.y;
+
+    Point2f ptcenter(rotatex, rotatey);
+    ptR1 = GetRotatePoint(ptcenter, pt1, radian);
+    ptR2 = GetRotatePoint(ptcenter, pt2, radian);
+    ptR3 = GetRotatePoint(ptcenter, pt3, radian);
+    ptR4 = GetRotatePoint(ptcenter, pt4, radian);
+
+    int margin_l = 0;
+    int margin_t = 0;
+    int margin_r = width;
+    int margin_b = height;
+
+    if (ptR1.x + adjustx > margin_l)
+        margin_l = (int)(ptR1.x + adjustx);
+    if (ptR1.y + adjusty > margin_t)
+        margin_t = (int)(ptR1.y + adjusty);
+
+    if (ptR2.x + adjustx < margin_r)
+        margin_r = (int)(ptR2.x + adjustx);
+    if (ptR2.y + adjusty > margin_t)
+        margin_t = (int)(ptR2.y + adjusty);
+
+    if (ptR3.x + adjustx < margin_r)
+        margin_r = (int)(ptR3.x + adjustx);
+    if (ptR3.y + adjusty < margin_b)
+        margin_b = (int)(ptR3.y + adjusty);
+
+    if (ptR4.x + adjustx > margin_l)
+        margin_l = (int)(ptR4.x + adjustx);
+    if (ptR4.y + adjusty < margin_b)
+        margin_b = (int)(ptR4.y + adjusty);
+
+    if (margin_l > margin_t * width / height)
+        margin_t = margin_l * height / width;
+    else
+        margin_l = margin_t * width / height;
+
+    if (margin_r < margin_b * width / height)
+        margin_b = margin_r * height / width;
+    else
+        margin_r = margin_b * width / height;
+
+    // Margin 뒤집힘 현상 임시 방지
+    if (margin_l > margin_r)
+    {
+        int nTemp = margin_l;
+        margin_l = margin_r;
+        margin_r = nTemp;
+    }
+    if (margin_t > margin_b)
+    {
+        int nTemp = margin_t;
+        margin_t = margin_b;
+        margin_b = nTemp;
+    }
+
+    newadj.angle = angle;
+    newadj.rotate_centerx = rotatex;
+    newadj.rotate_centery = rotatey;
+    newadj.scale = scale;
+    newadj.trans_x = adjustx;
+    newadj.trans_x = adjusty;
+    newadj.rect = Rect(margin_l, margin_t, margin_r - margin_l, margin_b - margin_t);
+
+    Logger("Adjust data .." );
+    Logger("angle  %f  centerx %f  centery %f scale %f ", newadj.angle , newadj.rotate_centerx, newadj.rotate_centery,
+            newadj.scale);
+    Logger(" trans x %f y %f rect %f %f %f %f ", newadj.trans_x, newadj.trans_y, 
+            newadj.rect.x, newadj.rect.y, newadj.rect.width, newadj.rect.height);
+
+    return newadj;
 }
 
 int Extractor::SolveRnRbyH()
@@ -853,28 +955,32 @@ int Extractor::VerifyNumeric() {
             //PostProcess();
             WarpingStep1();
         }
-#endif
-
-#if 1
-        SetCurTrainScene(&p->world);
-        SetCurQueryScene(&cal_group[index]);
-
-        SolvePnP();
-        WarpingStep2();
-
-        }
-#endif
-
         is_first = false;
         index++;
     }
 
+#endif
+
+#if 1
+        SetCurTrainScene(p->world);
+        SetCurQueryScene(&cal_group[index]);
+
+        SolvePnP();
+        is_first = false;
+        index++;
+    }
+
+    WarpingStep2();
+#endif    
     Logger("Verify Done.");
 }
 
 int Extractor::WarpingStep2(){
 
-
+    SetCurTrainScene(&cal_group[0]);
+    SetCurQueryScene(&cal_group[1]);
+    ADJST adj = CalAdjustData();
+    AdjustImage(adj);
 }
 
 int Extractor::WarpingStep1()
@@ -903,6 +1009,7 @@ int Extractor::WarpingStep1()
 
     Logger("ori image size %d %d ", cur_query->ori_img.cols, cur_query->ori_img.rows);
 
+
     Mat final;
     warpPerspective(cur_query->ori_img, final, _h, Size(cur_query->ori_img.cols, cur_query->ori_img.rows));
 
@@ -922,3 +1029,134 @@ int Extractor::WarpingStep1()
     Logger("error  %f %f ", cur_query->center.x - mresult.at<double>(0), cur_query->center.y - mresult.at<double>(1));
     //ROI Warping
 }
+
+Point2f Extractor::GetRotatePoint(Point2f ptCenter, Point2f ptRot, double dbAngle)
+{
+    Point2f ptResult =Point2f();
+
+    // 회전 중심좌표와의 상대좌표
+    ptRot.x = ptRot.x - ptCenter.x;
+    ptRot.y = -(ptRot.y - ptCenter.y);
+
+    double cosx = cos(dbAngle);
+    double sinx = sin(dbAngle);
+
+    ptResult.x = (float)(ptRot.x * cosx - ptRot.y * sinx);
+    ptResult.y = (float)(ptRot.x * sinx + ptRot.y * cosx);
+
+    ptResult.x = ptResult.x + ptCenter.x;
+    ptResult.y = -(ptResult.y - ptCenter.y);
+
+    return ptResult;
+}
+
+int Extractor::AdjustImage(ADJST adj)
+{
+    Size sz = Size(cur_query->ori_img.cols, cur_query->ori_img.rows);
+    double angle = adj.angle + 90;
+    double rad = angle * M_PI/ 180.0;
+    Logger("Adjust Image angle %f rad %f ", angle, rad);
+
+    //Mat flipm = Mat::eye(3, 3, CV_32FC1);
+    Mat mrot = GetRotationMatrix(rad, adj.rotate_centerx, adj.rotate_centery);
+    Logger("1");
+    Mat mscale = GetScaleMatrix(adj.scale, adj.scale, adj.rotate_centerx, adj.rotate_centery);
+    Logger("2");    
+    Mat mtran = GetTranslationMatrix(adj.trans_x, adj.trans_y);
+    Logger("3");    
+    Mat mscaleout = GetScaleMatrix(1, 1);
+    Logger("4");    
+
+    Mat mfm = mscaleout * mtran * mscale * mrot;
+    Logger("5");        
+    for( int i = 0 ; i < mfm.rows; i ++)
+        for(int j = 0 ; j < mfm.cols; j ++)
+            Logger("[%d][%d] %f ", i, j , mfm.at<float>(i,j));
+
+    Mat mret = mfm(Rect(0, 0, 3, 2));
+    Logger("6");    
+    for( int i = 0 ; i < mret.rows; i ++)
+        for(int j = 0 ; j < mret.cols; j ++)
+            Logger("[%d][%d] %f ", i, j , mret.at<float>(i,j));
+
+
+    Mat final;
+    warpAffine(cur_query->ori_img, final, mret, Size(cur_query->ori_img.cols, cur_query->ori_img.rows));
+
+    static int index = 0;
+    char filename[30] = { 0, };        
+    sprintf(filename, "saved/%2d_perspective.png", index);
+    imwrite(filename, final);
+}
+
+Mat Extractor::GetRotationMatrix(float rad, float cx, float cy) {
+
+    Mat m = Mat::eye(3, 3, CV_32FC1);
+    if( rad == 0)
+        return m;
+    
+    Mat mtrana, mtranb, mrot;
+    mtrana = GetTranslationMatrix(-cx, -cy);
+    mrot = GetRotationMatrix(rad);
+    mtranb = GetTranslationMatrix(cx, cy);
+
+    m = mtranb * mrot * mtrana;
+    return m;
+
+}
+
+Mat Extractor::GetScaleMatrix(float scalex, float scaley, float cx, float cy) {
+
+    Mat m = Mat::eye(3, 3, CV_32FC1);
+
+    if( scalex == 0 && scaley == 0)
+        return m;
+
+    Mat mtrana, mtranb, mscale;
+
+    mtrana = GetTranslationMatrix(-cx, -cy);
+    mscale = GetScaleMatrix(scalex, scaley);
+    mtranb = GetTranslationMatrix(cx, cy);
+
+    m = mtranb * mscale * mtrana;
+    return m;
+}
+
+Mat Extractor::GetScaleMatrix(float scalex, float scaley) {
+
+    Mat m = Mat::eye(3, 3, CV_32FC1);
+    if (scalex == 0 && scaley == 0)
+        return m;
+    
+    m.at<float>(0, 0) = scalex;
+    m.at<float>(1, 1) = scaley;
+    return m;
+
+}
+
+Mat Extractor::GetTranslationMatrix(float tx, float ty) {
+
+    Mat m = Mat::eye(3, 3, CV_32FC1);
+    if (tx == 0 && ty == 0)
+        return m;
+    
+    m.at<float>(0, 2) = tx;
+    m.at<float>(1, 2) = ty;
+    return m;
+}
+
+Mat Extractor::GetRotationMatrix(float rad) {
+
+    Mat m = Mat::eye(3, 3, CV_32FC1);
+    if (rad == 0)
+        return m;
+    
+    m.at<float>(0, 0) = (float)cos(rad);
+    m.at<float>(0, 1) = (float)-sin(rad);
+    m.at<float>(1, 0) = (float)sin(rad);
+    m.at<float>(1, 1) = (float)cos(rad);
+
+    return m;
+
+}
+

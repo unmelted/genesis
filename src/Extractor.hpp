@@ -16,6 +16,7 @@
 #include <filesystem>
 #include <fstream>
 #include <vector>
+#include <cmath>
 #include <opencv2/opencv.hpp>
 #include <opencv2/highgui/highgui.hpp>
 #include <opencv2/features2d/features2d.hpp>
@@ -68,9 +69,18 @@ private :
     int CalVirtualRod();
     int SolvePnP();
     int SolveRnRbyH();
-    int CalAdjustData();
+    ADJST CalAdjustData();
     int Warping();
     int WarpingStep1();
     int WarpingStep2();
-    
+    int AdjustImage(ADJST adj);
+
+    Point2f GetRotatePoint(Point2f ptCenter, Point2f ptRot, double dbAngle);
+    Mat GetRotationMatrix(float rad, float cx, float cy);    
+    Mat GetScaleMatrix(float scalex, float scaley, float cx, float cy);    
+    Mat GetScaleMatrix(float scalex, float scaley);        
+    Mat GetTranslationMatrix(float tx, float ty);
+
+    Mat GetRotationMatrix(float rad);    
+    Mat GetMarginMatrix(int width, int height, int marginx, int marginy, int marginw, int marginh);
 };
