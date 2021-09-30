@@ -66,6 +66,17 @@ typedef struct _maindata {
 
 } SCENE;
 
+typedef struct _adj { 
+    double angle;
+    double scale;
+    double trans_x;
+    double trans_y;
+    double rotate_centerx;
+    double rotate_centery;
+    Rect rect;
+
+} ADJST;
+
 typedef struct _PARAM {
     int ground;     //Groud type
     int count;      // Region point count

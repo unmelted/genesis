@@ -725,6 +725,7 @@ int Extractor::CalAdjustData()
     double interval = cur_query->rod_norm - cur_train->rod_norm;
     double agvx = (cur_train->center.x + cur_query->center.x)/2;
     double agvy = (cur_train->center.y + cur_query->center.y)/2;
+    
 
 }
 
@@ -855,16 +856,11 @@ int Extractor::VerifyNumeric() {
 #endif
 
 #if 1
-        if (index == 0 ) {
-            SetCurTrainScene(&p->world);
-            SetCurQueryScene(&cal_group[index]);
-        }
-        else if (index > 0 ) {
-            SetCurTrainScene(&cal_group[index-1]);
-            SetCurQueryScene(&cal_group[index]);
+        SetCurTrainScene(&p->world);
+        SetCurQueryScene(&cal_group[index]);
 
-            SolvePnP();
-            Warping();
+        SolvePnP();
+        WarpingStep2();
 
         }
 #endif
@@ -874,6 +870,11 @@ int Extractor::VerifyNumeric() {
     }
 
     Logger("Verify Done.");
+}
+
+int Extractor::WarpingStep2(){
+
+
 }
 
 int Extractor::WarpingStep1()

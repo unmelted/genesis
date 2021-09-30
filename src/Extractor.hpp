@@ -71,6 +71,6 @@ private :
     int CalAdjustData();
     int Warping();
     int WarpingStep1();
-
-
+    int WarpingStep2();
+    
 };
