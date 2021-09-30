@@ -69,7 +69,8 @@ void Process(int cnt, int* region, char* img_path)
 {
         string imgset(img_path);    
         Extractor* ext = new Extractor(imgset, cnt, region);
-        ext->Execute();
-        ext->DrawInfo();
+        //ext->Execute();
+        ext->VerifyNumeric();
+        //ext->DrawInfo();
         
 }

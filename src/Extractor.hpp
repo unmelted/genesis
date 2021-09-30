@@ -16,6 +16,7 @@
 #include <filesystem>
 #include <fstream>
 #include <vector>
+#include <cmath>
 #include <opencv2/opencv.hpp>
 #include <opencv2/highgui/highgui.hpp>
 #include <opencv2/features2d/features2d.hpp>
@@ -34,6 +35,7 @@ public :
     Extractor(string& imgset, int cnt , int* roi);
     ~Extractor();
     int Execute();
+    int VerifyNumeric();
     void DrawInfo();
     PARAM* p;
 
@@ -44,13 +46,16 @@ public :
 private :
 
     bool is_first;
+    bool verify_mode = false;
+
     SCENE* cur_train = 0;
     SCENE* cur_query = 0;
 
     vector<Mat>LoadImages(const string& path);
     void SaveImageSet(vector<Mat>& images);
-    void InitializeData(int* roi);
-    void NormalizePoint(Pt* fpt, int maxrange);
+    void InitializeData(int cnt, int* roi);
+    int UpdateConfig();
+    void NormalizePoint(SCENE* sc, int maxrange);
     int CalculateCenter(SCENE* sc1, SCENE* sc2);
 
 
@@ -64,7 +69,18 @@ private :
     int CalVirtualRod();
     int SolvePnP();
     int SolveRnRbyH();
-    int CalAdjustData();
+    ADJST CalAdjustData();
     int Warping();
+    int WarpingStep1();
+    int WarpingStep2();
+    int AdjustImage(ADJST adj);
 
+    Point2f GetRotatePoint(Point2f ptCenter, Point2f ptRot, double dbAngle);
+    Mat GetRotationMatrix(float rad, float cx, float cy);    
+    Mat GetScaleMatrix(float scalex, float scaley, float cx, float cy);    
+    Mat GetScaleMatrix(float scalex, float scaley);        
+    Mat GetTranslationMatrix(float tx, float ty);
+
+    Mat GetRotationMatrix(float rad);    
+    Mat GetMarginMatrix(int width, int height, int marginx, int marginy, int marginw, int marginh);
 };

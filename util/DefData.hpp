@@ -30,14 +30,26 @@ typedef struct _Pt
     _Pt() { x = 0, y = 0; z = 0;};
 } Pt;
 
+typedef struct _FPt
+{    
+    float x;
+    float y;
+    float z;
+    _FPt(float a, float b ) {
+        x = a; y = b; z = 0.0;
+    };
+    _FPt() { x = 0.0, y = 0.0; z = 0.0;};
+} FPt;
+
 typedef struct _maindata {
     int id = 0;
     Mat img;
     Mat ori_img;
     
     Pt four_pt[4];
+    FPt four_fpt[4];    
     Pt center;
-    Mat normal;
+    float normal[2][3];
 
     Mat rot_matrix;
     Mat trans_matrix;
@@ -54,17 +66,28 @@ typedef struct _maindata {
 
 } SCENE;
 
+typedef struct _adj { 
+    double angle;
+    double scale;
+    double trans_x;
+    double trans_y;
+    double rotate_centerx;
+    double rotate_centery;
+    Rect rect;
+
+} ADJST;
+
 typedef struct _PARAM {
     int ground;     //Groud type
     int count;      // Region point count
 
-    const int blur_ksize = 19;
-    const float blur_sigma = 1;
-    const int desc_byte = 32;
-    const bool use_ori = true;
-    const int nms_k = 23;
-    const int fast_k = 24;
-    const int minx = 0;
+    int blur_ksize = 19;
+    float blur_sigma = 1;
+    int desc_byte = 32;
+    bool use_ori = true;
+    int nms_k = 23;
+    int fast_k = 24;
+    int minx = 0;
     int p_scale = 1;
     
 
@@ -72,12 +95,11 @@ typedef struct _PARAM {
     int pheight = 2160; //4K height
     float sensor_size = 17.30 / 1.35;
     float focal = 3840;
-    vector<float>camera_matrix;
-    vector<float>skew_coeff;
+    float* camera_matrix;
+    float* skew_coeff;
 
-    SCENE world;    // World Coord 4 point
-
-    Pt* region;     // Point array
+    SCENE* world;    // World Coord 4 point
+    Pt* region;     // Point array for polygon (ROI)
 
 } PARAM;
 
