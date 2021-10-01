@@ -947,21 +947,26 @@ int Extractor::VerifyNumeric() {
 
         cal_group.push_back(sc);
 
-#if 0
-        if (index > 0 ) {
-            SetCurTrainScene(&cal_group[index-1]);
-            SetCurQueryScene(&cal_group[index]);
+#if 1
+        SetCurTrainScene(p->world);
+        SetCurQueryScene(&cal_group[index]);
 
-            //PostProcess();
-            WarpingStep1();
+        //PostProcess();
+        SolvePnP();
+        
+        if( index > 0 ) {
+            ADJST adj = CalAdjustData();                    
+            AdjustImage(adj);        
         }
+        //WarpingStep1();
         is_first = false;
         index++;
+
     }
 
 #endif
 
-#if 1
+#if 0
         SetCurTrainScene(p->world);
         SetCurQueryScene(&cal_group[index]);
 
