@@ -69,16 +69,16 @@ void Extractor::InitializeData(int cnt, int *roi)
 
     p->world = new SCENE();
     p->world->four_pt[0].x = 330;
-    p->world->four_pt[0].y = 602;
+    p->world->four_pt[0].y = 601;
     p->world->four_pt[1].x = 473;
-    p->world->four_pt[1].y = 602;
+    p->world->four_pt[1].y = 601;
     p->world->four_pt[2].x = 490;
-    p->world->four_pt[2].y = 709;
+    p->world->four_pt[2].y = 710;
     p->world->four_pt[3].x = 310;
     p->world->four_pt[3].y = 709;
     p->world->center.x = 400;
     p->world->center.y = 656;
-    p->world->rod_norm = 10000;
+    p->world->rod_norm = 100;
 
     //p->world->normal = (float *)g_os_malloc(sizeof(float)* 6);
     p->camera_matrix = (float *)g_os_malloc(sizeof(float) * 9);
@@ -720,6 +720,11 @@ int Extractor::SolvePnP()
     {
         cur_query->rod_rotation_matrix = getRotationMatrix2D(Point2f(cur_query->center.x, cur_query->center.y), degree, (cur_train->rod_norm / cur_query->rod_norm));
     }
+
+    for( int i = 0 ; i < cur_query->rod_rotation_matrix.rows; i ++)
+        for(int j = 0 ; j < cur_query->rod_rotation_matrix.cols; j ++)
+            Logger("[%d][%d] %f ", i, j , cur_query->rod_rotation_matrix.at<double>(i,j));
+
 }
 
 ADJST Extractor::CalAdjustData()
@@ -915,30 +920,30 @@ int Extractor::VerifyNumeric() {
         sc.ori_img = img;
         if( index == 0 ){
             sc.id = 0;
-            sc.four_pt[0].x = 960;
-            sc.four_pt[0].y = 830;
-            sc.four_pt[1].x = 2638;
-            sc.four_pt[1].y = 720;
-            sc.four_pt[2].x = 3094;
-            sc.four_pt[2].y = 1466;
-            sc.four_pt[3].x = 1002;
-            sc.four_pt[3].y = 1438;
-            sc.center.x = 1908;
-            sc.center.y = 1078;
+            sc.four_pt[0].x = 916;
+            sc.four_pt[0].y = 1266;
+            sc.four_pt[1].x = 1535;
+            sc.four_pt[1].y = 836;
+            sc.four_pt[2].x = 2905;
+            sc.four_pt[2].y = 881;
+            sc.four_pt[3].x = 2403;
+            sc.four_pt[3].y = 1468;
+            sc.center.x = 1944;
+            sc.center.y = 1077;
 
         }
         else if( index == 1) {
             sc.id = 1;
-            sc.four_pt[0].x = 1056;
-            sc.four_pt[0].y = 807;
-            sc.four_pt[1].x = 2754;
-            sc.four_pt[1].y = 735;
-            sc.four_pt[2].x = 2990;
-            sc.four_pt[2].y = 1495;
-            sc.four_pt[3].x = 915;
-            sc.four_pt[3].y = 1410;
-            sc.center.x = 1917;
-            sc.center.y = 1080;
+            sc.four_pt[0].x = 952;
+            sc.four_pt[0].y = 1288;
+            sc.four_pt[1].x = 1440;
+            sc.four_pt[1].y = 840;
+            sc.four_pt[2].x = 2800;
+            sc.four_pt[2].y = 855;
+            sc.four_pt[3].x = 2479;
+            sc.four_pt[3].y = 1454;
+            sc.center.x = 1914;
+            sc.center.y = 1073;
 
         }
 
