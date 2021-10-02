@@ -65,6 +65,7 @@ void Extractor::InitializeData(int cnt, int *roi)
     p->pwidth = 3840;  //4K width
     p->pheight = 2160; //4K height
     p->sensor_size = 17.30 / 1.35;
+    Logger("Sensor Size -- %d", p->sensor_size);
     p->focal = 3840;
 
     p->world = new SCENE();
@@ -192,12 +193,20 @@ void Extractor::NormalizePoint(SCENE* sc, int maxrange)
         sc->four_fpt[i].x = ((float)sc->four_pt[i].x - minx) * range + marginx;
         sc->four_fpt[i].y = ((float)sc->four_pt[i].y - miny) * range + marginy;
     }
-
+/* 
     sc->normal[0][0] = (400.0 - minx) * range + marginx;
     sc->normal[0][1] = (656.0 - miny) * range + marginy;
     sc->normal[0][2] = 0.0;
     sc->normal[1][0] = (400.0 - minx) * range + marginx;
     sc->normal[1][1] = (656.0 - miny) * range + marginy;
+    sc->normal[1][2] = -100.0;
+ */
+
+    sc->normal[0][0] = 50.0;
+    sc->normal[0][1] = 50.0;
+    sc->normal[0][2] = 0.0;
+    sc->normal[1][0] = 50.0;
+    sc->normal[1][1] = 50.0;
     sc->normal[1][2] = -100.0;
 
 #if _DEBUG
@@ -632,20 +641,23 @@ int Extractor::SolvePnP()
         ppset1.at<float>(i, 1) = cur_train->four_fpt[i].y;
         ppset1.at<float>(i, 2) = cur_train->four_fpt[i].z;
 
-        ppset2.at<float>(i, 0) = (float)cur_query->four_pt[i].x;
-        ppset2.at<float>(i, 1) = (float)cur_query->four_pt[i].y;
+        ppset2.at<float>(i, 0) = (float)cur_query->four_fpt[i].x;
+        ppset2.at<float>(i, 1) = (float)cur_query->four_fpt[i].y;
 
         Logger("ppset %f %f %f -- %f %f", ppset1.at<float>(i, 0), ppset1.at<float>(i, 1), ppset1.at<float>(i, 2),
                ppset2.at<float>(i, 0), ppset2.at<float>(i, 1));
     }
+
     Mat cm(3, 3, CV_32F, p->camera_matrix);
 
     for (int i = 0; i < 3; i++) {
         for (int j = 0; j < 3; j++) {
-            Logger("[%d][%d] %f -- %f ", i, j, p->camera_matrix[i*3 +j], cm.at<float>(i,j));
+            Logger("[%d][%d] %f", i, j, cm.at<float>(i,j));
         }
     }
+    Logger("skew %f %f %f %f ", p->skew_coeff[0], p->skew_coeff[1], p->skew_coeff[2], p->skew_coeff[3]);
 
+    
     Mat sc(4, 1, CV_32F, p->skew_coeff);
     Mat ret1(3, 1, CV_32F);
     Mat ret2(3, 1, CV_32F);
@@ -712,13 +724,21 @@ int Extractor::SolvePnP()
     cur_query->rod_norm = dnorm;
     cur_query->rod_degree = degree;
 
+    float diffnorm = 0;
+    if(is_first)
+        diffnorm = 1;
+    else {
+        diffnorm = cal_group[0].rod_norm /cur_query->rod_norm;        
+        Logger("second train norm %f diff norm %f ", cal_group[0].rod_norm, diffnorm);
+    }
+
     Logger("dnorm %f degree %f", cur_query->rod_norm, cur_query->rod_degree);
     Logger(" ---- ");
     if (is_first)
         cur_query->rod_rotation_matrix = getRotationMatrix2D(Point2f(cur_query->center.x, cur_query->center.y), degree, 1);
     else
     {
-        cur_query->rod_rotation_matrix = getRotationMatrix2D(Point2f(cur_query->center.x, cur_query->center.y), degree, (cur_train->rod_norm / cur_query->rod_norm));
+        cur_query->rod_rotation_matrix = getRotationMatrix2D(Point2f(cur_query->center.x, cur_query->center.y), degree, diffnorm);
     }
 
     for( int i = 0 ; i < cur_query->rod_rotation_matrix.rows; i ++)
@@ -920,39 +940,39 @@ int Extractor::VerifyNumeric() {
         sc.ori_img = img;
         if( index == 0 ){
             sc.id = 0;
-            sc.four_pt[0].x = 916;
-            sc.four_pt[0].y = 1266;
-            sc.four_pt[1].x = 1535;
-            sc.four_pt[1].y = 836;
-            sc.four_pt[2].x = 2905;
-            sc.four_pt[2].y = 881;
-            sc.four_pt[3].x = 2403;
-            sc.four_pt[3].y = 1468;
-            sc.center.x = 1944;
-            sc.center.y = 1077;
+            sc.four_fpt[0].x = 916.3685;
+            sc.four_fpt[0].y = 1266.8764;
+            sc.four_fpt[1].x = 1535.5683;
+            sc.four_fpt[1].y = 836.3326;
+            sc.four_fpt[2].x = 2905.2381;
+            sc.four_fpt[2].y = 881.4742;
+            sc.four_fpt[3].x = 2403.9367;
+            sc.four_fpt[3].y = 1468.9617;
+            sc.center.x = 1944.2695;
+            sc.center.y = 1077.5728;
 
         }
         else if( index == 1) {
             sc.id = 1;
-            sc.four_pt[0].x = 952;
-            sc.four_pt[0].y = 1288;
-            sc.four_pt[1].x = 1440;
-            sc.four_pt[1].y = 840;
-            sc.four_pt[2].x = 2800;
-            sc.four_pt[2].y = 855;
-            sc.four_pt[3].x = 2479;
-            sc.four_pt[3].y = 1454;
-            sc.center.x = 1914;
-            sc.center.y = 1073;
+            sc.four_fpt[0].x = 952.9364;
+            sc.four_fpt[0].y = 1288.5572;
+            sc.four_fpt[1].x = 1440.4313;
+            sc.four_fpt[1].y = 840.5394;
+            sc.four_fpt[2].x = 2800.3415;
+            sc.four_fpt[2].y = 855.5865;
+            sc.four_fpt[3].x = 2479.0112;
+            sc.four_fpt[3].y = 1454.5618;
+            sc.center.x = 1914.4328;
+            sc.center.y = 1073.7937;
 
         }
 
+        cal_group.push_back(sc);
         if (index == 0)
             is_first = true;
 
-        cal_group.push_back(sc);
-
 #if 1
+
         SetCurTrainScene(p->world);
         SetCurQueryScene(&cal_group[index]);
 
@@ -960,6 +980,8 @@ int Extractor::VerifyNumeric() {
         SolvePnP();
         
         if( index > 0 ) {
+
+            SetCurTrainScene(&cal_group[index-1]);
             ADJST adj = CalAdjustData();                    
             AdjustImage(adj);        
         }
@@ -967,6 +989,8 @@ int Extractor::VerifyNumeric() {
         is_first = false;
         index++;
 
+        if(index > 1)
+            break;
     }
 
 #endif
