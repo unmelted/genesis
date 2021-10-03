@@ -48,7 +48,7 @@ typedef struct _maindata {
     
     Pt four_pt[4];
     FPt four_fpt[4];    
-    Pt center;
+    FPt center;
     float normal[2][3];
 
     Mat rot_matrix;
@@ -81,20 +81,20 @@ typedef struct _PARAM {
     int ground;     //Groud type
     int count;      // Region point count
 
-    int blur_ksize = 19;
-    float blur_sigma = 1;
-    int desc_byte = 32;
-    bool use_ori = true;
-    int nms_k = 23;
-    int fast_k = 24;
-    int minx = 0;
-    int p_scale = 1;
+    int blur_ksize;
+    float blur_sigma;
+    int desc_byte;
+    bool use_ori;
+    int nms_k;
+    int fast_k;
+    int minx;
+    int p_scale;
     
 
-    int pwidth = 3840;  //4K width
-    int pheight = 2160; //4K height
-    float sensor_size = 17.30 / 1.35;
-    float focal = 3840;
+    int pwidth;
+    int pheight;
+    float sensor_size;
+    float focal;
     float* camera_matrix;
     float* skew_coeff;
 
