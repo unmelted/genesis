@@ -57,7 +57,8 @@ private :
     int UpdateConfig();
     void NormalizePoint(SCENE* sc, int maxrange);
     int CalculateCenter(SCENE* sc1, SCENE* sc2);
-
+    int DecomposeHomography();
+    int FindHomographyP2P(); 
 
     Mat ProcessImages(Mat& img);
     int GetFeature(SCENE* sc);

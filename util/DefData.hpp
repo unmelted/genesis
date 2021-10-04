@@ -46,7 +46,7 @@ typedef struct _maindata {
     Mat img;
     Mat ori_img;
     
-    Pt four_pt[4];
+    //Pt four_pt[4];
     FPt four_fpt[4];    
     FPt center;
     float normal[2][3];

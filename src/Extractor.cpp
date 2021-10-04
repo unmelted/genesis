@@ -1,4 +1,4 @@
-
+    
 /*****************************************************************************
 *                                                                            *
 *                            Extractor      								 *
@@ -69,16 +69,16 @@ void Extractor::InitializeData(int cnt, int *roi)
     p->focal = 3840;
 
     p->world = new SCENE();
-    p->world->four_pt[0].x = 330;
-    p->world->four_pt[0].y = 601;
-    p->world->four_pt[1].x = 473;
-    p->world->four_pt[1].y = 601;
-    p->world->four_pt[2].x = 490;
-    p->world->four_pt[2].y = 710;
-    p->world->four_pt[3].x = 310;
-    p->world->four_pt[3].y = 709;
-    p->world->center.x = 400;
-    p->world->center.y = 656;
+    p->world->four_fpt[0].x = 330.0;
+    p->world->four_fpt[0].y = 601.0;
+    p->world->four_fpt[1].x = 473.0;
+    p->world->four_fpt[1].y = 601.0;
+    p->world->four_fpt[2].x = 490.0;
+    p->world->four_fpt[2].y = 710.0;
+    p->world->four_fpt[3].x = 310.0;
+    p->world->four_fpt[3].y = 709.0;
+    p->world->center.x = 400.0;
+    p->world->center.y = 656.0;
     p->world->rod_norm = 100;
 
     //p->world->normal = (float *)g_os_malloc(sizeof(float)* 6);
@@ -152,21 +152,21 @@ int Extractor::UpdateConfig()
 void Extractor::NormalizePoint(SCENE* sc, int maxrange)
 {
 
-    float minx = sc->four_pt[0].x;
-    float miny = sc->four_pt[0].y;
-    float maxx = sc->four_pt[0].x;
-    float maxy = sc->four_pt[0].y;
+    float minx = sc->four_fpt[0].x;
+    float miny = sc->four_fpt[0].y;
+    float maxx = sc->four_fpt[0].x;
+    float maxy = sc->four_fpt[0].y;
 
     for (int i = 0; i < 4; i++)
     {
-        if (minx > sc->four_pt[i].x)
-            minx = sc->four_pt[i].x;
-        if (miny > sc->four_pt[i].y)
-            miny = sc->four_pt[i].y;
-        if (maxx < sc->four_pt[i].x)
-            maxx = sc->four_pt[i].x;
-        if (maxy < sc->four_pt[i].y)
-            maxy = sc->four_pt[i].y;
+        if (minx > sc->four_fpt[i].x)
+            minx = sc->four_fpt[i].x;
+        if (miny > sc->four_fpt[i].y)
+            miny = sc->four_fpt[i].y;
+        if (maxx < sc->four_fpt[i].x)
+            maxx = sc->four_fpt[i].x;
+        if (maxy < sc->four_fpt[i].y)
+            maxy = sc->four_fpt[i].y;
     }
 
     Logger("min max %f %f %f %f ", minx, miny, maxx, maxy);
@@ -190,8 +190,8 @@ void Extractor::NormalizePoint(SCENE* sc, int maxrange)
 
     for (int i = 0; i < 4; i++)
     {
-        sc->four_fpt[i].x = ((float)sc->four_pt[i].x - minx) * range + marginx;
-        sc->four_fpt[i].y = ((float)sc->four_pt[i].y - miny) * range + marginy;
+        sc->four_fpt[i].x = ((float)sc->four_fpt[i].x - minx) * range + marginx;
+        sc->four_fpt[i].y = ((float)sc->four_fpt[i].y - miny) * range + marginy;
     }
 /* 
     sc->normal[0][0] = (400.0 - minx) * range + marginx;
@@ -236,6 +236,9 @@ void Extractor::DrawInfo()
         sprintf(filename, "saved/%2d_feature.png", index);
         imwrite(filename, dst);
         index++;
+
+        if(index > 1)
+            break;
 /* 
         for(int i = 0; i < each.ip.size(); i++) {
             Logger("%d, %d  oct %d class %d resp %lf size %lf angle %lf", int(each.ip[i].pt.x), int(each.ip[i].pt.y), each.ip[i].class_id,
@@ -327,7 +330,7 @@ int Extractor::Execute()
             cal_group.push_back(sc);
             SetCurTrainScene(&cal_group[index - 1]);
             SetCurQueryScene(&cal_group[index]);
-            int ret = MakeMatchPair();
+            ret = MakeMatchPair();
         }
 
         if (ret > 0 || sc.id == 0)
@@ -357,8 +360,8 @@ int Extractor::CalculateCenter(SCENE *sc1, SCENE *sc2)
     vector<Point2f> pset2;
     for (int i = 0; i < 4; i++)
     {
-        pset1.push_back(Point2f(float(sc1->four_pt[i].x), float(sc1->four_pt[i].y)));
-        pset2.push_back(Point2f(float(sc2->four_pt[i].x), float(sc2->four_pt[i].y)));
+        pset1.push_back(Point2f(float(sc1->four_fpt[i].x), float(sc1->four_fpt[i].y)));
+        pset2.push_back(Point2f(float(sc2->four_fpt[i].x), float(sc2->four_fpt[i].y)));
     }
 
     Mat h = findHomography(pset1, pset2);
@@ -475,12 +478,15 @@ int Extractor::MakeMatchPair()
     matcher->match(cur_query->desc, cur_train->desc, in);
     sort(in.begin(), in.end());
     Logger("matchees before cut %d  ", in.size());
-    for (int i = 0; i < in.size(); i++)
+    if( in.size() == 0)
+        return 1;
+
+/*     for (int i = 0; i < in.size(); i++)
     {
         Logger("Distance %f imgidx %d trainidx %d queryidx %d", in[i].distance,
                in[i].imgIdx, in[i].trainIdx, in[i].queryIdx);
     }
-
+ */
     int min, max = 0;
     float max_score = in[0].distance * 3;
     Logger("max score %f ", max_score);
@@ -544,7 +550,7 @@ int Extractor::MakeMatchPair()
         float qx = cur_query->ip[it->queryIdx].pt.x;
         float qy = cur_query->ip[it->queryIdx].pt.y;
 
-        Logger("_pt push %f %f %f %f ", tx, ty, qx, qy);
+//        Logger("_pt push %f %f %f %f ", tx, ty, qx, qy);
 
         if ((tx > 0 && ty > 0) && (tx < cur_train->img.cols && ty < cur_train->img.rows) &&
             (qx > 0 && qy > 0) && (qx < cur_query->img.cols && qy < cur_query->img.rows))
@@ -564,11 +570,11 @@ int Extractor::MakeMatchPair()
     query_pt.push_back(Point2f(1460, 279));
 
 #endif
-    //Mat _h = findHomography(train_pt, query_pt, FM_RANSAC);
+    Mat _h = findHomography(train_pt, query_pt, FM_RANSAC);
     //Mat _h = getAffineTransform(query_pt, train_pt);
     //Mat _h = estimateAffine2D(query_pt, train_pt);
     // solvePnp();
-    Mat _h = estimateRigidTransform(query_pt, train_pt, false);
+    //Mat _h = estimateRigidTransform(query_pt, train_pt, false);
 
     cur_query->matrix_fromimg = _h;
     Logger(" h shape : %d %d ", _h.cols, _h.rows);
@@ -590,14 +596,20 @@ int Extractor::MakeMatchPair()
     imwrite(filename, outputImg);
 
     for (int i = 0; i < _h.rows; i++)
-    {
         for (int j = 0; j < _h.cols; j++)
-        {
-            Logger("[%d][%d] %lf ", i, j, _h.at<float>(i, j));
-        }
-    }
+            Logger("[%d][%d] %lf ", i, j, _h.at<double>(i, j));
 
-    Mat fin, fin2;
+    Mat mcenter(3, 1, CV_64F);
+    mcenter.at<double>(0) = cur_train->center.x;
+    mcenter.at<double>(1) = cur_train->center.y;    
+    mcenter.at<double>(2) = 1;
+    Mat mret = _h * mcenter;
+
+    double newx = mret.at<double>(0) / mret.at<double>(2);
+    double newy = mret.at<double>(1) / mret.at<double>(2);    
+    Logger("transformed cetner by matching : %f %f ", newx, newy);
+
+/*     Mat fin, fin2;
     //warpPerspective(cur_train->img, fin, _h, Size(cur_train->img.cols, cur_train->img.rows));
     warpAffine(cur_query->ori_img, fin, _h, Size(cur_query->img.cols * p->p_scale, cur_train->img.rows * p->p_scale));
     //cur_query->img = fin;
@@ -607,7 +619,7 @@ int Extractor::MakeMatchPair()
     warpAffine(cur_query->img, fin2, _h, Size(cur_query->img.cols, cur_train->img.rows));
     sprintf(filename, "saved/%2d_perspective_pp.png", index);
     imwrite(filename, fin2);
-
+ */
     index++;
 #endif
     return matches.size();
@@ -706,19 +718,19 @@ int Extractor::SolvePnP()
     }
 
 
-    Point2f angle_vec = Point2f(pnormal[1].x - pnormal[0].x, pnormal[1].y - pnormal[1].x);
+    Point2f angle_vec = Point2f(pnormal[1].x - pnormal[0].x, pnormal[1].y - pnormal[0].y);
     double degree = fastAtan2(angle_vec.x, angle_vec.y);
     double dnorm = norm(pnormal[0] - pnormal[1]);
 
     if (pnormal[1].y > pnormal[0].y)
     {
-        degree = 360 - degree;
+        degree = 360.0 - degree;
         if (degree >= 360)
             degree -= 360;
     }
     else
     {
-        degree = 180 - degree;
+        degree = 180.0 - degree;
     }
 
     cur_query->rod_norm = dnorm;
@@ -757,8 +769,8 @@ ADJST Extractor::CalAdjustData()
  */    
     double angle = -cur_query->rod_degree;
     if (angle >= -180)
-        angle +=90;
-    else angle += -270;
+        angle += -90;
+    else angle += 270;
 
     double scale = cur_train->rod_norm / cur_query->rod_norm;
     double adjustx = cur_train->center.x - cur_query->center.x;
@@ -858,7 +870,6 @@ ADJST Extractor::CalAdjustData()
 
 int Extractor::SolveRnRbyH()
 {
-
     //homogeneous matrix multiply
     Mat output, result_normal;
     Mat cm(3, 3, CV_32F, p->camera_matrix);
@@ -967,16 +978,45 @@ int Extractor::VerifyNumeric() {
 
         }
 
+        sc.img = ProcessImages(sc.ori_img);
+        int ret = GetFeature(&sc);
         cal_group.push_back(sc);
+
         if (index == 0)
             is_first = true;
 
-#if 1
+#if 1 //step 3
+        if( index == 0 )
+            SetCurTrainScene(p->world);
+        else
+            SetCurTrainScene(&cal_group[index -1]);
+
+        SetCurQueryScene(&cal_group[index]);
+        
+        Logger(" -------- Test Calculaton ");
+
+        if(index > 0) {           
+            FindHomographyP2P(); 
+            ret = MakeMatchPair();
+            //DecomposeHomography();
+        }
+
+        is_first = false;
+        index++;
+
+        if(index > 1)
+            break;
+    }
+    DrawInfo();
+
+#endif
+
+#if 0 //step 2
 
         SetCurTrainScene(p->world);
         SetCurQueryScene(&cal_group[index]);
 
-        //PostProcess();
+
         SolvePnP();
         
         if( index > 0 ) {
@@ -995,7 +1035,7 @@ int Extractor::VerifyNumeric() {
 
 #endif
 
-#if 0
+#if 0 //step1
         SetCurTrainScene(p->world);
         SetCurQueryScene(&cal_group[index]);
 
@@ -1026,8 +1066,8 @@ int Extractor::WarpingStep1()
 
     for (int i = 0; i < 4; i++)
     {
-        t_pset.push_back(Point2f(cur_train->four_pt[i].x, cur_train->four_pt[i].y));
-        q_pset.push_back(Point2f(cur_query->four_pt[i].x, cur_query->four_pt[i].y));
+        t_pset.push_back(Point2f(cur_train->four_fpt[i].x, cur_train->four_fpt[i].y));
+        q_pset.push_back(Point2f(cur_query->four_fpt[i].x, cur_query->four_fpt[i].y));
 
         Logger("t_pset %f %f  -- t_qset %f %f", t_pset[i].x, t_pset[i].y,
                q_pset[i].x, q_pset[i].y);
@@ -1084,8 +1124,74 @@ Point2f Extractor::GetRotatePoint(Point2f ptCenter, Point2f ptRot, double dbAngl
     return ptResult;
 }
 
+int Extractor::DecomposeHomography() {
+
+    Mat _h = cur_query->matrix_fromimg;
+    Mat cm(3, 3, CV_32F, p->camera_matrix);    
+    Logger("_h from img is cols %d rows %d ", _h.cols, _h.rows);
+
+    vector<Mat> Rs_decomp, ts_decomp, normals_decomp;
+
+    int solutions = decomposeHomographyMat(_h, cm, Rs_decomp, ts_decomp, normals_decomp);
+
+    for (int i = 0; i < solutions; i++)
+    {
+        Mat rvec_decomp;
+        Rodrigues(Rs_decomp[i], rvec_decomp);
+        Logger("Solution %d : ", i);
+        Mat rvec_t = rvec_decomp.t();
+        Logger("rvec from homography decomposition: %f %f %f ", rvec_t.at<double>(0), rvec_t.at<double>(1), rvec_t.at<double>(2));
+        Mat ts_decom_t = ts_decomp[i].t();
+        Mat normal_decom_t = normals_decomp[i].t();        
+        Logger("tvec from homography decomposition: %f %f %f ", ts_decom_t.at<double>(0),ts_decom_t.at<double>(1),
+            ts_decom_t.at<double>(2));
+        Logger("plane normal from homography decomposition: %f %f %f ", normal_decom_t.at<double>(0),
+            normal_decom_t.at<double>(1), normal_decom_t.at<double>(2));
+    }
+}
+
+int Extractor::FindHomographyP2P() {
+
+    Mat ppset1(4, 2, CV_32F);
+    Mat ppset2(4, 2, CV_32F);
+    for (int i = 0; i < 4; i++)
+    {
+        ppset1.at<float>(i, 0) = cur_train->four_fpt[i].x;
+        ppset1.at<float>(i, 1) = cur_train->four_fpt[i].y;
+
+        ppset2.at<float>(i, 0) = cur_query->four_fpt[i].x;
+        ppset2.at<float>(i, 1) = cur_query->four_fpt[i].y;
+
+        Logger("ppset %f %f %f -- %f %f", ppset1.at<float>(i, 0), ppset1.at<float>(i, 1),
+               ppset2.at<float>(i, 0), ppset2.at<float>(i, 1));
+    }
+
+    Mat h = findHomography(ppset1, ppset2);
+    for (int i = 0; i < h.rows; i++)
+        for (int j = 0; j < h.cols; j++)
+            Logger("[%d][%d] %lf ", i, j, h.at<double>(i, j));
+        
+    Mat mcenter(3, 1, CV_64F);
+    mcenter.at<double>(0) = cur_train->center.x;
+    mcenter.at<double>(1) = cur_train->center.y;    
+    mcenter.at<double>(2) = 1;
+    Mat mret = h * mcenter;
+
+    double newx = mret.at<double>(0) / mret.at<double>(2);
+    double newy = mret.at<double>(1) / mret.at<double>(2);    
+    Logger("transformed cetner by P2P : %f %f ", newx, newy);
+
+}
+
 int Extractor::AdjustImage(ADJST adj)
 {
+/*     adj.angle = -89.02552;
+    adj.rotate_centerx = 1914.4328;
+    adj.rotate_centery = 1073.7937;
+    adj.scale = 1.01319;
+    adj.trans_x = 0.2191;
+    adj.trans_y = 2.9097;
+ */
     Size sz = Size(cur_query->ori_img.cols, cur_query->ori_img.rows);
     double angle = adj.angle + 90;
     double rad = angle * M_PI/ 180.0;
@@ -1093,22 +1199,19 @@ int Extractor::AdjustImage(ADJST adj)
 
     //Mat flipm = Mat::eye(3, 3, CV_32FC1);
     Mat mrot = GetRotationMatrix(rad, adj.rotate_centerx, adj.rotate_centery);
-    Logger("1");
     Mat mscale = GetScaleMatrix(adj.scale, adj.scale, adj.rotate_centerx, adj.rotate_centery);
-    Logger("2");    
     Mat mtran = GetTranslationMatrix(adj.trans_x, adj.trans_y);
-    Logger("3");    
     Mat mscaleout = GetScaleMatrix(1, 1);
-    Logger("4");    
+
 
     Mat mfm = mscaleout * mtran * mscale * mrot;
-    Logger("5");        
+    Logger("5 assembed mfm matrix ");        
     for( int i = 0 ; i < mfm.rows; i ++)
         for(int j = 0 ; j < mfm.cols; j ++)
             Logger("[%d][%d] %f ", i, j , mfm.at<float>(i,j));
 
     Mat mret = mfm(Rect(0, 0, 3, 2));
-    Logger("6");    
+    Logger("6 mret = submatrix of mfm");    
     for( int i = 0 ; i < mret.rows; i ++)
         for(int j = 0 ; j < mret.cols; j ++)
             Logger("[%d][%d] %f ", i, j , mret.at<float>(i,j));
