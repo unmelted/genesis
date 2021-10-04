@@ -128,7 +128,7 @@ FPt MtrxUtil::TransformPtbyHomography(FPt* in, Mat& homography) {
 Pt MtrxUtil::TransformPtbyHomography(Pt* in, Mat& homography) {
 
     Logger("TransformPt PT start ");
-    Logger("in %d %d ", &in->x, &in->y);
+    Logger("in %d %d ", in->x, in->y);
 
     Mat mcenter(3, 1, CV_64F);
     mcenter.at<double>(0) = (double)in->x;
