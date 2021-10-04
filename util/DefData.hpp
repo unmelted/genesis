@@ -2,6 +2,11 @@
 
 #include <iostream>
 #include <opencv2/opencv.hpp>
+#include <opencv2/highgui/highgui.hpp>
+#include <opencv2/features2d/features2d.hpp>
+#include <opencv2/xfeatures2d.hpp>
+#include <opencv2/calib3d/calib3d.hpp>
+
 #include <string>
 #include <vector>
 #include <stdio.h>
@@ -46,20 +51,18 @@ typedef struct _maindata {
     Mat img;
     Mat ori_img;
     
-    Pt four_pt[4];
+    //Pt four_pt[4];
     FPt four_fpt[4];    
     FPt center;
-    float normal[2][3];
 
     Mat rot_matrix;
     Mat trans_matrix;
-    
+    Point2f normal_vec[2];
+
     double rod_norm;
     double rod_degree;
     Mat rod_rotation_matrix;
 
-    int dim;
-    Pt* roi;
     vector<KeyPoint> ip;
     Mat desc;
     Mat matrix_fromimg;
@@ -89,7 +92,6 @@ typedef struct _PARAM {
     int fast_k;
     int minx;
     int p_scale;
-    
 
     int pwidth;
     int pheight;
@@ -97,9 +99,11 @@ typedef struct _PARAM {
     float focal;
     float* camera_matrix;
     float* skew_coeff;
-
+    float normal[2][3];
+    
     SCENE* world;    // World Coord 4 point
     Pt* region;     // Point array for polygon (ROI)
+    Pt* moved_region;
 
 } PARAM;
 

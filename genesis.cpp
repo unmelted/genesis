@@ -47,6 +47,7 @@ using namespace std;
 }
  */
 void Process(int cnt, int* region, char* img_path);
+void Finish();
 
 extern "C" {
 /*     void Feature(unsigned char* buffers) {
@@ -63,14 +64,22 @@ extern "C" {
         Logger( "received count %d path %s", cnt, img_path);
         Process(cnt, buffers, img_path);
     }
+
+    void Exit() {
+        Finish();
+    }
 }
 
-void Process(int cnt, int* region, char* img_path)
-{
+Extractor* ext;
+void Process(int cnt, int* region, char* img_path) {
         string imgset(img_path);    
-        Extractor* ext = new Extractor(imgset, cnt, region);
-        //ext->Execute();
-        ext->VerifyNumeric();
+        ext = new Extractor(imgset, cnt, region);
+        ext->Execute();
+        //ext->VerifyNumeric();
         //ext->DrawInfo();
         
+}
+
+void Finish() {    
+    ext->~Extractor();
 }
