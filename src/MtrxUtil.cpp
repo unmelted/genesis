@@ -122,10 +122,40 @@ FPt MtrxUtil::TransformPtbyHomography(FPt* in, Mat& homography) {
     return newpt;
 }
 
-Pt* TransformPtbyHomography(Pt* in, Mat& homography) {
+Pt MtrxUtil::TransformPtbyHomography(Pt* in, Mat& homography) {
 
-/*     for() {
+    Mat mcenter(3, 1, CV_64F);
+    mcenter.at<double>(0) = (double)in->x;
+    mcenter.at<double>(1) = (double)in->y;    
+    mcenter.at<double>(2) = 1;
+    Mat mret = homography * mcenter;
 
+    double newx = mret.at<double>(0) / mret.at<double>(2);
+    double newy = mret.at<double>(1) / mret.at<double>(2);    
+    Pt newpt = Pt((int)newx, (int)newy);
+    return newpt;
+}
+
+Point2f MtrxUtil::TransformPtbyHomography(Point2f* in, Mat& homography) {
+
+    Mat mcenter(3, 1, CV_64F);
+    mcenter.at<double>(0) = in->x;
+    mcenter.at<double>(1) = in->y;    
+    mcenter.at<double>(2) = 1;
+    Mat mret = homography * mcenter;
+
+    double newx = mret.at<double>(0) / mret.at<double>(2);
+    double newy = mret.at<double>(1) / mret.at<double>(2);    
+    Point2f newpt = Point2f((float)newx, (float)newy);
+    return newpt;
+}
+
+int MtrxUtil::TransformPtsbyHomography(Pt* in, Mat& homography, int cnt) {
+                
+    for(int i = 0 ; i < cnt ; i ++) {
+        Pt tp = TransformPtbyHomography(&in[i], homography);
+        in[i].x = tp.x;
+        in[i].y = tp.y;
     }
- */
+
 }

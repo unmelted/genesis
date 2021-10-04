@@ -54,11 +54,11 @@ typedef struct _maindata {
     //Pt four_pt[4];
     FPt four_fpt[4];    
     FPt center;
-    float normal[2][3];
 
     Mat rot_matrix;
     Mat trans_matrix;
-    
+    vector<Point2f>normal_vec;
+
     double rod_norm;
     double rod_degree;
     Mat rod_rotation_matrix;
@@ -94,7 +94,6 @@ typedef struct _PARAM {
     int fast_k;
     int minx;
     int p_scale;
-    
 
     int pwidth;
     int pheight;
@@ -102,7 +101,8 @@ typedef struct _PARAM {
     float focal;
     float* camera_matrix;
     float* skew_coeff;
-
+    float normal[2][3];
+    
     SCENE* world;    // World Coord 4 point
     Pt* region;     // Point array for polygon (ROI)
 

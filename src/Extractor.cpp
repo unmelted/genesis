@@ -37,6 +37,11 @@ Extractor::~Extractor()
     g_os_free(p->camera_matrix);
     g_os_free(p->skew_coeff);
     g_os_free(p);
+
+    for(int i = 0 ; i < cal_group.size(); i ++) {
+        Pt* roi = cal_group[i].roi;
+        g_os_free(roi);
+    }
 }
 
 void Extractor::InitializeData(int cnt, int *roi)
@@ -82,17 +87,12 @@ void Extractor::InitializeData(int cnt, int *roi)
     p->world->center.y = 656.0;
     p->world->rod_norm = 100;
 
-    //p->world->normal = (float *)g_os_malloc(sizeof(float)* 6);
+    p->world->dim = p->count;
+    p->world->roi = (Pt *)g_os_malloc(sizeof(Pt) * p->world->dim);
+
     p->camera_matrix = (float *)g_os_malloc(sizeof(float) * 9);
     p->skew_coeff = (float *)g_os_malloc(sizeof(float) * 4);
 
-/*     p->world->normal[0][0] = 50.0;
-    p->world->normal[0][1] = 50.0;
-    p->world->normal[0][2] = 0.0;
-    p->world->normal[1][0] = 50.0;
-    p->world->normal[1][1] = 50.0;
-    p->world->normal[1][2] = -100.0;
- */
     p->world->rod_norm = 0;
     NormalizePoint(p->world, 100);
     p->camera_matrix[0] = p->focal;
@@ -188,12 +188,12 @@ void Extractor::NormalizePoint(SCENE* sc, int maxrange)
     sc->normal[1][2] = -100.0;
  */
 
-    sc->normal[0][0] = 50.0;
-    sc->normal[0][1] = 50.0;
-    sc->normal[0][2] = 0.0;
-    sc->normal[1][0] = 50.0;
-    sc->normal[1][1] = 50.0;
-    sc->normal[1][2] = -100.0;
+    p->normal[0][0] = 50.0;
+    p->normal[0][1] = 50.0;
+    p->normal[0][2] = 0.0;
+    p->normal[1][0] = 50.0;
+    p->normal[1][1] = 50.0;
+    p->normal[1][2] = -100.0;
 
 #if _DEBUG
     Logger("Normalized point 4pt");
@@ -203,7 +203,7 @@ void Extractor::NormalizePoint(SCENE* sc, int maxrange)
     Logger("Normalized point normal.");
     for(int i = 0 ; i < 2 ; i ++)
         for( int j = 0 ; j < 3 ; j ++)
-            Logger("[%d][%d]  %f" , i, j , sc->normal[i][j]);
+            Logger("[%d][%d]  %f" , i, j , p->normal[i][j]);
 
 #endif
 }
@@ -318,6 +318,7 @@ int Extractor::Execute()
             sc.four_fpt[3].y = 1468.9617;
             sc.center.x = 1944.2695;
             sc.center.y = 1077.5728;
+
             cal_group.push_back(sc);            
             is_first = true;
 
@@ -587,9 +588,19 @@ int Extractor::PostProcess()
     Logger("Query center %f %f ", cur_query->center.x, cur_query->center.y);
 
     //move normal vector
+    cur_query->normal_vec[0] = mtrx.TransformPtbyHomography(&cur_query->normal_vec[0], cur_query->matrix_fromimg);
+    cur_query->normal_vec[1] = mtrx.TransformPtbyHomography(&cur_query->normal_vec[1], cur_query->matrix_fromimg);
+    Logger("noraml vec[0] %f %f vec[1] %f %f", cur_query->normal_vec[0].x, cur_query->normal_vec[0].y,
+            cur_query->normal_vec[1].x, cur_query->normal_vec[1].y);
+
     //move region point
+    cur_query->roi = (Pt *)g_os_malloc(sizeof(Pt) * p->count);
+    memcpy(cur_query->roi, cur_train->roi, sizeof(Pt) * p->count);
+    mtrx.TransformPtsbyHomography(cur_query->roi, cur_query->matrix_fromimg, cur_query->dim);
 
-
+    for(int i = 0 ; i < p->count; i++) {
+        Logger("transformed roi [%d] %d, %d ", cur_query->roi[i].x, cur_query->roi[i].y);
+    }
 
     //CalAdjustData();
     //Warping();
@@ -647,7 +658,7 @@ int Extractor::FindBaseCoordfromWd()
 
 
     Mat projectedNormal;
-    Mat tvec(2, 3, CV_32F, p->world->normal);
+    Mat tvec(2, 3, CV_32F, p->normal);
     Logger(" world normal -- %d %d", tvec.rows, tvec.cols);
     for( int i = 0 ; i < tvec.rows; i ++)
         for(int j = 0 ; j < tvec.cols; j ++)
@@ -658,23 +669,25 @@ int Extractor::FindBaseCoordfromWd()
                   projectedNormal);
 
     Logger("project Points is done. ");
-    vector<Point2f>pnormal;
+
     for (int i = 0; i < projectedNormal.rows; i++)
     {
         for (int j = 0; j < projectedNormal.cols; j++)
         {
             Point2f v1 = projectedNormal.at<Point2f>(i, j);
-            pnormal.push_back((v1));
-            Logger("[%d][%d] %f %f  ", i, j, v1.x, v1.y);
+            cur_query->normal_vec.push_back((v1));
+            Logger("normal vector [%d][%d] %f %f  ", i, j, v1.x, v1.y);
         }
     }
 
 
-    Point2f angle_vec = Point2f(pnormal[1].x - pnormal[0].x, pnormal[1].y - pnormal[0].y);
-    double degree = fastAtan2(angle_vec.x, angle_vec.y);
-    double dnorm = norm(pnormal[0] - pnormal[1]);
+    Point2f angle_vec = Point2f(cur_query->normal_vec[1].x - cur_query->normal_vec[0].x, 
+            cur_query->normal_vec[1].y - cur_query->normal_vec[0].y);
 
-    if (pnormal[1].y > pnormal[0].y)
+    double degree = fastAtan2(angle_vec.x, angle_vec.y);
+    double dnorm = norm(cur_query->normal_vec[0] - cur_query->normal_vec[1]);
+
+    if (cur_query->normal_vec[1].y > cur_query->normal_vec[0].y)
     {
         degree = 360.0 - degree;
         if (degree >= 360)
