@@ -21,6 +21,7 @@ using namespace cv;
 
 Extractor::Extractor(string &imgset, int cnt, int *roi)
 {
+    mtrx = MtrxUtil();    
     InitializeData(cnt, roi);
     imgs = LoadImages(imgset);
 
@@ -330,7 +331,7 @@ int Extractor::Execute()
             cal_group.push_back(sc);
             SetCurTrainScene(&cal_group[index - 1]);
             SetCurQueryScene(&cal_group[index]);
-            ret = MakeMatchPair();
+            ret = FindHomographyMatch();
         }
 
         if (ret > 0 || sc.id == 0)
@@ -352,27 +353,6 @@ int Extractor::Execute()
     }
 
     return ERR_NONE;
-}
-
-int Extractor::CalculateCenter(SCENE *sc1, SCENE *sc2)
-{
-    vector<Point2f> pset1;
-    vector<Point2f> pset2;
-    for (int i = 0; i < 4; i++)
-    {
-        pset1.push_back(Point2f(float(sc1->four_fpt[i].x), float(sc1->four_fpt[i].y)));
-        pset2.push_back(Point2f(float(sc2->four_fpt[i].x), float(sc2->four_fpt[i].y)));
-    }
-
-    Mat h = findHomography(pset1, pset2);
-    Mat nCenter = Mat(3, 1, CV_32F);
-    nCenter.at<float>(0) = sc2->center.x;
-    nCenter.at<float>(1) = sc2->center.y;
-    nCenter.at<float>(2) = 1;
-
-    Mat mResult = h * nCenter;
-    sc2->center.x = mResult.at<float>(0) / mResult.at<float>(2);
-    sc2->center.y = mResult.at<float>(1) / mResult.at<float>(2);
 }
 
 Mat Extractor::ProcessImages(Mat &img)
@@ -410,7 +390,7 @@ int Extractor::GetFeature(SCENE *sc)
 
     feature_detector->detect(sc->img, kpt);
     Logger("extracted keypoints count : %d", kpt.size());
-    f_kpt = MaskKeypointWithROI(&kpt);
+    f_kpt = KeypointMasking(&kpt);
     dscr->compute(sc->img, f_kpt, desc);
 
     sc->ip = f_kpt;
@@ -427,7 +407,7 @@ int Extractor::GetFeature(SCENE *sc)
     return ERR_NONE;
 }
 
-vector<KeyPoint> Extractor::MaskKeypointWithROI(vector<KeyPoint> *oip)
+vector<KeyPoint> Extractor::KeypointMasking(vector<KeyPoint> *oip)
 {
 
     vector<KeyPoint> ip;
@@ -461,8 +441,7 @@ vector<KeyPoint> Extractor::MaskKeypointWithROI(vector<KeyPoint> *oip)
     Logger("new vector  %d. left %d  del %d / total ip %d ", ip.size(), left, del, total);
     return ip;
 }
-int Extractor::MakeMatchPair()
-{
+int Extractor::FindHomographyMatch() {
 
     Ptr<DescriptorMatcher> matcher = DescriptorMatcher::create(DescriptorMatcher::FLANNBASED);
 
@@ -541,7 +520,7 @@ int Extractor::MakeMatchPair()
 #endif
 
     vector<Point2f> train_pt, query_pt;
-#if 1
+
     for (vector<DMatch>::const_iterator it = matches.begin(); it != matches.end(); it++)
     {
         float tx = cur_train->ip[it->trainIdx].pt.x;
@@ -559,17 +538,7 @@ int Extractor::MakeMatchPair()
             query_pt.push_back(Point2f(qx, qy));
         }
     }
-#else
-    train_pt.push_back(Point2f(365, 559));
-    query_pt.push_back(Point2f(348, 575));
 
-    train_pt.push_back(Point2f(777, 740));
-    query_pt.push_back(Point2f(813, 748));
-
-    train_pt.push_back(Point2f(1529, 287));
-    query_pt.push_back(Point2f(1460, 279));
-
-#endif
     Mat _h = findHomography(train_pt, query_pt, FM_RANSAC);
     //Mat _h = getAffineTransform(query_pt, train_pt);
     //Mat _h = estimateAffine2D(query_pt, train_pt);
@@ -599,15 +568,8 @@ int Extractor::MakeMatchPair()
         for (int j = 0; j < _h.cols; j++)
             Logger("[%d][%d] %lf ", i, j, _h.at<double>(i, j));
 
-    Mat mcenter(3, 1, CV_64F);
-    mcenter.at<double>(0) = cur_train->center.x;
-    mcenter.at<double>(1) = cur_train->center.y;    
-    mcenter.at<double>(2) = 1;
-    Mat mret = _h * mcenter;
-
-    double newx = mret.at<double>(0) / mret.at<double>(2);
-    double newy = mret.at<double>(1) / mret.at<double>(2);    
-    Logger("transformed cetner by matching : %f %f ", newx, newy);
+    Point2f ttp = mtrx.TransformPtbyHomography(&cur_train->center, _h);
+    Logger("refactoring function %f %f ", ttp.x, ttp.y);
 
 /*     Mat fin, fin2;
     //warpPerspective(cur_train->img, fin, _h, Size(cur_train->img.cols, cur_train->img.rows));
@@ -639,8 +601,6 @@ int Extractor::CalVirtualRod()
 {
     if (is_first || verify_mode)
         SolvePnP();
-    else
-        SolveRnRbyH();
 }
 
 int Extractor::SolvePnP()
@@ -797,10 +757,10 @@ ADJST Extractor::CalAdjustData()
     pt4.y = pt3.y;
 
     Point2f ptcenter(rotatex, rotatey);
-    ptR1 = GetRotatePoint(ptcenter, pt1, radian);
-    ptR2 = GetRotatePoint(ptcenter, pt2, radian);
-    ptR3 = GetRotatePoint(ptcenter, pt3, radian);
-    ptR4 = GetRotatePoint(ptcenter, pt4, radian);
+    ptR1 = mtrx.GetRotatePoint(ptcenter, pt1, radian);
+    ptR2 = mtrx.GetRotatePoint(ptcenter, pt2, radian);
+    ptR3 = mtrx.GetRotatePoint(ptcenter, pt3, radian);
+    ptR4 = mtrx.GetRotatePoint(ptcenter, pt4, radian);
 
     int margin_l = 0;
     int margin_t = 0;
@@ -868,77 +828,6 @@ ADJST Extractor::CalAdjustData()
     return newadj;
 }
 
-int Extractor::SolveRnRbyH()
-{
-    //homogeneous matrix multiply
-    Mat output, result_normal;
-    Mat cm(3, 3, CV_32F, p->camera_matrix);
-    Mat sc(1, 4, CV_32F, p->skew_coeff);
-    Mat tvec(2, 3, CV_32F, cur_train->normal);
-    Mat ret1(3, 1, CV_32F);
-    Mat ret2(3, 1, CV_32F);
-
-//method 1. calculate homogeneous matrix
-    multiply(cur_train->rod_rotation_matrix, cur_query->matrix_fromimg, output);
-
-    Logger(" SolveRnR output -- %d %d", output.rows, output.cols);
-    for( int i = 0 ; i < output.rows; i ++)
-        for(int j = 0 ; j < output.cols; j ++)
-            Logger("[%d][%d] %f ", i, j , output.at<float>(i,j));
-
-    int cnt = decomposeHomographyMat(output, cm,
-                        ret1, ret2, result_normal);
-
-    cur_query->rot_matrix = ret1;
-    cur_query->trans_matrix = ret2;
-
-    Logger(" SolveRnR result_normal -- %d %d", result_normal.rows, result_normal.cols);
-    for( int i = 0 ; i < result_normal.rows; i ++)
-        for(int j = 0 ; j < result_normal.cols; j ++)
-            Logger("[%d][%d] %f ", i, j , result_normal.at<float>(i,j));
-
-
-    if (cnt > 1)
-        Logger("Multiple soulution is occurred ..");
-
-
-    Mat projectedNormal;
-    projectPoints(tvec, cur_query->rot_matrix, cur_query->trans_matrix,
-                  cm, sc,
-                  projectedNormal);
-
-    Vec2f v0 = projectedNormal.at<Vec2f>(0);
-    Vec2f v1 = projectedNormal.at<Vec2f>(1);
-    Point2f angle_vec = Point2f(v1[0] - v0[0], v1[1] - v0[1]);
-    double degree = fastAtan2(angle_vec.x, angle_vec.y);
-    double dnorm = norm(v0, v1);
-
-    if (v1[1] > v0[1])
-    {
-        degree = 360 - degree;
-        if (degree >= 360)
-            degree -= 360;
-    }
-    else
-    {
-        degree = 180 - degree;
-    }
-
-    cur_query->rod_norm = norm(v0, v1);
-    cur_query->rod_degree = degree;
-    if (is_first)
-        cur_query->rod_rotation_matrix = getRotationMatrix2D(Point2f(cur_query->center.x, cur_query->center.y), degree, 1);
-    else
-    {
-        cur_query->rod_rotation_matrix = getRotationMatrix2D(Point2f(cur_query->center.x, cur_query->center.y), degree, (cur_train->rod_norm / cur_query->rod_norm));
-    }
-
-#if 0
-    //normal vector or grain trasform by homography
-    perspectiveTransform(cur_train->normal, cur_query->normal, cur_query->matrix_fromimg);
-#endif
-}
-
 int Extractor::VerifyNumeric() {
 
     verify_mode = true;
@@ -997,7 +886,7 @@ int Extractor::VerifyNumeric() {
 
         if(index > 0) {           
             FindHomographyP2P(); 
-            ret = MakeMatchPair();
+            ret = FindHomographyMatch();
             //DecomposeHomography();
         }
 
@@ -1104,26 +993,6 @@ int Extractor::WarpingStep1()
     //ROI Warping
 }
 
-Point2f Extractor::GetRotatePoint(Point2f ptCenter, Point2f ptRot, double dbAngle)
-{
-    Point2f ptResult =Point2f();
-
-    // 회전 중심좌표와의 상대좌표
-    ptRot.x = ptRot.x - ptCenter.x;
-    ptRot.y = -(ptRot.y - ptCenter.y);
-
-    double cosx = cos(dbAngle);
-    double sinx = sin(dbAngle);
-
-    ptResult.x = (float)(ptRot.x * cosx - ptRot.y * sinx);
-    ptResult.y = (float)(ptRot.x * sinx + ptRot.y * cosx);
-
-    ptResult.x = ptResult.x + ptCenter.x;
-    ptResult.y = -(ptResult.y - ptCenter.y);
-
-    return ptResult;
-}
-
 int Extractor::DecomposeHomography() {
 
     Mat _h = cur_query->matrix_fromimg;
@@ -1198,10 +1067,10 @@ int Extractor::AdjustImage(ADJST adj)
     Logger("Adjust Image angle %f rad %f ", angle, rad);
 
     //Mat flipm = Mat::eye(3, 3, CV_32FC1);
-    Mat mrot = GetRotationMatrix(rad, adj.rotate_centerx, adj.rotate_centery);
-    Mat mscale = GetScaleMatrix(adj.scale, adj.scale, adj.rotate_centerx, adj.rotate_centery);
-    Mat mtran = GetTranslationMatrix(adj.trans_x, adj.trans_y);
-    Mat mscaleout = GetScaleMatrix(1, 1);
+    Mat mrot = mtrx.GetRotationMatrix(rad, adj.rotate_centerx, adj.rotate_centery);
+    Mat mscale = mtrx.GetScaleMatrix(adj.scale, adj.scale, adj.rotate_centerx, adj.rotate_centery);
+    Mat mtran = mtrx.GetTranslationMatrix(adj.trans_x, adj.trans_y);
+    Mat mscaleout = mtrx.GetScaleMatrix(1, 1);
 
 
     Mat mfm = mscaleout * mtran * mscale * mrot;
@@ -1224,76 +1093,5 @@ int Extractor::AdjustImage(ADJST adj)
     char filename[30] = { 0, };        
     sprintf(filename, "saved/%2d_perspective.png", index);
     imwrite(filename, final);
-}
-
-Mat Extractor::GetRotationMatrix(float rad, float cx, float cy) {
-
-    Mat m = Mat::eye(3, 3, CV_32FC1);
-    if( rad == 0)
-        return m;
-    
-    Mat mtrana, mtranb, mrot;
-    mtrana = GetTranslationMatrix(-cx, -cy);
-    mrot = GetRotationMatrix(rad);
-    mtranb = GetTranslationMatrix(cx, cy);
-
-    m = mtranb * mrot * mtrana;
-    return m;
-
-}
-
-Mat Extractor::GetScaleMatrix(float scalex, float scaley, float cx, float cy) {
-
-    Mat m = Mat::eye(3, 3, CV_32FC1);
-
-    if( scalex == 0 && scaley == 0)
-        return m;
-
-    Mat mtrana, mtranb, mscale;
-
-    mtrana = GetTranslationMatrix(-cx, -cy);
-    mscale = GetScaleMatrix(scalex, scaley);
-    mtranb = GetTranslationMatrix(cx, cy);
-
-    m = mtranb * mscale * mtrana;
-    return m;
-}
-
-Mat Extractor::GetScaleMatrix(float scalex, float scaley) {
-
-    Mat m = Mat::eye(3, 3, CV_32FC1);
-    if (scalex == 0 && scaley == 0)
-        return m;
-    
-    m.at<float>(0, 0) = scalex;
-    m.at<float>(1, 1) = scaley;
-    return m;
-
-}
-
-Mat Extractor::GetTranslationMatrix(float tx, float ty) {
-
-    Mat m = Mat::eye(3, 3, CV_32FC1);
-    if (tx == 0 && ty == 0)
-        return m;
-    
-    m.at<float>(0, 2) = tx;
-    m.at<float>(1, 2) = ty;
-    return m;
-}
-
-Mat Extractor::GetRotationMatrix(float rad) {
-
-    Mat m = Mat::eye(3, 3, CV_32FC1);
-    if (rad == 0)
-        return m;
-    
-    m.at<float>(0, 0) = (float)cos(rad);
-    m.at<float>(0, 1) = (float)-sin(rad);
-    m.at<float>(1, 0) = (float)sin(rad);
-    m.at<float>(1, 1) = (float)cos(rad);
-
-    return m;
-
 }
 

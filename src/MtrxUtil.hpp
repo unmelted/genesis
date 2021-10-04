@@ -13,14 +13,8 @@
     Description     : MtrxUtil.hpp
     Notes           : Matrix calculate uility
 */
-#include <fstream>
-#include <vector>
+
 #include <cmath>
-#include <opencv2/opencv.hpp>
-#include <opencv2/highgui/highgui.hpp>
-#include <opencv2/features2d/features2d.hpp>
-#include <opencv2/xfeatures2d.hpp>
-#include <opencv2/calib3d/calib3d.hpp>
 #include "../util/DefData.hpp"
 #include "../util/Pip.hpp"
 
@@ -31,5 +25,14 @@ using namespace cv;
 
 class MtrxUtil {
 
+public:
 
+    Point2f GetRotatePoint(Point2f ptCenter, Point2f ptRot, double dbAngle);
+    Mat GetRotationMatrix(float rad, float cx, float cy);
+    Mat GetScaleMatrix(float scalex, float scaley, float cx, float cy);
+    Mat GetScaleMatrix(float scalex, float scaley);
+    Mat GetTranslationMatrix(float tx, float ty);
+    Mat GetRotationMatrix(float rad);
+
+    Point2f TransformPtbyHomography(FPt* in, Mat& homography);
 };
