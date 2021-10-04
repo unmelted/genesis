@@ -57,14 +57,12 @@ typedef struct _maindata {
 
     Mat rot_matrix;
     Mat trans_matrix;
-    vector<Point2f>normal_vec;
+    Point2f normal_vec[2];
 
     double rod_norm;
     double rod_degree;
     Mat rod_rotation_matrix;
 
-    int dim;
-    Pt* roi;
     vector<KeyPoint> ip;
     Mat desc;
     Mat matrix_fromimg;
@@ -105,6 +103,7 @@ typedef struct _PARAM {
     
     SCENE* world;    // World Coord 4 point
     Pt* region;     // Point array for polygon (ROI)
+    Pt* moved_region;
 
 } PARAM;
 

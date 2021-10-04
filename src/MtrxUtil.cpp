@@ -110,9 +110,12 @@ Mat MtrxUtil::GetRotationMatrix(float rad) {
 
 FPt MtrxUtil::TransformPtbyHomography(FPt* in, Mat& homography) {
 
+    Logger("TransformPt FPT start ");
+    Logger("in %f %f ", in->x, in->y);
+
     Mat mcenter(3, 1, CV_64F);
-    mcenter.at<double>(0) = in->x;
-    mcenter.at<double>(1) = in->y;    
+    mcenter.at<double>(0) = (double)in->x;
+    mcenter.at<double>(1) = (double)in->y;    
     mcenter.at<double>(2) = 1;
     Mat mret = homography * mcenter;
 
@@ -123,6 +126,9 @@ FPt MtrxUtil::TransformPtbyHomography(FPt* in, Mat& homography) {
 }
 
 Pt MtrxUtil::TransformPtbyHomography(Pt* in, Mat& homography) {
+
+    Logger("TransformPt PT start ");
+    Logger("in %d %d ", &in->x, &in->y);
 
     Mat mcenter(3, 1, CV_64F);
     mcenter.at<double>(0) = (double)in->x;
@@ -138,6 +144,9 @@ Pt MtrxUtil::TransformPtbyHomography(Pt* in, Mat& homography) {
 
 Point2f MtrxUtil::TransformPtbyHomography(Point2f* in, Mat& homography) {
 
+    Logger("TransformPt Point2f  start ");
+    Logger("in %f %f ", in->x, in->y);
+
     Mat mcenter(3, 1, CV_64F);
     mcenter.at<double>(0) = in->x;
     mcenter.at<double>(1) = in->y;    
@@ -147,12 +156,15 @@ Point2f MtrxUtil::TransformPtbyHomography(Point2f* in, Mat& homography) {
     double newx = mret.at<double>(0) / mret.at<double>(2);
     double newy = mret.at<double>(1) / mret.at<double>(2);    
     Point2f newpt = Point2f((float)newx, (float)newy);
+    Logger(" TransformPt Point2f end %f %f ", newx, newy);
     return newpt;
 }
 
 int MtrxUtil::TransformPtsbyHomography(Pt* in, Mat& homography, int cnt) {
-                
+    
+    Logger(" Start Transform PTS ");
     for(int i = 0 ; i < cnt ; i ++) {
+        Logger(" check .. in[i] %d %d ", in[i].x, in[i].y );
         Pt tp = TransformPtbyHomography(&in[i], homography);
         in[i].x = tp.x;
         in[i].y = tp.y;

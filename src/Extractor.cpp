@@ -33,15 +33,12 @@ Extractor::Extractor(string &imgset, int cnt, int *roi)
 Extractor::~Extractor()
 {
     g_os_free(p->region);
+    g_os_free(p->moved_region);    
     g_os_free(p->world);
     g_os_free(p->camera_matrix);
     g_os_free(p->skew_coeff);
     g_os_free(p);
 
-    for(int i = 0 ; i < cal_group.size(); i ++) {
-        Pt* roi = cal_group[i].roi;
-        g_os_free(roi);
-    }
 }
 
 void Extractor::InitializeData(int cnt, int *roi)
@@ -71,7 +68,6 @@ void Extractor::InitializeData(int cnt, int *roi)
     p->pwidth = 3840;  //4K width
     p->pheight = 2160; //4K height
     p->sensor_size = 17.30 / 1.35;
-    Logger("Sensor Size -- %d", p->sensor_size);
     p->focal = 3840;
 
     p->world = new SCENE();
@@ -87,8 +83,8 @@ void Extractor::InitializeData(int cnt, int *roi)
     p->world->center.y = 656.0;
     p->world->rod_norm = 100;
 
-    p->world->dim = p->count;
-    p->world->roi = (Pt *)g_os_malloc(sizeof(Pt) * p->world->dim);
+    p->moved_region = (Pt *)g_os_malloc(sizeof(Pt) * p->count);
+    memcpy(&p->moved_region, &p->region, sizeof(Pt) * p->count);   
 
     p->camera_matrix = (float *)g_os_malloc(sizeof(float) * 9);
     p->skew_coeff = (float *)g_os_malloc(sizeof(float) * 4);
@@ -296,14 +292,19 @@ vector<Mat> Extractor::LoadImages(const string &path)
 int Extractor::Execute()
 {
     int index = 0;
+    int ret = -1;
     for (Mat &img : imgs) {
 
         SCENE sc;
-
         sc.id = index;
         sc.ori_img = img;
         sc.img = ProcessImages(img);
-        int ret = GetFeature(&sc);
+        Logger("Execute For loop index %d", index);
+
+        if (index == 0)
+            is_first = true;      
+
+        ret = GetFeature(&sc);            
 
         if (index == 0) {
 
@@ -320,19 +321,20 @@ int Extractor::Execute()
             sc.center.y = 1077.5728;
 
             cal_group.push_back(sc);            
-            is_first = true;
 
             SetCurTrainScene(p->world);
             SetCurQueryScene(&cal_group[index]);
             ret = FindBaseCoordfromWd();
         }
         else {
-
             cal_group.push_back(sc);
+
             SetCurTrainScene(&cal_group[index - 1]);
             SetCurQueryScene(&cal_group[index]);
             ret = FindHomographyMatch();
         }
+        
+        Logger("return from FindHomography------  %d", ret);
 
         if (ret > 0 ) {
             PostProcess();
@@ -343,11 +345,6 @@ int Extractor::Execute()
 
         is_first = false;
         index++;
-
-#if _DEBUG
-        if (index >= 1)
-            break;
-#endif
     }
 
     return ERR_NONE;
@@ -407,18 +404,21 @@ int Extractor::GetFeature(SCENE *sc)
 
 vector<KeyPoint> Extractor::KeypointMasking(vector<KeyPoint> *oip)
 {
-
     vector<KeyPoint> ip;
     //Logger("Before masking %d ", oip->size());
     int left = 0;
     int total = 0;
     int del = 0;
 
+    for(int i = 0 ; i < p->count ; i ++) {
+        Logger("roi check %d %d ", p->moved_region[i].x, p->moved_region[i].y);
+    }
+
     for (auto it = oip->begin(); it != oip->end(); it++)
     {
         total++;
         Pt cp(int(it->pt.x), int(it->pt.y));
-        int ret = isInside(p->region, p->count, cp);
+        int ret = isInside(p->moved_region, p->count, cp);
 
         if (ret == 0 && it != oip->end()) {
             del++;
@@ -432,6 +432,7 @@ vector<KeyPoint> Extractor::KeypointMasking(vector<KeyPoint> *oip)
     Logger("new vector  %d. left %d  del %d / total ip %d ", ip.size(), left, del, total);
     return ip;
 }
+
 int Extractor::FindHomographyMatch() {
 
     Ptr<DescriptorMatcher> matcher = DescriptorMatcher::create(DescriptorMatcher::FLANNBASED);
@@ -444,12 +445,13 @@ int Extractor::FindHomographyMatch() {
         cur_train->desc.convertTo(cur_train->desc, CV_32F);
         cur_query->desc.convertTo(cur_query->desc, CV_32F);
     }
+    Logger("Match start %d %d ", cur_train->ip.size(), cur_query->ip.size());
 
     matcher->match(cur_query->desc, cur_train->desc, in);
     sort(in.begin(), in.end());
     Logger("matchees before cut %d  ", in.size());
     if( in.size() == 0)
-        return 1;
+        return -1;
 
 /*     for (int i = 0; i < in.size(); i++)
     {
@@ -559,9 +561,9 @@ int Extractor::FindHomographyMatch() {
         for (int j = 0; j < _h.cols; j++)
             Logger("[%d][%d] %lf ", i, j, _h.at<double>(i, j));
 
-    FPt ttp = mtrx.TransformPtbyHomography(&cur_train->center, _h);
+/*     FPt ttp = mtrx.TransformPtbyHomography(&cur_train->center, _h);
     Logger("refactoring function %f %f ", ttp.x, ttp.y);
-
+ */
 /*     Mat fin, fin2;
     //warpPerspective(cur_train->img, fin, _h, Size(cur_train->img.cols, cur_train->img.rows));
     warpAffine(cur_query->ori_img, fin, _h, Size(cur_query->img.cols * p->p_scale, cur_train->img.rows * p->p_scale));
@@ -588,18 +590,23 @@ int Extractor::PostProcess()
     Logger("Query center %f %f ", cur_query->center.x, cur_query->center.y);
 
     //move normal vector
-    cur_query->normal_vec[0] = mtrx.TransformPtbyHomography(&cur_query->normal_vec[0], cur_query->matrix_fromimg);
-    cur_query->normal_vec[1] = mtrx.TransformPtbyHomography(&cur_query->normal_vec[1], cur_query->matrix_fromimg);
+    Logger("noraml vec[0] %f %f vec[1] %f %f", cur_train->normal_vec[0].x, cur_train->normal_vec[0].y,
+            cur_train->normal_vec[1].x, cur_train->normal_vec[1].y);
+
+    cur_query->normal_vec[0] = mtrx.TransformPtbyHomography(&cur_train->normal_vec[0], cur_query->matrix_fromimg);
+    cur_query->normal_vec[1] = mtrx.TransformPtbyHomography(&cur_train->normal_vec[1], cur_query->matrix_fromimg);
     Logger("noraml vec[0] %f %f vec[1] %f %f", cur_query->normal_vec[0].x, cur_query->normal_vec[0].y,
             cur_query->normal_vec[1].x, cur_query->normal_vec[1].y);
 
     //move region point
-    cur_query->roi = (Pt *)g_os_malloc(sizeof(Pt) * p->count);
-    memcpy(cur_query->roi, cur_train->roi, sizeof(Pt) * p->count);
-    mtrx.TransformPtsbyHomography(cur_query->roi, cur_query->matrix_fromimg, cur_query->dim);
+    for(int i = 0 ; i < p->count; i++) {
+        Logger("transformed roi after [%d] %d, %d ", i, p->moved_region[i].x, p->moved_region[i].y);
+    }
+
+    mtrx.TransformPtsbyHomography(p->moved_region, cur_query->matrix_fromimg, p->count);
 
     for(int i = 0 ; i < p->count; i++) {
-        Logger("transformed roi [%d] %d, %d ", cur_query->roi[i].x, cur_query->roi[i].y);
+        Logger("transformed roi after [%d] %d, %d ", i, p->moved_region[i].x, p->moved_region[i].y);
     }
 
     //CalAdjustData();
@@ -608,6 +615,7 @@ int Extractor::PostProcess()
 
 int Extractor::FindBaseCoordfromWd()
 {
+    Logger("FindBaseCoordfromW start ");
     Mat ppset1(4, 3, CV_32F);
     Mat ppset2(4, 2, CV_32F);
     for (int i = 0; i < 4; i++)
@@ -675,7 +683,8 @@ int Extractor::FindBaseCoordfromWd()
         for (int j = 0; j < projectedNormal.cols; j++)
         {
             Point2f v1 = projectedNormal.at<Point2f>(i, j);
-            cur_query->normal_vec.push_back((v1));
+            cur_query->normal_vec[i].x = v1.x;
+            cur_query->normal_vec[i].y = v1.y;
             Logger("normal vector [%d][%d] %f %f  ", i, j, v1.x, v1.y);
         }
     }
@@ -722,6 +731,7 @@ int Extractor::FindBaseCoordfromWd()
         for(int j = 0 ; j < cur_query->rod_rotation_matrix.cols; j ++)
             Logger("[%d][%d] %f ", i, j , cur_query->rod_rotation_matrix.at<double>(i,j));
 
+    return 1;
 }
 
 ADJST Extractor::CalAdjustData()
