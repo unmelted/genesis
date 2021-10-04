@@ -112,21 +112,6 @@ void Extractor::InitializeData(int cnt, int *roi)
     p->skew_coeff[2] = 0;
     p->skew_coeff[3] = 0;
 
-    // 1st camera manual data input
-/*     SCENE sc;
-    sc.id = 0;
-    sc.four_pt[0].x = 960;
-    sc.four_pt[0].y = 830;
-    sc.four_pt[1].x = 2638;
-    sc.four_pt[1].y = 720;
-    sc.four_pt[2].x = 3094;
-    sc.four_pt[2].y = 1466;
-    sc.four_pt[3].x = 1002;
-    sc.four_pt[3].y = 1438;
-    sc.center.x = 1908;
-    sc.center.y = 1078;
-
-    cal_group.push_back(sc); */
     Logger("Data Initalize complete .. ");
 }
 
@@ -311,8 +296,8 @@ vector<Mat> Extractor::LoadImages(const string &path)
 int Extractor::Execute()
 {
     int index = 0;
-    for (Mat &img : imgs)
-    {
+    for (Mat &img : imgs) {
+
         SCENE sc;
 
         sc.id = index;
@@ -320,26 +305,38 @@ int Extractor::Execute()
         sc.img = ProcessImages(img);
         int ret = GetFeature(&sc);
 
-        if (index == 0)
-         {
+        if (index == 0) {
+
+            sc.id = 0;
+            sc.four_fpt[0].x = 916.3685;
+            sc.four_fpt[0].y = 1266.8764;
+            sc.four_fpt[1].x = 1535.5683;
+            sc.four_fpt[1].y = 836.3326;
+            sc.four_fpt[2].x = 2905.2381;
+            sc.four_fpt[2].y = 881.4742;
+            sc.four_fpt[3].x = 2403.9367;
+            sc.four_fpt[3].y = 1468.9617;
+            sc.center.x = 1944.2695;
+            sc.center.y = 1077.5728;
+            cal_group.push_back(sc);            
             is_first = true;
+
             SetCurTrainScene(p->world);
             SetCurQueryScene(&cal_group[index]);
+            ret = FindBaseCoordfromWd();
         }
-        else
-        {
+        else {
+
             cal_group.push_back(sc);
             SetCurTrainScene(&cal_group[index - 1]);
             SetCurQueryScene(&cal_group[index]);
             ret = FindHomographyMatch();
         }
 
-        if (ret > 0 || sc.id == 0)
-        {
+        if (ret > 0 ) {
             PostProcess();
         }
-        else
-        {
+        else {
             Logger("Match Pair Fail. Can't keep going.");
         }
 
@@ -422,17 +419,10 @@ vector<KeyPoint> Extractor::KeypointMasking(vector<KeyPoint> *oip)
         Pt cp(int(it->pt.x), int(it->pt.y));
         int ret = isInside(p->region, p->count, cp);
 
-        if (ret == 0 && it != oip->end())
-        {
+        if (ret == 0 && it != oip->end()) {
             del++;
         }
-        /*          else if (it->pt.x > 900 && it->pt.x < 1040 &&
-                it->pt.y > 365 && it->pt.y < 490) {
-                    Logger("except special case .. ");
-        }
- */
-        else
-        {
+       else  {
             ip.push_back(*it);
             left++;
         }
@@ -568,7 +558,7 @@ int Extractor::FindHomographyMatch() {
         for (int j = 0; j < _h.cols; j++)
             Logger("[%d][%d] %lf ", i, j, _h.at<double>(i, j));
 
-    Point2f ttp = mtrx.TransformPtbyHomography(&cur_train->center, _h);
+    FPt ttp = mtrx.TransformPtbyHomography(&cur_train->center, _h);
     Logger("refactoring function %f %f ", ttp.x, ttp.y);
 
 /*     Mat fin, fin2;
@@ -589,21 +579,23 @@ int Extractor::FindHomographyMatch() {
 
 int Extractor::PostProcess()
 {
-    CalVirtualRod();
     if(is_first)
         return ERR_NONE;
 
-    CalAdjustData();
+    //move centerpoint
+    cur_query->center = mtrx.TransformPtbyHomography(&cur_train->center, cur_query->matrix_fromimg);
+    Logger("Query center %f %f ", cur_query->center.x, cur_query->center.y);
+
+    //move normal vector
+    //move region point
+
+
+
+    //CalAdjustData();
     //Warping();
 }
 
-int Extractor::CalVirtualRod()
-{
-    if (is_first || verify_mode)
-        SolvePnP();
-}
-
-int Extractor::SolvePnP()
+int Extractor::FindBaseCoordfromWd()
 {
     Mat ppset1(4, 3, CV_32F);
     Mat ppset2(4, 2, CV_32F);
@@ -905,9 +897,8 @@ int Extractor::VerifyNumeric() {
         SetCurTrainScene(p->world);
         SetCurQueryScene(&cal_group[index]);
 
+        FindBaseCoordfromWd();
 
-        SolvePnP();
-        
         if( index > 0 ) {
 
             SetCurTrainScene(&cal_group[index-1]);
@@ -928,7 +919,7 @@ int Extractor::VerifyNumeric() {
         SetCurTrainScene(p->world);
         SetCurQueryScene(&cal_group[index]);
 
-        SolvePnP();
+        FindBaseCoordfromWd();
         is_first = false;
         index++;
     }

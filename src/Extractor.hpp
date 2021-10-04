@@ -57,15 +57,14 @@ private :
     
     void SetCurTrainScene(SCENE* sc) { cur_train = sc; };
     void SetCurQueryScene(SCENE* sc) { cur_query = sc; };
+    int FindBaseCoordfromWd();
     int FindHomographyMatch();
-    void NormalizePoint(SCENE* sc, int maxrange);
-    int DecomposeHomography();
     int FindHomographyP2P(); 
 
+    void NormalizePoint(SCENE* sc, int maxrange);
+    int DecomposeHomography();
 
     int PostProcess();
-    int CalVirtualRod();
-    int SolvePnP();
     
     ADJST CalAdjustData();
     int Warping();

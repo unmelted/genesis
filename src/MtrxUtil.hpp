@@ -34,5 +34,6 @@ public:
     Mat GetTranslationMatrix(float tx, float ty);
     Mat GetRotationMatrix(float rad);
 
-    Point2f TransformPtbyHomography(FPt* in, Mat& homography);
+    Pt* TransformPtbyHomography(Pt* in, Mat& homography);
+    FPt TransformPtbyHomography(FPt* in, Mat& homography);
 };

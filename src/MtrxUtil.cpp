@@ -108,7 +108,7 @@ Mat MtrxUtil::GetRotationMatrix(float rad) {
 
 }
 
-Point2f MtrxUtil::TransformPtbyHomography(FPt* in, Mat& homography) {
+FPt MtrxUtil::TransformPtbyHomography(FPt* in, Mat& homography) {
 
     Mat mcenter(3, 1, CV_64F);
     mcenter.at<double>(0) = in->x;
@@ -118,6 +118,14 @@ Point2f MtrxUtil::TransformPtbyHomography(FPt* in, Mat& homography) {
 
     double newx = mret.at<double>(0) / mret.at<double>(2);
     double newy = mret.at<double>(1) / mret.at<double>(2);    
-    Point2f newpt = Point2f((float)newx, (float)newy);
+    FPt newpt = FPt((float)newx, (float)newy);
     return newpt;
+}
+
+Pt* TransformPtbyHomography(Pt* in, Mat& homography) {
+
+/*     for() {
+
+    }
+ */
 }
