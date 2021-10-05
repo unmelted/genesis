@@ -36,7 +36,10 @@ public:
 
     int TransformPtsbyHomography(Pt* in, Mat& homography, int cnt);
     Pt TransformPtbyHomography(Pt* in, Mat& homography);
-    FPt TransformPtbyHomography(FPt* in, Mat& homography);
+    FPt TransformPtbyHomography(FPt in, Mat& homography);
     Point2f TransformPtbyHomography(Point2f* in, Mat& homography);
+
+    FPt TransformPtbyAffine(FPt in, Mat& aff);
+    void TestCal(Mat& M1, Mat& M2);
     
 };

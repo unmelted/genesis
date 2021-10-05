@@ -56,11 +56,11 @@ void Extractor::InitializeData(int cnt, int *roi)
         p->region[i].y = int(roi[j + 1] / p->p_scale);
     }
 
-    p->blur_ksize = 19;
+    p->blur_ksize = 17;
     p->blur_sigma = 1;
     p->desc_byte = 32;
     p->use_ori = true;
-    p->nms_k = 23;
+    p->nms_k = 21;
     p->fast_k = 24;
     p->minx = 0;
     p->p_scale = 1;
@@ -332,6 +332,7 @@ int Extractor::Execute()
             SetCurTrainScene(&cal_group[index - 1]);
             SetCurQueryScene(&cal_group[index]);
             ret = FindHomographyMatch();
+            mtrx.TestCal( cur_train->rod_rotation_matrix, cur_query->matrix_fromimg);            
         }
         
         Logger("return from FindHomography------  %d", ret);
@@ -345,6 +346,8 @@ int Extractor::Execute()
 
         is_first = false;
         index++;
+        if(index == 2)
+            break;
     }
 
     return ERR_NONE;
@@ -532,10 +535,9 @@ int Extractor::FindHomographyMatch() {
         }
     }
 
-    Mat _h = findHomography(train_pt, query_pt, FM_RANSAC);
+    //Mat _h = findHomography(train_pt, query_pt, FM_RANSAC);
     //Mat _h = getAffineTransform(query_pt, train_pt);
-    //Mat _h = estimateAffine2D(query_pt, train_pt);
-    // solvePnp();
+    Mat _h = estimateAffine2D(train_pt, query_pt);
     //Mat _h = estimateRigidTransform(query_pt, train_pt, false);
 
     cur_query->matrix_fromimg = _h;
@@ -586,9 +588,19 @@ int Extractor::PostProcess()
         return ERR_NONE;
 
     //move centerpoint
-    cur_query->center = mtrx.TransformPtbyHomography(&cur_train->center, cur_query->matrix_fromimg);
+    cur_query->center = mtrx.TransformPtbyHomography(cur_train->center, cur_query->matrix_fromimg);
+//    cur_query->center = mtrx.TransformPtbyAffine(cur_train->center, cur_query->matrix_fromimg);
     Logger("Query center %f %f ", cur_query->center.x, cur_query->center.y);
 
+    //4point move
+    for(int i = 0 ; i < 4 ; i ++) {
+            Logger(" four pt move before[%d] %f %f ", i , cur_train->four_fpt[i].x, cur_train->four_fpt[i].y);        
+            FPt newpt = mtrx.TransformPtbyHomography(cur_train->four_fpt[i], cur_query->matrix_fromimg);
+//            FPt newpt = mtrx.TransformPtbyAffine(cur_train->four_fpt[i], cur_query->matrix_fromimg);
+            Logger(" four pt move [%d] %f %f ", i , newpt.x, newpt.y);
+    }
+
+#if 0
     //move normal vector
     cur_query->normal_vec[0] = mtrx.TransformPtbyHomography(&cur_train->normal_vec[0], cur_query->matrix_fromimg);
     cur_query->normal_vec[1] = mtrx.TransformPtbyHomography(&cur_train->normal_vec[1], cur_query->matrix_fromimg);
@@ -605,7 +617,7 @@ int Extractor::PostProcess()
     for(int i = 0 ; i < p->count; i++) {
         Logger("transformed roi after [%d] %d, %d ", i, p->moved_region[i].x, p->moved_region[i].y);
     }
-
+#endif 
     //CalAdjustData();
     //Warping();
 }
