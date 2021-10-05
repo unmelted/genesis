@@ -590,9 +590,6 @@ int Extractor::PostProcess()
     Logger("Query center %f %f ", cur_query->center.x, cur_query->center.y);
 
     //move normal vector
-    Logger("noraml vec[0] %f %f vec[1] %f %f", cur_train->normal_vec[0].x, cur_train->normal_vec[0].y,
-            cur_train->normal_vec[1].x, cur_train->normal_vec[1].y);
-
     cur_query->normal_vec[0] = mtrx.TransformPtbyHomography(&cur_train->normal_vec[0], cur_query->matrix_fromimg);
     cur_query->normal_vec[1] = mtrx.TransformPtbyHomography(&cur_train->normal_vec[1], cur_query->matrix_fromimg);
     Logger("noraml vec[0] %f %f vec[1] %f %f", cur_query->normal_vec[0].x, cur_query->normal_vec[0].y,
@@ -600,7 +597,7 @@ int Extractor::PostProcess()
 
     //move region point
     for(int i = 0 ; i < p->count; i++) {
-        Logger("transformed roi after [%d] %d, %d ", i, p->moved_region[i].x, p->moved_region[i].y);
+        Logger("transformed roi before [%d] %d, %d ", i, p->moved_region[i].x, p->moved_region[i].y);
     }
 
     mtrx.TransformPtsbyHomography(p->moved_region, cur_query->matrix_fromimg, p->count);
@@ -853,6 +850,10 @@ int Extractor::VerifyNumeric() {
         SCENE sc;
         sc.id = index;
         sc.ori_img = img;
+
+        if (index == 0)
+            is_first = true;
+            
         if( index == 0 ){
             sc.id = 0;
             sc.four_fpt[0].x = 916.3685;
@@ -886,70 +887,21 @@ int Extractor::VerifyNumeric() {
         int ret = GetFeature(&sc);
         cal_group.push_back(sc);
 
-        if (index == 0)
-            is_first = true;
-
-#if 1 //step 3
-        if( index == 0 )
-            SetCurTrainScene(p->world);
-        else
-            SetCurTrainScene(&cal_group[index -1]);
-
-        SetCurQueryScene(&cal_group[index]);
-        
-        Logger(" -------- Test Calculaton ");
-
-        if(index > 0) {           
-            FindHomographyP2P(); 
-            ret = FindHomographyMatch();
-            //DecomposeHomography();
-        }
-
-        is_first = false;
-        index++;
-
-        if(index > 1)
-            break;
-    }
-    DrawInfo();
-
-#endif
-
-#if 0 //step 2
-
         SetCurTrainScene(p->world);
         SetCurQueryScene(&cal_group[index]);
+        ret = FindBaseCoordfromWd();
 
-        FindBaseCoordfromWd();
-
-        if( index > 0 ) {
-
-            SetCurTrainScene(&cal_group[index-1]);
-            ADJST adj = CalAdjustData();                    
-            AdjustImage(adj);        
-        }
-        //WarpingStep1();
+        //PostProcess();
+        CalAdjustData();        
         is_first = false;
         index++;
+        Logger("Verify Done.");
 
-        if(index > 1)
+        if(index == 1)
             break;
     }
 
-#endif
-
-#if 0 //step1
-        SetCurTrainScene(p->world);
-        SetCurQueryScene(&cal_group[index]);
-
-        FindBaseCoordfromWd();
-        is_first = false;
-        index++;
-    }
-
-    WarpingStep2();
-#endif    
-    Logger("Verify Done.");
+    return ERR_NONE;
 }
 
 int Extractor::WarpingStep2(){
