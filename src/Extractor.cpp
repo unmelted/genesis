@@ -45,15 +45,15 @@ void Extractor::InitializeData(int cnt, int *roi)
     p = (PARAM *)g_os_malloc(sizeof(PARAM));
     p->count = cnt / 2 - 1;
     p->region = (Pt *)g_os_malloc(sizeof(Pt) * p->count);
-    p->p_scale = 1;
-
+    p->p_scale = 2;    
+    
     for (int i = 0; i < p->count; i++)
     {
         int j = (i * 2) + 1;
         p->region[i].x = int(roi[j] / p->p_scale);
         p->region[i].y = int(roi[j + 1] / p->p_scale);
     }
-
+#if FULL
     p->blur_ksize = 15;
     p->blur_sigma = 0.9;
     p->desc_byte = 32;
@@ -61,10 +61,21 @@ void Extractor::InitializeData(int cnt, int *roi)
     p->nms_k = 17;
     p->fast_k = 21;
     p->minx = 0;
-    p->p_scale = 2;
 
     p->pwidth = 3840;  //4K width
     p->pheight = 2160; //4K height
+#endif    
+    p->blur_ksize = 15;
+    p->blur_sigma = 0.9;
+    p->desc_byte = 32;
+    p->use_ori = true;
+    p->nms_k = 17;
+    p->fast_k = 21;
+    p->minx = 0;
+
+    p->pwidth = 3840;  //4K width
+    p->pheight = 2160; //4K height
+
     p->sensor_size = 17.30 / 1.35;
     p->focal = 3840;
 
@@ -603,7 +614,7 @@ int Extractor::PostProcess()
     //    cur_query->center = mtrx.TransformPtbyAffine(cur_train->center, cur_query->matrix_fromimg);
     Logger("Query center %f %f ", cur_query->center.x, cur_query->center.y);
 
-    //4point move
+    //4point answer
     if (cur_query->id == 1) {
         cur_query->four_fpt[0].x = 952.9364;
         cur_query->four_fpt[0].y = 1288.5572;
