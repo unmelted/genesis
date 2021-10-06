@@ -46,6 +46,11 @@ typedef struct _FPt
     _FPt() { x = 0.0, y = 0.0; z = 0.0;};
 } FPt;
 
+typedef struct _cc {
+    Pt center;
+    int radius;
+} Cr;
+
 typedef struct _maindata {
     int id = 0;
     Mat img;
@@ -83,8 +88,9 @@ typedef struct _adj {
 
 typedef struct _PARAM {
     int ground;     //Groud type
+    int roi_type;
     int count;      // Region point count
-
+    
     int blur_ksize;
     float blur_sigma;
     int desc_byte;
@@ -104,9 +110,15 @@ typedef struct _PARAM {
     
     SCENE* world;    // World Coord 4 point
     Pt* region;     // Point array for polygon (ROI)
+    Cr* circles;
     Pt* moved_region;
 
 } PARAM;
+
+typedef enum roitype {
+    POLYGON,
+    CIRCLE,
+};
 
 typedef enum groundtype
 {

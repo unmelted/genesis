@@ -83,9 +83,9 @@ class Handler(object):
 
     def setRegion(self, rg):
         for i in rg:
-            self.region.append(i)
+            self.region.append(int(i))
 
-        self.dim = len(self.region)
+        self.dim = int(len(self.region) / 3)
         print(self.dim, self.region)
 
     def setImgData(self, imageset):

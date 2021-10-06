@@ -41,19 +41,32 @@ Extractor::~Extractor()
 
 void Extractor::InitializeData(int cnt, int *roi)
 {
-
     p = (PARAM *)g_os_malloc(sizeof(PARAM));
-    p->count = cnt / 2 - 1;
-    p->region = (Pt *)g_os_malloc(sizeof(Pt) * p->count);
-    p->p_scale = 2;    
-    
-    for (int i = 0; i < p->count; i++)
-    {
-        int j = (i * 2) + 1;
-        p->region[i].x = int(roi[j] / p->p_scale);
-        p->region[i].y = int(roi[j + 1] / p->p_scale);
+    p->p_scale = 1;    
+
+    if(p->roi_type == POLYGON) {
+        p->count = (cnt - 1) / 2;                
+        p->region = (Pt *)g_os_malloc(sizeof(Pt) * p->count);        
+        for (int i = 0; i < p->count; i++)
+        {
+            int j = (i * 2) + 1;
+            p->region[i].x = int(roi[j] / p->p_scale);
+            p->region[i].y = int(roi[j + 1] / p->p_scale);
+        }
+    } else if( p->roi_type == CIRCLE) {
+        p->count = (cnt - 1) / 3;        
+        p->circles = (Cr *)g_os_malloc(sizeof(Cr) * p->count);
+        for (int i = 0; i < p->count; i++)
+        {
+            int j = (i * 3) + 1;
+            p->circles[i].center.x = int(roi[j] / p->p_scale);
+            p->circles[i].center.y = int(roi[j + 1] / p->p_scale);
+            p->circles[i].radius = int(roi[j + 2] / p->p_scale);            
+        }
+
     }
-#if FULL
+
+#if FOURK
     p->blur_ksize = 15;
     p->blur_sigma = 0.9;
     p->desc_byte = 32;
@@ -64,7 +77,11 @@ void Extractor::InitializeData(int cnt, int *roi)
 
     p->pwidth = 3840;  //4K width
     p->pheight = 2160; //4K height
-#endif    
+    p->sensor_size = 17.30 / 1.35;
+    p->focal = 3840;
+
+#else
+
     p->blur_ksize = 15;
     p->blur_sigma = 0.9;
     p->desc_byte = 32;
@@ -78,6 +95,7 @@ void Extractor::InitializeData(int cnt, int *roi)
 
     p->sensor_size = 17.30 / 1.35;
     p->focal = 3840;
+#endif
 
     p->world = new SCENE();
     p->world->four_fpt[0].x = 330.0;
@@ -92,9 +110,9 @@ void Extractor::InitializeData(int cnt, int *roi)
     p->world->center.y = 656.0;
     p->world->rod_norm = 100;
 
-    p->moved_region = (Pt *)g_os_malloc(sizeof(Pt) * p->count);
+/*     p->moved_region = (Pt *)g_os_malloc(sizeof(Pt) * p->count);
     memcpy(&p->moved_region, &p->region, sizeof(Pt) * p->count);
-
+ */
     p->camera_matrix = (float *)g_os_malloc(sizeof(float) * 9);
     p->skew_coeff = (float *)g_os_malloc(sizeof(float) * 4);
 
@@ -570,16 +588,14 @@ int Extractor::FindHomographyMatch()
         Logger("Distance %f ", matches[i].distance);
     }
 */
+    static int fi = 0;
     Mat outputImg = cur_train->img.clone();
     drawMatches(cur_query->img, cur_query->ip, cur_train->img, cur_train->ip,
                 matches, outputImg, Scalar::all(-1), Scalar::all(-1), vector<char>(), DrawMatchesFlags::DRAW_RICH_KEYPOINTS);
-    static int index = 0;
-    char filename[30] = {
-        0,
-    };
-    sprintf(filename, "saved/%2d_matchimg.png", index);
+    char filename[30] = { 0,     };
+    sprintf(filename, "saved/%2d_matchimg.png", fi);
     imwrite(filename, outputImg);
-    index++;
+    fi++;
 
     for (int i = 0; i < _h.rows; i++)
         for (int j = 0; j < _h.cols; j++)
