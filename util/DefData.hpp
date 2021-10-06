@@ -21,7 +21,7 @@ typedef enum _err {
     ERR_NONE = 0,
 
 
-} ERR;
+}ERR;
 
 
 typedef struct _Pt
@@ -50,6 +50,7 @@ typedef struct _maindata {
     int id = 0;
     Mat img;
     Mat ori_img;
+    Mat mask_img;
     
     //Pt four_pt[4];
     FPt four_fpt[4];    

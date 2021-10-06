@@ -41,11 +41,11 @@ int EndTimer(TIMER *times)
     return ms;
 }
 
-int LapTimer(TIMER *times)
+float LapTimer(TIMER *times)
 {
     if(times->last_check == 0) return -1;
     clock_t ctime = clock();
-    int ms = ctime - times->last_check;
+    float ms = ((float)ctime - (float)times->last_check)/CLOCKS_PER_SEC;
     times->last_check = ctime;
     return ms;
 }

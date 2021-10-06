@@ -11,14 +11,14 @@
 #include <fstream>
 #include <string>
 #include <stdarg.h>
-#include <chrono>
+#include <time.h>
 
 typedef struct _TIMER {
     unsigned int expire;
     void* routine;
     void* arg;
     short timer_id;
-    bool last_check = 0;
+    int last_check = 0;
 } TIMER;
 
 
@@ -29,7 +29,7 @@ void PassTime();
 
 void StartTimer(TIMER *times);
 int EndTimer(TIMER *times);
-int LapTimer(TIMER *times);
+float LapTimer(TIMER *times);
 
 std::string getSerial();
 std::string getCurrentDateTime( std::string s );

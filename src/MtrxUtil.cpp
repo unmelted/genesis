@@ -110,26 +110,28 @@ Mat MtrxUtil::GetRotationMatrix(float rad) {
 
 FPt MtrxUtil::TransformPtbyHomography(FPt in, Mat& homography) {
 
-    Logger("TransformPt FPT start ");
+/*     Logger("TransformPt FPT start ");
     Logger("... %f %f ", in.x, in.y);
-
+ */
 /*     for (int i = 0; i < homography.rows; i++)
         for (int j = 0; j < homography.cols; j++)
             Logger("Check homo in transform [%d][%d] %f ", i, j, homography.at<double>(i, j));
 
  */    
-    Mat mcenter(2, 1, CV_64F);
+    Mat mcenter(3, 1, CV_64F);
     mcenter.at<double>(0) = (double)in.x;
     mcenter.at<double>(1) = (double)in.y;    
-    //mcenter.at<double>(2) = 1;
+    mcenter.at<double>(2) = 1;
     Mat mret = homography * mcenter;
 
-/*     double newx = mret.at<double>(0) / mret.at<double>(2);
+    double newx = mret.at<double>(0) / mret.at<double>(2);
     double newy = mret.at<double>(1) / mret.at<double>(2);    
- */    
-    double newx = mret.at<double>(0);
+
+/*     double newx = mret.at<double>(0);
     double newy = mret.at<double>(1);
+ */    
     FPt newpt = FPt((float)newx, (float)newy);
+
     return newpt;
 }
 
