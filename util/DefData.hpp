@@ -93,6 +93,7 @@ typedef struct _PARAM {
     int roi_type;
     int count;
     int circle_masking_type;
+    int circle_fixedpt_radius;
     int match_type;
 
     int blur_ksize;

@@ -44,8 +44,8 @@ void Extractor::InitializeData(int cnt, int *roi)
     p = (PARAM *)g_os_malloc(sizeof(PARAM));
     p->p_scale = 2;
     p->roi_type = CIRCLE;
-    //p->circle_masking_type = FOUR_POINT_BASE;
-    p->circle_masking_type = USER_INPUT_CIRCLE;
+    p->circle_masking_type = FOUR_POINT_BASE;
+    //p->circle_masking_type = USER_INPUT_CIRCLE;
 
     if (p->roi_type == POLYGON)
     {
@@ -60,8 +60,10 @@ void Extractor::InitializeData(int cnt, int *roi)
     }
     else if (p->roi_type == CIRCLE)
     {
-        if (p->circle_masking_type == FOUR_POINT_BASE)
+        if (p->circle_masking_type == FOUR_POINT_BASE) {
             p->count = 4;
+            p->circle_fixedpt_radius = 200;
+        }
         else if (p->circle_masking_type == USER_INPUT_CIRCLE)
             p->count = cnt;
 
@@ -373,28 +375,25 @@ Mat Extractor::ProcessImages(Mat &img)
 
 int Extractor::ImageMasking(SCENE *sc)
 {
-
     Logger("Image masking function start ");
-
     Mat mask = Mat::zeros(sc->img.rows, sc->img.cols, CV_8UC1);
 
     if (p->circle_masking_type == FOUR_POINT_BASE)
     {
-        int radius = 200;
         for (int i = 0; i < 4; i++)
         {
             if (is_first)
             {
                 Logger("masking point 1 %f %f ", sc->four_fpt[i].x, sc->four_fpt[i].y);
                 circle(mask, Point((int)sc->four_fpt[i].x/p->p_scale, (int)sc->four_fpt[i].y/p->p_scale),
-                       int(radius/p->p_scale), Scalar(255), -1);
+                       int(p->circle_fixedpt_radius/p->p_scale), Scalar(255), -1);
             }
             else
             {
                 Logger("masking point 2 %f %f ", cal_group.back().four_fpt[i].x, cal_group.back().four_fpt[i].y);
                 circle(mask,
                        Point((int)cal_group.back().four_fpt[i].x/p->p_scale, (int)cal_group.back().four_fpt[i].y/p->p_scale),
-                       int(radius/p->p_scale), Scalar(255), -1);
+                       int(p->circle_fixedpt_radius/p->p_scale), Scalar(255), -1);
             }
         }
     }
