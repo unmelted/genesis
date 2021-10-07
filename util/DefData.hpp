@@ -90,6 +90,7 @@ typedef struct _PARAM {
     int ground;     //Groud type
     int roi_type;
     int count;      // Region point count
+    int circle_masking_type;
     
     int blur_ksize;
     float blur_sigma;
@@ -116,8 +117,13 @@ typedef struct _PARAM {
 } PARAM;
 
 typedef enum roitype {
-    POLYGON,
-    CIRCLE,
+    POLYGON     = 1,
+    CIRCLE      = 2,
+};
+
+typedef enum roi_circle_type {
+    FOUR_POINT_BASE     = 1,
+    USER_INPUT_CIRCLE   = 2,
 };
 
 typedef enum groundtype

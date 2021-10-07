@@ -18,7 +18,9 @@ typedef struct _TIMER {
     void* routine;
     void* arg;
     short timer_id;
-    int last_check = 0;
+    clock_t last_time;
+    bool last_check = 0;
+    
 } TIMER;
 
 
