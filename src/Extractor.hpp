@@ -34,6 +34,7 @@ public :
     PARAM* p;
     MtrxUtil mtrx;
 
+    vector<string> image_paths;
     vector<Mat> imgs;
     vector<SCENE> cal_group;
 
@@ -72,5 +73,6 @@ private :
     int WarpingStep1();
     int WarpingStep2();
     int AdjustImage(ADJST adj);
+    void MakingLog();
 
 };

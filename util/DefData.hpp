@@ -53,6 +53,7 @@ typedef struct _cc {
 
 typedef struct _maindata {
     int id = 0;
+    char filename[100];
     Mat img;
     Mat ori_img;
     Mat mask_img;
@@ -72,6 +73,7 @@ typedef struct _maindata {
     vector<KeyPoint> ip;
     Mat desc;
     Mat matrix_fromimg;
+    Mat matrix_scaledfromimg;
 
 } SCENE;
 
@@ -89,9 +91,10 @@ typedef struct _adj {
 typedef struct _PARAM {
     int ground;     //Groud type
     int roi_type;
-    int count;      // Region point count
+    int count;
     int circle_masking_type;
-    
+    int match_type;
+
     int blur_ksize;
     float blur_sigma;
     int desc_byte;
@@ -115,6 +118,11 @@ typedef struct _PARAM {
     Pt* moved_region;
 
 } PARAM;
+
+typedef enum _match {
+     BEST_MATCH     = 0,
+     KNN_MATCH      = 1,
+};
 
 typedef enum roitype {
     POLYGON     = 1,
