@@ -137,7 +137,7 @@ def center_circle_app():
     w, h = bg_image.size[:2]
     bg_image = bg_image.resize((int(h/scale), int(w/scale)), Image.BILINEAR)
 
-    with open("/Users/kelly/work/genesis/streamlit/saved_state.json", "r") as f:
+    with open("/Users/4dreplay/work/genesis/streamlit/saved_state.json", "r") as f:
         saved_state = json.load(f)
 
     canvas_result = st_canvas(

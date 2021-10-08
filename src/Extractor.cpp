@@ -316,23 +316,21 @@ int Extractor::Execute()
         SaveImage(&sc, 1);
 #endif
 
-        if (index == 0)
-        {
-
+        if (is_first == 0) {
             cal_group.push_back(sc);
 
             SetCurTrainScene(p->world);
             SetCurQueryScene(&cal_group[index]);
-            ret = FindBaseCoordfromWd();
         }
-        else
-        {
+        else {
             cal_group.push_back(sc);
 
             SetCurTrainScene(&cal_group[index - 1]);
             SetCurQueryScene(&cal_group[index]);
-            ret = FindHomographyMatch();
         }
+
+        int ret = Match();
+
         Logger("[%d] match consuming %f ", index, LapTimer(t));
         Logger("return from FindHomography------  %d", ret);
 
@@ -353,6 +351,9 @@ int Extractor::Execute()
             break;
     }
 
+    //Export result to josn file
+    Export();
+    
     return ERR_NONE;
 }
 
@@ -487,15 +488,30 @@ vector<KeyPoint> Extractor::KeypointMasking(vector<KeyPoint> *oip)
     return ip;
 }
 
+int Extractor::Match() {
+    int ret = -1;
+
+    if (is_first == 0) {
+        ret = FindBaseCoordfromWd();
+    } else {
+
+        ret = FindHomographyMatch();
+        if (ret > 10) {
+
+        }
+        else
+            Logger("Match score is too low. ");
+    }
+
+    return ret;
+}
+
 int Extractor::FindHomographyMatch()
 {
 
     Ptr<DescriptorMatcher> matcher = DescriptorMatcher::create(DescriptorMatcher::FLANNBASED);
-
-    vector<vector<DMatch>> in;
     vector<DMatch> matches;
     vector<DMatch> good;
-    const float ratio_thresh = 0.90f;
 
     if (cur_train->desc.type() != CV_32F || cur_query->desc.type() != CV_32F)
     {
@@ -505,6 +521,8 @@ int Extractor::FindHomographyMatch()
     Logger("Match start %d %d ", cur_train->ip.size(), cur_query->ip.size());
 
     if(p->match_type == KNN_MATCH) {
+        vector<vector<DMatch>> in;        
+        const float ratio_thresh = 0.90f;        
         matcher->knnMatch(cur_query->desc, cur_train->desc, in, 2); //knn matcher
         for( int i = 0 ; i < in.size(); i++) {
             if(in[i][0].distance < ratio_thresh * in[i][1].distance) {
@@ -1269,4 +1287,9 @@ void Extractor::MakingLog()
 
     
     ofs.close();
+}
+
+void Extractor::Export() {
+
+
 }

@@ -56,6 +56,8 @@ private :
     int ImageMasking(SCENE* sc);
     int GetFeature(SCENE* sc);
     vector<KeyPoint> KeypointMasking(vector<KeyPoint>* oip);
+    int Match();    
+    void Export();        
     
     void SetCurTrainScene(SCENE* sc) { cur_train = sc; };
     void SetCurQueryScene(SCENE* sc) { cur_query = sc; };
