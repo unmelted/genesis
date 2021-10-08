@@ -94,10 +94,10 @@ void Extractor::InitializeData(int cnt, int *roi)
     } else {
 
         p->blur_ksize = 5;
-        p->blur_sigma = 0.8;
+        p->blur_sigma = 0.7;
         p->desc_byte = 32;
         p->use_ori = true;
-        p->nms_k = 11;
+        p->nms_k = 9;
         p->fast_k = 21;
         p->minx = 0;
 
@@ -663,8 +663,7 @@ vector<DMatch> Extractor::RemoveOutlier(vector<DMatch> matches) {
 
     vector<DMatch> result;
     Logger("Remove Outlier is called %d ", matches.size());
-    const float dist_threshold = 0.3;
-    float deg_threshold = 2.0;    
+    float deg_threshold = 0, dist_threshold = 0;    
     double covar_x = 0, covar_y = 0, covar_deg = 0;
     double covar_dist = 0;
     double t_covar_x = 0, t_covar_y = 0, t_covar_deg = 0;        
@@ -679,23 +678,20 @@ vector<DMatch> Extractor::RemoveOutlier(vector<DMatch> matches) {
         float ty = cur_train->ip[it->trainIdx].pt.y;
         float qx = cur_query->ip[it->queryIdx].pt.x;
         float qy = cur_query->ip[it->queryIdx].pt.y;
-        //xsum += (tx - qx);
-        //ysum += (ty - qy);
-        dist_sum += sqrt( (qx - tx) * (qx - tx) + (qy - ty)*(qy - ty) );
-        float orideg = fastAtan2((qx-tx), (qy-ty));
+        float dx = qx - tx;
+        float dy = qy - ty;
+
+        dist_sum += sqrt( dx * dx + dy * dy );
+        float orideg = fastAtan2( dx, dy);
         if (orideg > 180 )
             orideg -= 180;
         degsum += orideg;
-        Logger(" diff %f %f ", sqrt( (qx - tx) * (qx - tx) + (qy - ty)*(qy - ty) ), orideg);
+//        Logger(" diff %f %f ", sqrt( dx * dx  + dy * dy ), orideg);
     }
 
-    Logger(" sum %f %f ", dist_sum, degsum);
 
-//    xavg = xsum / (float)matches.size();
-//    yavg = ysum / (float)matches.size();     
     distavg = dist_sum / (float)matches.size();
     degavg = degsum / (float)matches.size();
-
     Logger("avg %f %f ", distavg, degavg);
 
     for(vector<DMatch>::const_iterator it = matches.begin(); it != matches.end(); it++) {
@@ -703,44 +699,43 @@ vector<DMatch> Extractor::RemoveOutlier(vector<DMatch> matches) {
         float ty = cur_train->ip[it->trainIdx].pt.y;
         float qx = cur_query->ip[it->queryIdx].pt.x;
         float qy = cur_query->ip[it->queryIdx].pt.y;
+        float dx = qx - tx;
+        float dy = qy - ty;
 
-//        t_covar_x += ((tx - qx) - xavg)*((tx - qx) - xavg);
-//        t_covar_y += ((ty - qy) - yavg)*((ty - qy) - yavg);
-        t_covar_dist += ((sqrt( (qx - tx) * (qx - tx) + (qy - ty)*(qy - ty) ) - distavg) *( sqrt( (qx - tx) * (qx - tx) + (qy - ty)*(qy - ty) ) - distavg));
+        t_covar_dist += (sqrt( dx * dx+ dy * dy)  - distavg) * (sqrt( dx * dx + dy * dy ) - distavg);
 
-        float orideg = fastAtan2((qx-tx), (qy-ty));
+        float orideg = fastAtan2( dx, dy);
         if (orideg > 180 )
             orideg -= 180;
 
         t_covar_deg += (orideg - degavg)*(orideg - degavg);
     }
 
-//    covar_x = sqrt(t_covar_x);
-//    covar_y = sqrt(t_covar_y);
     covar_dist = sqrt(t_covar_dist/(float)matches.size());
     covar_deg = sqrt(t_covar_deg/(float)matches.size());    
 
-    deg_threshold = covar_deg * 0.06;    
-    Logger("covar %f %f , %f %f // %f ", t_covar_dist ,t_covar_deg, covar_dist, covar_deg, deg_threshold);
+    deg_threshold = covar_deg * 0.055;      //soccer set1 0.055
+    dist_threshold = covar_dist * 0.01;     //soccker set1 0.01
+    Logger("covar %f %f threshold %f %f  ", covar_deg, deg_threshold, deg_threshold, dist_threshold);
 
     for(vector<DMatch>::const_iterator it = matches.begin(); it != matches.end(); it++) {
         float tx = cur_train->ip[it->trainIdx].pt.x;
         float ty = cur_train->ip[it->trainIdx].pt.y;
         float qx = cur_query->ip[it->queryIdx].pt.x;
         float qy = cur_query->ip[it->queryIdx].pt.y;
+        float dx = qx - tx;
+        float dy = qy - ty;
 
-//        float mh_distance_x =(abs(tx - qx) - xavg )/covar_x;
-//        float mh_distance_y =(abs(ty - qy) - yavg )/covar_y;
-        float mh_distance_dist = (sqrt( (qx - tx) * (qx - tx) + (qy - ty)*(qy - ty) ) - distavg )/covar_dist;
-        float orideg = fastAtan2((qx-tx), (qy-ty));
+        float mh_distance_dist = abs(sqrt(dx * dx + dy * dy) - distavg )/covar_dist;
+        float orideg = fastAtan2( dx, dy);
         if (orideg > 180 )
             orideg -= 180;
 
-        float mh_distance_deg =abs(orideg - degavg)/covar_deg;
+        float mh_distance_deg = abs(orideg - degavg)/covar_deg;
 
-        Logger(" mh distance %f angle %f -> %f ", mh_distance_dist, orideg, mh_distance_deg);
-        //if( mh_distance_dist > dist_threshold || mh_distance_deg > deg_threshold)
-        if( mh_distance_deg > deg_threshold)        
+        Logger(" mh distance %f -> %f  angle %f -> %f ", sqrt(dx * dx + dy * dy), mh_distance_dist, orideg, mh_distance_deg);
+
+        if( mh_distance_deg > deg_threshold || mh_distance_dist > dist_threshold)
             Logger("mh distance is over limit ");
         else
             result.push_back(*it);
