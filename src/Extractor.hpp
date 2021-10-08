@@ -41,7 +41,6 @@ public :
 
 private :
     TIMER* t;
-    bool is_first;
     bool verify_mode = false;
 
     SCENE* cur_train = 0;
@@ -64,17 +63,19 @@ private :
     int FindBaseCoordfromWd();
     int FindHomographyMatch();
     int FindHomographyP2P(); 
+    vector<DMatch> RefineMatch(vector<DMatch> good);
+    vector<DMatch> RemoveOutlier(vector<DMatch> matches);
+
+    int PostProcess();
+    void MakingLog();
+
 
     void NormalizePoint(SCENE* sc, int maxrange);
     int DecomposeHomography();
-
-    int PostProcess();
-    
     ADJST CalAdjustData();
     int Warping();
     int WarpingStep1();
     int WarpingStep2();
     int AdjustImage(ADJST adj);
-    void MakingLog();
 
 };

@@ -120,22 +120,22 @@ typedef struct _PARAM {
 
 } PARAM;
 
-typedef enum _match {
+enum _match {
      BEST_MATCH     = 0,
      KNN_MATCH      = 1,
 };
 
-typedef enum roitype {
+enum roitype {
     POLYGON     = 1,
     CIRCLE      = 2,
 };
 
-typedef enum roi_circle_type {
+enum roi_circle_type {
     FOUR_POINT_BASE     = 1,
     USER_INPUT_CIRCLE   = 2,
 };
 
-typedef enum groundtype
+typedef enum _groundtype
 {
     BaseballHome,
     BaseballGround,
@@ -153,4 +153,4 @@ typedef enum groundtype
     VolleyballHalf,
     VolleyballGround,
     Football
-} GDT;
+} GROUNDTYPE;
