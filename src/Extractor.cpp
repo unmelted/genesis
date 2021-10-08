@@ -520,6 +520,7 @@ int Extractor::FindHomographyMatch() {
 
     sort(good.begin(), good.end());
     Logger("First matche size %d ", good.size());
+
     matches = RefineMatch(good);
     
     if (matches.size() < 10 ) {
@@ -569,8 +570,6 @@ int Extractor::FindHomographyMatch() {
         cur_query->matrix_scaledfromimg = sc_h;
     }
 
-    Logger(" h shape : %d %d ", _h.cols, _h.rows);
-
 #if defined _DEBUG
     /*         for (int i = 0 ; i < matches.size(); i ++) {
         Logger("Distance %f ", matches[i].distance);
@@ -616,8 +615,6 @@ vector<DMatch> Extractor::RefineMatch(vector<DMatch> good) {
     vector<DMatch>matches;
     vector<DMatch>last;
 
-    Logger("Refine Match start %d %d  match cnt %d ", cur_train->ip.size(), cur_query->ip.size(), good.size());
-
     int *t_hist = (int *)g_os_malloc(sizeof(int) * cur_train->ip.size());
     int *q_hist = (int *)g_os_malloc(sizeof(int) * cur_query->ip.size());
     for (int a = 0; a < cur_train->ip.size(); a++)
@@ -633,14 +630,12 @@ vector<DMatch> Extractor::RefineMatch(vector<DMatch> good) {
             t_hist[good[t].trainIdx]++;
             q_hist[good[t].queryIdx]++;
         }
-        else
-            Logger("double check %d %d ", good[t].trainIdx, good[t].queryIdx);
+//        else
+//            Logger("double check %d %d ", good[t].trainIdx, good[t].queryIdx);
     }
 
     g_os_free(t_hist);
     g_os_free(q_hist);
-
-    Logger("Refine match 1st. left %d", matches.size());
 
     last = RemoveOutlier(matches);
 
@@ -660,7 +655,7 @@ vector<DMatch> Extractor::RefineMatch(vector<DMatch> good) {
     } */
 #endif
 
-    return matches;
+    return last;
 
 };
 
@@ -668,8 +663,87 @@ vector<DMatch> Extractor::RemoveOutlier(vector<DMatch> matches) {
 
     vector<DMatch> result;
     Logger("Remove Outlier is called %d ", matches.size());
-     for(int i = 0; i < matches.size(); i ++) {
-         result.push_back((matches[i]));
+    const float dist_threshold = 0.3;
+    float deg_threshold = 2.0;    
+    double covar_x = 0, covar_y = 0, covar_deg = 0;
+    double covar_dist = 0;
+    double t_covar_x = 0, t_covar_y = 0, t_covar_deg = 0;        
+    double t_covar_dist = 0;
+    double xsum = 0, ysum = 0, degsum = 0;
+    double dist_sum = 0;
+    double xavg = 0, yavg = 0, degavg = 0;
+    double distavg = 0;
+
+    for( vector<DMatch>::const_iterator it = matches.begin(); it != matches.end(); it++) {
+        float tx = cur_train->ip[it->trainIdx].pt.x;
+        float ty = cur_train->ip[it->trainIdx].pt.y;
+        float qx = cur_query->ip[it->queryIdx].pt.x;
+        float qy = cur_query->ip[it->queryIdx].pt.y;
+        //xsum += (tx - qx);
+        //ysum += (ty - qy);
+        dist_sum += sqrt( (qx - tx) * (qx - tx) + (qy - ty)*(qy - ty) );
+        float orideg = fastAtan2((qx-tx), (qy-ty));
+        if (orideg > 180 )
+            orideg -= 180;
+        degsum += orideg;
+        Logger(" diff %f %f ", sqrt( (qx - tx) * (qx - tx) + (qy - ty)*(qy - ty) ), orideg);
+    }
+
+    Logger(" sum %f %f ", dist_sum, degsum);
+
+//    xavg = xsum / (float)matches.size();
+//    yavg = ysum / (float)matches.size();     
+    distavg = dist_sum / (float)matches.size();
+    degavg = degsum / (float)matches.size();
+
+    Logger("avg %f %f ", distavg, degavg);
+
+    for(vector<DMatch>::const_iterator it = matches.begin(); it != matches.end(); it++) {
+        float tx = cur_train->ip[it->trainIdx].pt.x;
+        float ty = cur_train->ip[it->trainIdx].pt.y;
+        float qx = cur_query->ip[it->queryIdx].pt.x;
+        float qy = cur_query->ip[it->queryIdx].pt.y;
+
+//        t_covar_x += ((tx - qx) - xavg)*((tx - qx) - xavg);
+//        t_covar_y += ((ty - qy) - yavg)*((ty - qy) - yavg);
+        t_covar_dist += ((sqrt( (qx - tx) * (qx - tx) + (qy - ty)*(qy - ty) ) - distavg) *( sqrt( (qx - tx) * (qx - tx) + (qy - ty)*(qy - ty) ) - distavg));
+
+        float orideg = fastAtan2((qx-tx), (qy-ty));
+        if (orideg > 180 )
+            orideg -= 180;
+
+        t_covar_deg += (orideg - degavg)*(orideg - degavg);
+    }
+
+//    covar_x = sqrt(t_covar_x);
+//    covar_y = sqrt(t_covar_y);
+    covar_dist = sqrt(t_covar_dist/(float)matches.size());
+    covar_deg = sqrt(t_covar_deg/(float)matches.size());    
+
+    deg_threshold = covar_deg * 0.06;    
+    Logger("covar %f %f , %f %f // %f ", t_covar_dist ,t_covar_deg, covar_dist, covar_deg, deg_threshold);
+
+    for(vector<DMatch>::const_iterator it = matches.begin(); it != matches.end(); it++) {
+        float tx = cur_train->ip[it->trainIdx].pt.x;
+        float ty = cur_train->ip[it->trainIdx].pt.y;
+        float qx = cur_query->ip[it->queryIdx].pt.x;
+        float qy = cur_query->ip[it->queryIdx].pt.y;
+
+//        float mh_distance_x =(abs(tx - qx) - xavg )/covar_x;
+//        float mh_distance_y =(abs(ty - qy) - yavg )/covar_y;
+        float mh_distance_dist = (sqrt( (qx - tx) * (qx - tx) + (qy - ty)*(qy - ty) ) - distavg )/covar_dist;
+        float orideg = fastAtan2((qx-tx), (qy-ty));
+        if (orideg > 180 )
+            orideg -= 180;
+
+        float mh_distance_deg =abs(orideg - degavg)/covar_deg;
+
+        Logger(" mh distance %f angle %f -> %f ", mh_distance_dist, orideg, mh_distance_deg);
+        //if( mh_distance_dist > dist_threshold || mh_distance_deg > deg_threshold)
+        if( mh_distance_deg > deg_threshold)        
+            Logger("mh distance is over limit ");
+        else
+            result.push_back(*it);
     }
 
     Logger(" check calling .. %d ", result.size());
