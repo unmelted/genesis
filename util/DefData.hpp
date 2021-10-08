@@ -21,7 +21,7 @@ typedef enum _err {
     ERR_NONE = 0,
 
 
-} ERR;
+}ERR;
 
 
 typedef struct _Pt
@@ -46,10 +46,17 @@ typedef struct _FPt
     _FPt() { x = 0.0, y = 0.0; z = 0.0;};
 } FPt;
 
+typedef struct _cc {
+    Pt center;
+    int radius;
+} Cr;
+
 typedef struct _maindata {
     int id = 0;
+    char filename[100];
     Mat img;
     Mat ori_img;
+    Mat mask_img;
     
     //Pt four_pt[4];
     FPt four_fpt[4];    
@@ -66,6 +73,7 @@ typedef struct _maindata {
     vector<KeyPoint> ip;
     Mat desc;
     Mat matrix_fromimg;
+    Mat matrix_scaledfromimg;
 
 } SCENE;
 
@@ -82,7 +90,11 @@ typedef struct _adj {
 
 typedef struct _PARAM {
     int ground;     //Groud type
-    int count;      // Region point count
+    int roi_type;
+    int count;
+    int circle_masking_type;
+    int circle_fixedpt_radius;
+    int match_type;
 
     int blur_ksize;
     float blur_sigma;
@@ -103,9 +115,25 @@ typedef struct _PARAM {
     
     SCENE* world;    // World Coord 4 point
     Pt* region;     // Point array for polygon (ROI)
+    Cr* circles;
     Pt* moved_region;
 
 } PARAM;
+
+typedef enum _match {
+     BEST_MATCH     = 0,
+     KNN_MATCH      = 1,
+};
+
+typedef enum roitype {
+    POLYGON     = 1,
+    CIRCLE      = 2,
+};
+
+typedef enum roi_circle_type {
+    FOUR_POINT_BASE     = 1,
+    USER_INPUT_CIRCLE   = 2,
+};
 
 typedef enum groundtype
 {

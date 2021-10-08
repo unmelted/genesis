@@ -30,23 +30,25 @@ void SetTimer(TIMER *times, unsigned int expire, void (*func)(void *), void *arg
 
 void StartTimer(TIMER *times)
 {
-    times->last_check = clock();
+    times->last_check = true;
+    times->last_time = clock();
 }
 
 int EndTimer(TIMER *times)
 {
     if(times->last_check == 0) return -1;
-    int ms = clock() - times->last_check;
+    int ms = clock() - times->last_time;
     times->last_check = 0;
     return ms;
 }
 
-int LapTimer(TIMER *times)
+float LapTimer(TIMER *times)
 {
     if(times->last_check == 0) return -1;
     clock_t ctime = clock();
-    int ms = ctime - times->last_check;
-    times->last_check = ctime;
+    float ms = ((float)ctime - (float)times->last_time)/1000.0;
+    times->last_time = ctime;
+    times->last_check = true;
     return ms;
 }
 

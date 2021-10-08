@@ -30,16 +30,17 @@ public :
     ~Extractor();
     int Execute();
     int VerifyNumeric();
-    void DrawInfo();
+
     PARAM* p;
     MtrxUtil mtrx;
 
+    vector<string> image_paths;
     vector<Mat> imgs;
     vector<SCENE> cal_group;
 
 
 private :
-
+    TIMER* t;
     bool is_first;
     bool verify_mode = false;
 
@@ -48,10 +49,11 @@ private :
 
     int UpdateConfig();    
     vector<Mat>LoadImages(const string& path);
-    void SaveImageSet(vector<Mat>& images);
+    void SaveImage(SCENE* sc, int type = 0);
     void InitializeData(int cnt, int* roi);
     
     Mat ProcessImages(Mat& img);
+    int ImageMasking(SCENE* sc);
     int GetFeature(SCENE* sc);
     vector<KeyPoint> KeypointMasking(vector<KeyPoint>* oip);
     
@@ -71,5 +73,6 @@ private :
     int WarpingStep1();
     int WarpingStep2();
     int AdjustImage(ADJST adj);
+    void MakingLog();
 
 };
