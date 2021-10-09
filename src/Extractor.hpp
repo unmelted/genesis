@@ -73,6 +73,7 @@ private :
     int DecomposeHomography();
     ADJST CalAdjustData();
     void DrawNormal();
+    void ApplyImage();
 
     int Warping();
     int WarpingStep1();
