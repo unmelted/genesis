@@ -56,23 +56,24 @@ private :
     int GetFeature(SCENE* sc);
     vector<KeyPoint> KeypointMasking(vector<KeyPoint>* oip);
     int Match();    
-    void Export();        
+    int PostProcess();
+    void MakingLog();
+    void Export();
+
     
     void SetCurTrainScene(SCENE* sc) { cur_train = sc; };
     void SetCurQueryScene(SCENE* sc) { cur_query = sc; };
-    int FindBaseCoordfromWd();
+    int FindBaseCoordfromWd(int mode = 0);
     int FindHomographyMatch();
     int FindHomographyP2P(); 
     vector<DMatch> RefineMatch(vector<DMatch> good);
     vector<DMatch> RemoveOutlier(vector<DMatch> matches);
 
-    int PostProcess();
-    void MakingLog();
-
-
     void NormalizePoint(SCENE* sc, int maxrange);
     int DecomposeHomography();
     ADJST CalAdjustData();
+    void DrawNormal();
+
     int Warping();
     int WarpingStep1();
     int WarpingStep2();

@@ -101,8 +101,8 @@ void Extractor::InitializeData(int cnt, int *roi)
         p->fast_k = 21;
         p->minx = 0;
 
-        p->pwidth = int(3840 / p->p_scale);
-        p->pheight = int(2160 / p->p_scale); //4K height
+        p->pwidth = 3840;
+        p->pheight = 2160;
     }
 
     p->sensor_size = 17.30 / 1.35;
@@ -284,7 +284,35 @@ void Extractor::SaveImage(SCENE *sc, int type)
 
         }        
         sprintf(filename, "saved/%d_keypoint.png", sc->id);
+    }
+    else if (type == 4) {
+        vector<Scalar> color;
+        color.push_back(Scalar(0, 0, 255));
+        color.push_back(Scalar(0, 255, 0));
+        color.push_back(Scalar(255, 0, 0));
+        color.push_back(Scalar(255, 255, 0));
+        color.push_back(Scalar(255, 0, 255));
+        color.push_back(Scalar(0, 255, 255));        
 
+        drawKeypoints(sc->img, sc->ip, img);
+        for (int i = 0; i < 4; i++)       {
+            circle(img,
+                    Point((int)cal_group.back().four_fpt[i].x/p->p_scale, (int)cal_group.back().four_fpt[i].y/p->p_scale), 6, Scalar(255), -1);
+        }
+
+        Point2f tp1 = Point2f(cur_query->projected_normal.at<Point2f>(0).x/p->p_scale, 
+                cur_query->projected_normal.at<Point2f>(0).y/p->p_scale);
+
+        for (int i = 0 ; i < cur_query->projected_normal.rows; i ++) {
+            Logger("projected point %f %f ", cur_query->projected_normal.at<Point2f>(i).x,
+                    cur_query->projected_normal.at<Point2f>(i).y);
+            Point2f tp2 = Point2f(cur_query->projected_normal.at<Point2f>(i).x/p->p_scale, 
+                    cur_query->projected_normal.at<Point2f>(i).y/p->p_scale);
+
+            line(img, tp1, tp2, color[i], 2);
+        }
+
+        sprintf(filename, "saved/%d_keypoint+normal.png", sc->id);
     }
 
     imwrite(filename, img);
@@ -408,7 +436,7 @@ int Extractor::Execute()
         if (ret > 0) {
             PostProcess();
 #ifdef _IMGDEBUG
-            SaveImage(&sc, 3);
+            SaveImage(&sc, 4);
 #endif            
         }
         else {
@@ -477,7 +505,11 @@ int Extractor::ImageMasking(SCENE *sc)
     }
 
     sc->mask_img = mask;
-    SaveImage(sc, 2);
+
+#if defined _IMGDEBUG
+//    SaveImage(sc, 2);
+#endif
+    
 }
 
 int Extractor::GetFeature(SCENE *sc) {
@@ -647,10 +679,7 @@ int Extractor::FindHomographyMatch() {
     }
 
 #if defined _DEBUG
-    /*         for (int i = 0 ; i < matches.size(); i ++) {
-        Logger("Distance %f ", matches[i].distance);
-    }
-*/
+
     static int fi = 0;
     Mat outputImg = cur_train->img.clone();
     drawMatches(cur_query->img, cur_query->ip, cur_train->img, cur_train->ip,
@@ -666,20 +695,6 @@ int Extractor::FindHomographyMatch() {
         for (int j = 0; j < _h.cols; j++)
             Logger("[%d][%d] %lf ", i, j, _h.at<double>(i, j));
 
-            /*     FPt ttp = mtrx.TransformPtbyHomography(&cur_train->center, _h);
-    Logger("refactoring function %f %f ", ttp.x, ttp.y);
- */
-            /*     Mat fin, fin2;
-    //warpPerspective(cur_train->img, fin, _h, Size(cur_train->img.cols, cur_train->img.rows));
-    warpAffine(cur_query->ori_img, fin, _h, Size(cur_query->img.cols * p->p_scale, cur_train->img.rows * p->p_scale));
-    //cur_query->img = fin;
-    sprintf(filename, "saved/%2d_perspective.png", index);
-    imwrite(filename, fin);
-
-    warpAffine(cur_query->img, fin2, _h, Size(cur_query->img.cols, cur_train->img.rows));
-    sprintf(filename, "saved/%2d_perspective_pp.png", index);
-    imwrite(filename, fin2);
- */
 #endif
 
     return matches.size();
@@ -739,14 +754,13 @@ vector<DMatch> Extractor::RemoveOutlier(vector<DMatch> matches) {
 
     vector<DMatch> result;
     Logger("Remove Outlier is called %d ", matches.size());
-    float deg_threshold = 0, dist_threshold = 0;    
-    double covar_x = 0, covar_y = 0, covar_deg = 0;
+    double covar_deg = 0;
     double covar_dist = 0;
-    double t_covar_x = 0, t_covar_y = 0, t_covar_deg = 0;        
+    double t_covar_deg = 0;        
     double t_covar_dist = 0;
-    double xsum = 0, ysum = 0, degsum = 0;
+    double degsum = 0;
     double dist_sum = 0;
-    double xavg = 0, yavg = 0, degavg = 0;
+    double degavg = 0;
     double distavg = 0;
 
     for( vector<DMatch>::const_iterator it = matches.begin(); it != matches.end(); it++) {
@@ -762,13 +776,12 @@ vector<DMatch> Extractor::RemoveOutlier(vector<DMatch> matches) {
         if (orideg > 180 )
             orideg -= 180;
         degsum += orideg;
-        Logger(" diff %f %f ", sqrt( dx * dx  + dy * dy ), orideg);
+//        Logger(" diff %f %f ", sqrt( dx * dx  + dy * dy ), orideg);
     }
 
 
     distavg = dist_sum / (float)matches.size();
     degavg = degsum / (float)matches.size();
-    Logger("avg %f %f ", distavg, degavg);
 
     for(vector<DMatch>::const_iterator it = matches.begin(); it != matches.end(); it++) {
         float tx = cur_train->ip[it->trainIdx].pt.x;
@@ -790,9 +803,7 @@ vector<DMatch> Extractor::RemoveOutlier(vector<DMatch> matches) {
     covar_dist = sqrt(t_covar_dist/(float)matches.size());
     covar_deg = sqrt(t_covar_deg/(float)matches.size());    
 
-    deg_threshold = covar_deg * 0.055;      //soccer set1 0.055
-    dist_threshold = covar_dist * 0.01;     //soccker set1 0.01
-    Logger("covar %f %f threshold %f %f  ", covar_deg, deg_threshold, deg_threshold, dist_threshold);
+    Logger("covar %f %f threshold %f %f  ", covar_deg, covar_dist);
 
     for(vector<DMatch>::const_iterator it = matches.begin(); it != matches.end(); it++) {
         float tx = cur_train->ip[it->trainIdx].pt.x;
@@ -811,21 +822,21 @@ vector<DMatch> Extractor::RemoveOutlier(vector<DMatch> matches) {
 
         Logger(" mh distance %f -> %f  angle %f -> %f ", sqrt(dx * dx + dy * dy), mh_distance_dist, orideg, mh_distance_deg);
 
-//        if( mh_distance_deg > deg_threshold || mh_distance_dist > dist_threshold)
         if( mh_distance_deg >= 1.0 || mh_distance_dist >= 1.0)
             Logger("mh distance is over limit ");
         else
             result.push_back(*it);
     }
 
-    Logger(" check calling .. %d ", result.size());
     return result;
 }
 
 int Extractor::PostProcess() {
 
-    if (cur_query->id == 0)
+    if (cur_query->id == 0) {
+        FindBaseCoordfromWd(NORMAL_VECTOR_CAL);
         return ERR_NONE;
+    }
 
     if (cur_query->id == 1)
     {
@@ -917,7 +928,8 @@ int Extractor::PostProcess() {
     }
 
     Logger("err : %f ", err);
-    MakingLog();
+    FindBaseCoordfromWd(NORMAL_VECTOR_CAL);
+    //MakingLog();
 
     //move user circle input
     if (p->roi_type == CIRCLE && p->circle_masking_type == USER_INPUT_CIRCLE)
@@ -937,50 +949,37 @@ int Extractor::PostProcess() {
     }
 }
 
-int Extractor::FindBaseCoordfromWd()
+int Extractor::FindBaseCoordfromWd(int mode)
 {
     Logger("FindBaseCoordfromW start ");
-
+    Mat cm(3, 3, CV_32F, p->camera_matrix);
+    Mat sc(4, 1, CV_32F, p->skew_coeff);
     Mat ppset1(4, 3, CV_32F);
     Mat ppset2(4, 2, CV_32F);
     for (int i = 0; i < 4; i++)
     {
-        ppset1.at<float>(i, 0) = cur_train->four_fpt[i].x;
-        ppset1.at<float>(i, 1) = cur_train->four_fpt[i].y;
-        ppset1.at<float>(i, 2) = cur_train->four_fpt[i].z;
+        ppset1.at<float>(i, 0) = p->world->four_fpt[i].x;
+        ppset1.at<float>(i, 1) = p->world->four_fpt[i].y;
+        ppset1.at<float>(i, 2) = p->world->four_fpt[i].z;
 
         ppset2.at<float>(i, 0) = (float)cur_query->four_fpt[i].x;
         ppset2.at<float>(i, 1) = (float)cur_query->four_fpt[i].y;
 
-        Logger("ppset %f %f %f -- %f %f", ppset1.at<float>(i, 0), ppset1.at<float>(i, 1), ppset1.at<float>(i, 2),
-               ppset2.at<float>(i, 0), ppset2.at<float>(i, 1));
     }
 
-    Mat cm(3, 3, CV_32F, p->camera_matrix);
-
-    for (int i = 0; i < 3; i++)
-    {
-        for (int j = 0; j < 3; j++)
-        {
-            Logger("[%d][%d] %f", i, j, cm.at<float>(i, j));
-        }
-    }
-    Logger("skew %f %f %f %f ", p->skew_coeff[0], p->skew_coeff[1], p->skew_coeff[2], p->skew_coeff[3]);
-
-    Mat sc(4, 1, CV_32F, p->skew_coeff);
     Mat ret1(3, 1, CV_32F);
     Mat ret2(3, 1, CV_32F);
 
     bool result = solvePnP(ppset1, ppset2,
-                           cm, sc,
-                           ret1, ret2,
-                           false, SOLVEPNP_ITERATIVE);
+                        cm, sc,
+                        ret1, ret2,
+                        false, SOLVEPNP_ITERATIVE);
 
     cur_query->rot_matrix = ret1;
     cur_query->trans_matrix = ret2;
 
     Logger("solve pnp is done result %d :  %d %d %d %d ", result,
-           ret1.cols, ret1.rows, ret2.cols, ret2.rows);
+        ret1.cols, ret1.rows, ret2.cols, ret2.rows);
     for (int i = 0; i < cur_query->rot_matrix.rows; i++)
         for (int j = 0; j < cur_query->rot_matrix.cols; j++)
             Logger("[%d][%d] %f ", i, j, cur_query->rot_matrix.at<float>(i, j));
@@ -991,28 +990,41 @@ int Extractor::FindBaseCoordfromWd()
             Logger("[%d][%d] %f ", i, j, cur_query->trans_matrix.at<float>(i, j));
 
     Mat projectedNormal;
-    Mat tvec(2, 3, CV_32F, p->normal);
-    Logger(" world normal -- %d %d", tvec.rows, tvec.cols);
-    for (int i = 0; i < tvec.rows; i++)
-        for (int j = 0; j < tvec.cols; j++)
-            Logger("[%d][%d] %f ", i, j, tvec.at<float>(i, j));
+    float v_normal[6][3];
+    float loca_x = 50.0;
+    float loca_y = 50.0;        
+    float nlen = 10;
+    v_normal[0][0] = loca_x;
+    v_normal[0][1] = loca_y;
+    v_normal[0][2] = 0.0;
 
+    v_normal[1][0] = loca_x + nlen;
+    v_normal[1][1] = loca_y;
+    v_normal[1][2] = 0;
+
+    v_normal[2][0] = loca_x;
+    v_normal[2][1] = loca_y + nlen;
+    v_normal[2][2] = 0;
+
+    v_normal[3][0] = loca_x;
+    v_normal[3][1] = loca_y;
+    v_normal[3][2] = -nlen * 3;
+
+    v_normal[4][0] = loca_x - nlen;
+    v_normal[4][1] = loca_y;
+    v_normal[4][2] = 0;
+
+    v_normal[5][0] = loca_x;
+    v_normal[5][1] = loca_y - nlen;
+    v_normal[5][2] = 0;
+
+    Mat tvec(6, 3, CV_32F, v_normal);
     projectPoints(tvec, cur_query->rot_matrix, cur_query->trans_matrix,
-                  cm, sc,
-                  projectedNormal);
+        cm, sc, projectedNormal);
 
-    Logger("project Points is done. ");
+    cur_query->projected_normal = projectedNormal.clone();
 
-    for (int i = 0; i < projectedNormal.rows; i++)
-    {
-        for (int j = 0; j < projectedNormal.cols; j++)
-        {
-            Point2f v1 = projectedNormal.at<Point2f>(i, j);
-            cur_query->normal_vec[i].x = v1.x;
-            cur_query->normal_vec[i].y = v1.y;
-            Logger("normal vector [%d][%d] %f %f  ", i, j, v1.x, v1.y);
-        }
-    }
+#if 0
 
     Point2f angle_vec = Point2f(cur_query->normal_vec[1].x - cur_query->normal_vec[0].x,
                                 cur_query->normal_vec[1].y - cur_query->normal_vec[0].y);
@@ -1056,6 +1068,7 @@ int Extractor::FindBaseCoordfromWd()
         for (int j = 0; j < cur_query->rod_rotation_matrix.cols; j++)
             Logger("[%d][%d] %f ", i, j, cur_query->rod_rotation_matrix.at<double>(i, j));
 
+#endif
     return 1;
 }
 
@@ -1350,13 +1363,6 @@ int Extractor::FindHomographyP2P()
 
 int Extractor::AdjustImage(ADJST adj)
 {
-    /*     adj.angle = -89.02552;
-    adj.rotate_centerx = 1914.4328;
-    adj.rotate_centery = 1073.7937;
-    adj.scale = 1.01319;
-    adj.trans_x = 0.2191;
-    adj.trans_y = 2.9097;
- */
     Size sz = Size(cur_query->ori_img.cols, cur_query->ori_img.rows);
     double angle = adj.angle + 90;
     double rad = angle * M_PI / 180.0;
@@ -1435,6 +1441,10 @@ void Extractor::MakingLog()
 
     
     ofs.close();
+}
+
+void Extractor::DrawNormal() {
+
 }
 
 void Extractor::Export() {

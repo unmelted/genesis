@@ -65,6 +65,7 @@ typedef struct _maindata {
     Mat rot_matrix;
     Mat trans_matrix;
     Point2f normal_vec[2];
+    Mat projected_normal;
 
     double rod_norm;
     double rod_degree;
@@ -133,6 +134,11 @@ enum roitype {
 enum roi_circle_type {
     FOUR_POINT_BASE     = 1,
     USER_INPUT_CIRCLE   = 2,
+};
+
+enum _coordwd { 
+    FIRST_MATCH = 0,
+    NORMAL_VECTOR_CAL = 1,
 };
 
 typedef enum _groundtype
