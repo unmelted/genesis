@@ -41,7 +41,6 @@ public :
 
 private :
     TIMER* t;
-    bool is_first;
     bool verify_mode = false;
 
     SCENE* cur_train = 0;
@@ -56,23 +55,29 @@ private :
     int ImageMasking(SCENE* sc);
     int GetFeature(SCENE* sc);
     vector<KeyPoint> KeypointMasking(vector<KeyPoint>* oip);
+    int Match();    
+    int PostProcess();
+    void MakingLog();
+    void Export();
+
     
     void SetCurTrainScene(SCENE* sc) { cur_train = sc; };
     void SetCurQueryScene(SCENE* sc) { cur_query = sc; };
-    int FindBaseCoordfromWd();
+    int FindBaseCoordfromWd(int mode = 0);
     int FindHomographyMatch();
     int FindHomographyP2P(); 
+    vector<DMatch> RefineMatch(vector<DMatch> good);
+    vector<DMatch> RemoveOutlier(vector<DMatch> matches);
 
     void NormalizePoint(SCENE* sc, int maxrange);
     int DecomposeHomography();
-
-    int PostProcess();
-    
     ADJST CalAdjustData();
+    void DrawNormal();
+    void ApplyImage();
+
     int Warping();
     int WarpingStep1();
     int WarpingStep2();
     int AdjustImage(ADJST adj);
-    void MakingLog();
 
 };

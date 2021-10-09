@@ -65,6 +65,7 @@ typedef struct _maindata {
     Mat rot_matrix;
     Mat trans_matrix;
     Point2f normal_vec[2];
+    Mat projected_normal;
 
     double rod_norm;
     double rod_degree;
@@ -120,22 +121,27 @@ typedef struct _PARAM {
 
 } PARAM;
 
-typedef enum _match {
+enum _match {
      BEST_MATCH     = 0,
      KNN_MATCH      = 1,
 };
 
-typedef enum roitype {
+enum roitype {
     POLYGON     = 1,
     CIRCLE      = 2,
 };
 
-typedef enum roi_circle_type {
+enum roi_circle_type {
     FOUR_POINT_BASE     = 1,
     USER_INPUT_CIRCLE   = 2,
 };
 
-typedef enum groundtype
+enum _coordwd { 
+    FIRST_MATCH = 0,
+    NORMAL_VECTOR_CAL = 1,
+};
+
+typedef enum _groundtype
 {
     BaseballHome,
     BaseballGround,
@@ -153,4 +159,4 @@ typedef enum groundtype
     VolleyballHalf,
     VolleyballGround,
     Football
-} GDT;
+} GROUNDTYPE;
