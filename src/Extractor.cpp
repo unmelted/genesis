@@ -1031,9 +1031,9 @@ int Extractor::FindBaseCoordfromWd(int mode)
     Logger(" tp1 %f %f tp2 %f %f dx %f dy %f ", tp1.x, tp1.y, tp2.x, tp2.y, tp1.x-tp2.x, tp1.y - tp2.y);
     cur_query->rod_norm = distance;
     cur_query->rod_degree = degree;
-    Logger("normal vector norm %f degree %f  ", distance, degree);
+    double scale = cur_train->rod_norm / cur_query->rod_norm;    
+    Logger("normal vector norm %f degree %f scale %f ", distance, degree, scale);
 
-    double scale = cur_train->rod_norm / cur_query->rod_norm;
 
     if (cur_query->id == 0)
         cur_query->rod_rotation_matrix = getRotationMatrix2D(Point2f(cur_query->center.x, cur_query->center.y), degree, 1);
@@ -1474,5 +1474,21 @@ void Extractor::DrawNormal() {
 
 void Extractor::Export() {
 
+    //world coord 
+    //world point1 x = p->world->four_fpt[0].x;
+    //world point1 y = p->world->four_fpt[0].x;
+    //world center x = p->world->center.x;
+    //world center y = p->world->center.y;    
+
+    for (vector<SCENE>::const_iterator it = cal_group.begin(); it != cal_group.end(); it++)
+    {
+        //id = it-> image_paths[it->id] 
+        //point1 x = it->four_fpt[0].x
+        //point1 y = it->four_fpt[0].y
+        //center x = it->center.x;
+        //center y = it->center.y;
+    }
+
+    //file write. path = "/saved/xxx.json"
 
 }
