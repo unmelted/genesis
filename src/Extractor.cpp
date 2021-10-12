@@ -15,9 +15,11 @@
 */
 
 #include "Extractor.hpp"
+#include "nlohmann/json.hpp"
 
 using namespace std;
 using namespace cv;
+using json = nlohmann::json;
 
 Extractor::Extractor(string &imgset, int cnt, int *roi)
 {
@@ -1475,4 +1477,63 @@ void Extractor::DrawNormal() {
 void Extractor::Export() {
 
 
+    json jObj = json::object();
+    //World
+    json world;
+    world["X1"] = p->world->four_fpt[0].x;
+    world["Y1"] = p->world->four_fpt[0].y;
+    world["X2"] = p->world->four_fpt[1].x;
+    world["Y2"] = p->world->four_fpt[1].y;
+    world["X3"] = p->world->four_fpt[2].x;
+    world["Y3"] = p->world->four_fpt[2].y;
+    world["X4"] = p->world->four_fpt[3].x;
+    world["Y4"] = p->world->four_fpt[3].y;
+    //GDT
+    //jObj["stadium"] = GROUNDTYPE.get();
+    jObj["stadium"] = "SoccerHalf";
+
+    //2dPoint
+    json point2d = json::object();
+    point2d["UpperPosX"] = -1.0;
+    point2d["UpperPosY"] = -1.0;
+    point2d["MiddlePosX"] = -1.0;
+    point2d["MiddlePosX"] = -1.0;
+    point2d["LowerPosX"] = -1.0;
+    point2d["LowerPosX"] = -1.0;
+
+
+    auto arr = json::array();
+
+    for (vector<SCENE>::const_iterator it = cal_group.begin(); it != cal_group.end(); it++)
+    {
+  
+        json jDsc = json::object();
+  
+        jDsc["dsc_id"] = image_paths[it->id];
+        jDsc["pts_2d"] = point2d;
+
+        //3dPoint
+        json point3d = json::object();
+        point3d["X1"] = it->four_fpt[0].x;
+        point3d["Y1"] = it->four_fpt[0].y;
+        point3d["X2"] = it->four_fpt[1].x;
+        point3d["Y2"] = it->four_fpt[1].y;
+        point3d["X3"] = it->four_fpt[2].x;
+        point3d["Y3"] = it->four_fpt[2].y;
+        point3d["X4"] = it->four_fpt[3].x;
+        point3d["Y4"] = it->four_fpt[3].y;
+        point3d["CenterX"] = it->center.x;
+        point3d["CenterY"] = it->center.y;
+        jDsc["pts_3d"] = point3d;
+
+        arr.push_back(jDsc);
+
+    }
+    jObj["points"] = arr;
+
+    //file write
+    std::ofstream file("/saved/UserPointData_" + getCurrentDateTime("date") + ".pts");
+
+    file << std::setw(4) << jObj << '\n';
+    std::cout << std::setw(4) << jObj << '\n';
 }
