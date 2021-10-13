@@ -15,19 +15,20 @@
 */
 
 #include "Extractor.hpp"
-#include "nlohmann/json.hpp"
 
 using namespace std;
 using namespace cv;
-using json = nlohmann::json;
+
 
 Extractor::Extractor(string &imgset, int cnt, int *roi)
 {
     mtrx = MtrxUtil();
+    genutil = Util();
+    t = new TIMER();    
     InitializeData(cnt, roi);
     imgs = LoadImages(imgset);
 
-    t = new TIMER();
+
 }
 
 Extractor::~Extractor()
@@ -111,8 +112,19 @@ void Extractor::InitializeData(int cnt, int *roi)
     p->focal = 3840;
 
     p->world = new SCENE();
-    //soccer
+    //soccer 1 (without player)
     /*
+    p->world->four_fpt[0].x = 330.0;
+    p->world->four_fpt[0].y = 601.0;
+    p->world->four_fpt[1].x = 473.0;
+    p->world->four_fpt[1].y = 601.0;
+    p->world->four_fpt[2].x = 490.0;
+    p->world->four_fpt[2].y = 710.0;
+    p->world->four_fpt[3].x = 310.0;
+    p->world->four_fpt[3].y = 710.0;
+    p->world->center.x = 400.0;
+    p->world->center.y = 656.0; */
+    /* soccer 2 (with player)
     p->world->four_fpt[0].x = 202.0;
     p->world->four_fpt[0].y = 601.0;
     p->world->four_fpt[1].x = 599.0;
@@ -134,7 +146,7 @@ void Extractor::InitializeData(int cnt, int *roi)
     p->world->four_fpt[3].x = 210.0;
     p->world->four_fpt[3].y = 428.0;
     p->world->center.x = 210.0;
-    p->world->center.y = 372.0;
+    p->world->center.y = 372.0; 
     //ufc
     /*
     p->world->four_fpt[0].x = 271.0;
@@ -158,7 +170,7 @@ void Extractor::InitializeData(int cnt, int *roi)
     p->skew_coeff = (float *)g_os_malloc(sizeof(float) * 4);
 
     p->world->rod_norm = 0;
-    NormalizePoint(p->world, 100);
+    //NormalizePoint(p->world, 100);
     p->camera_matrix[0] = p->focal;
     p->camera_matrix[1] = 0;
     p->camera_matrix[2] = p->pwidth / 2;
@@ -339,10 +351,13 @@ vector<Mat> Extractor::LoadImages(const string &path)
 
     sort(begin(image_paths), end(image_paths), less<string>());
     vector<Mat> images;
+    int len = path.length();
     for (const string &ip : image_paths)
-    {
-        Logger("Read image : %s ", ip.c_str());
+    {        
         images.push_back(imread(ip));
+        string dsc = ip.substr(len, len + 6);
+        dsc_id.push_back(dsc);
+        Logger("Read image : %s , desc_id %s ", ip.c_str(), dsc.c_str());
     }
     return images;
 }
@@ -362,7 +377,20 @@ int Extractor::Execute()
         if (index == 0)
         {
             sc.id = 0;
-            //soccer 1
+            //soccer 1 
+            /*
+            sc.four_fpt[0].x = 916.3685;
+            sc.four_fpt[0].y = 1266.8764;
+            sc.four_fpt[1].x = 1535.5683;
+            sc.four_fpt[1].y = 836.3326;
+            sc.four_fpt[2].x = 2905.2381;
+            sc.four_fpt[2].y = 881.4742;
+            sc.four_fpt[3].x = 2403.9367;
+            sc.four_fpt[3].y = 1468.9617;
+            sc.center.x = 1944.2695;
+            sc.center.y = 1077.5728; */
+
+            //soccer 2 (with player)
             /*
             sc.four_fpt[0].x = 156.8897;
             sc.four_fpt[0].y = 1803.5595;
@@ -455,8 +483,9 @@ int Extractor::Execute()
     }
 
     //Export result to josn file
-    Export();
-    
+    genutil.Export(dsc_id, cal_group, p);
+    genutil.ExportforApp(dsc_id, cal_group, p);
+
     return ERR_NONE;
 }
 
@@ -924,8 +953,8 @@ int Extractor::PostProcess() {
 
     Logger("err : %f ", err);
     FindBaseCoordfromWd(NORMAL_VECTOR_CAL);
-    ApplyImage();    
-    //MakingLog();
+    //ApplyImage();    
+
 
     //move user circle input
     if (p->roi_type == CIRCLE && p->circle_masking_type == USER_INPUT_CIRCLE)
@@ -1424,255 +1453,6 @@ int Extractor::AdjustImage(ADJST adj)
     imwrite(filename, final);
 }
 
-void Extractor::MakingLog()
-{
-
-    string filePath = "log/log_pts_" + getCurrentDateTime("date") + ".txt";
-    ofstream ofs(filePath.c_str(), std::ios_base::out | std::ios_base::app);
-    char buf[2048];
-
-    sprintf(buf, "{\n");
-    ofs << '\t' << buf;
-    sprintf(buf, "\"dsc_id\": ");
-    ofs << '\t' << buf;
-    sprintf(buf, "Filename : %s \n", image_paths[cur_query->id].c_str());
-    ofs << '\t' << buf;     
-
- 
-    sprintf(buf, "\"pts_3d\": {\n");
-    ofs << '\t' << buf;
-    sprintf(buf, "\"X1\": %f,\n", cur_query->four_fpt[0].x);
-    ofs << '\t' << buf;
-    sprintf(buf, "\"Y1\": %f,\n", cur_query->four_fpt[0].y);
-    ofs << '\t' << buf;
-    sprintf(buf, "\"X2\": %f,\n", cur_query->four_fpt[1].x);
-    ofs << '\t' << buf;
-    sprintf(buf, "\"Y2\": %f,\n", cur_query->four_fpt[1].y);
-    ofs << '\t' << buf;
-    sprintf(buf, "\"X3\": %f,\n", cur_query->four_fpt[2].x);
-    ofs << '\t' << buf;
-    sprintf(buf, "\"Y3\": %f,\n", cur_query->four_fpt[2].y);
-    ofs << '\t' << buf;
-    sprintf(buf, "\"X4\": %f,\n", cur_query->four_fpt[3].x);
-    ofs << '\t' << buf;
-    sprintf(buf, "\"Y4\": %f,\n", cur_query->four_fpt[3].y);
-    ofs << '\t' << buf;
-    sprintf(buf, "\"CenterX\": %f,\n", cur_query->center.x);
-    ofs << '\t' << buf;
-    sprintf(buf, "\"CenterY\": %f\n", cur_query->center.y);
-    ofs << '\t' << buf;    
-    sprintf(buf, "}\n");
-    ofs << '\t' << buf;
-    sprintf(buf, "},\n");
-    ofs << '\t' << buf;
-
-    
-    ofs.close();
-}
-
 void Extractor::DrawNormal() {
 
-}
-
-void Extractor::Export() {
-
-    //world coord 
-    //world point1 x = p->world->four_fpt[0].x;
-    //world point1 y = p->world->four_fpt[0].x;
-    //world center x = p->world->center.x;
-    //world center y = p->world->center.y;    
-
-    for (vector<SCENE>::const_iterator it = cal_group.begin(); it != cal_group.end(); it++)
-    {
-        //id = it-> image_paths[it->id] 
-        //point1 x = it->four_fpt[0].x
-        //point1 y = it->four_fpt[0].y
-        //center x = it->center.x;
-        //center y = it->center.y;
-    }
-
-    //file write. path = "/saved/xxx.json"
-
-    json jObj = json::object();
-    //World
-    json world;
-    world["X1"] = p->world->four_fpt[0].x;
-    world["Y1"] = p->world->four_fpt[0].y;
-    world["X2"] = p->world->four_fpt[1].x;
-    world["Y2"] = p->world->four_fpt[1].y;
-    world["X3"] = p->world->four_fpt[2].x;
-    world["Y3"] = p->world->four_fpt[2].y;
-    world["X4"] = p->world->four_fpt[3].x;
-    world["Y4"] = p->world->four_fpt[3].y;
-   
-    //jObj["stadium"] = GROUNDTYPE.get();
-    jObj["stadium"] = "SoccerHalf";
-    jObj["world_coords"] = world;
-
-    //2dPoint
-    json point2d = json::object();
-    point2d["UpperPosX"] = -1.0;
-    point2d["UpperPosY"] = -1.0;
-    point2d["MiddlePosX"] = -1.0;
-    point2d["MiddlePosX"] = -1.0;
-    point2d["LowerPosX"] = -1.0;
-    point2d["LowerPosX"] = -1.0;
-    //swipe
-    json swipe;
-    swipe["X1"] = -1.0;
-    swipe["Y1"] = -1.0;
-    swipe["X2"] = -1.0;
-    swipe["Y2"] = -1.0;
-
-    auto arr = json::array();
-
-    for (vector<SCENE>::const_iterator it = cal_group.begin(); it != cal_group.end(); it++)
-    {
-  
-        json jDsc = json::object();
-  
-        jDsc["dsc_id"] = image_paths[it->id];
-        jDsc["pts_2d"] = point2d;
-
-        //3dPoint
-        json point3d = json::object();
-        point3d["X1"] = it->four_fpt[0].x;
-        point3d["Y1"] = it->four_fpt[0].y;
-        point3d["X2"] = it->four_fpt[1].x;
-        point3d["Y2"] = it->four_fpt[1].y;
-        point3d["X3"] = it->four_fpt[2].x;
-        point3d["Y3"] = it->four_fpt[2].y;
-        point3d["X4"] = it->four_fpt[3].x;
-        point3d["Y4"] = it->four_fpt[3].y;
-        point3d["CenterX"] = it->center.x;
-        point3d["CenterY"] = it->center.y;
-   
-        jDsc["pts_3d"] = point3d;
-        jDsc["pts_swipe"] = swipe;
-
-
-        arr.push_back(jDsc);
-
-    }
-    jObj["points"] = arr;
-
-    //file write
-    std::ofstream file("saved/UserPointData_" + getCurrentDateTime("date")  +"_" + getCurrentDateTime("now")+ ".pts");
-
-    file << std::setw(4) << jObj << '\n';
-    std::cout << std::setw(4) << jObj << '\n';
-}
-
-void Extractor::Export_APP() {
-
-
-    json jObj = json::object();
-    //World
-    json world; json world1;
-    world["X1"] = p->world->four_fpt[0].x;
-    world["Y1"] = p->world->four_fpt[0].y;
-    world["X2"] = p->world->four_fpt[1].x;
-    world["Y2"] = p->world->four_fpt[1].y;
-    world["X3"] = p->world->four_fpt[2].x;
-    world["Y3"] = p->world->four_fpt[2].y;
-    world["X4"] = p->world->four_fpt[3].x;
-    world["Y4"] = p->world->four_fpt[3].y;
-
-    
-    world1["group"] = "Group1";                   //group
-    world1["stadium"] = "SoccerHalf";             //stadium
-    world1["world_coords"] = world;
-
-    //2dPoint
-    json point2d = json::object();
-    point2d["UpperPosX"] = -1.0;
-    point2d["UpperPosY"] = -1.0;
-    point2d["MiddlePosX"] = -1.0;
-    point2d["MiddlePosX"] = -1.0;
-    point2d["LowerPosX"] = -1.0;
-    point2d["LowerPosX"] = -1.0;
-
-    json pt2d = json::object();
-    pt2d["IsEmpty"] = false;
-    pt2d["X"] = -1.0;
-    pt2d["Y"] = -1.0;
-
-    point2d["Upper"] = pt2d;
-    point2d["Middle"] = pt2d;
-    point2d["Lower"] = pt2d;
-
-    auto world_arr = json::array();
-    world_arr.push_back(world1);
-    jObj["worlds"] = world_arr;
-
-
-
-    auto arr = json::array();
-
-    for (vector<SCENE>::const_iterator it = cal_group.begin(); it != cal_group.end(); it++)
-    {
-
-        json jDsc = json::object();
-
-        jDsc["dsc_id"] = image_paths[it->id];
-        jDsc["flip"] = 0;
-        jDsc["Group"] = "Group1";
-        jDsc["Width"] = "w";
-        jDsc["Height"] = "h";
-        jDsc["infection_point"] = 0;
-        jDsc["swipe_base_length"] = -1.0;
-        jDsc["ManualOffsetY"] = 0;
-        jDsc["FocalLength"] = 0.0;
-        jDsc["pts_2d"] = point2d;
-
-        //3dPoint
-        json point3d = json::object();
-        point3d["X1"] = it->four_fpt[0].x;
-        point3d["Y1"] = it->four_fpt[0].y;
-        point3d["X2"] = it->four_fpt[1].x;
-        point3d["Y2"] = it->four_fpt[1].y;
-        point3d["X3"] = it->four_fpt[2].x;
-        point3d["Y3"] = it->four_fpt[2].y;
-        point3d["X4"] = it->four_fpt[3].x;
-        point3d["Y4"] = it->four_fpt[3].y;
-        point3d["CenterX"] = it->center.x;
-        point3d["CenterY"] = it->center.y;
-        json pt3d_1;
-        pt3d_1["IsEmpty"] = false;
-        pt3d_1["X"] = it->four_fpt[0].x;
-        pt3d_1["Y"] = it->four_fpt[0].y;
-        point3d["Point1"] = pt3d_1;
-        json pt3d_2;
-        pt3d_2["IsEmpty"] = false;
-        pt3d_2["X"] = it->four_fpt[1].x;
-        pt3d_2["Y"] = it->four_fpt[1].y;
-        point3d["Point2"] = pt3d_2;
-        json pt3d_3;
-        pt3d_3["IsEmpty"] = false;
-        pt3d_3["X"] = it->four_fpt[2].x;
-        pt3d_3["Y"] = it->four_fpt[2].y;
-        point3d["Point3"] = pt3d_3;
-        json pt3d_4;
-        pt3d_4["IsEmpty"] = false;
-        pt3d_4["X"] = it->four_fpt[3].x;
-        pt3d_4["Y"] = it->four_fpt[3].y;
-        point3d["Point4"] = pt3d_4;
-        json cent;
-        cent["IsEmpty"] = false;
-        cent["X"] = it->center.x;
-        cent["Y"] = it->center.y;
-        point3d["Center"] = cent;
-
-        jDsc["pts_3d"] = point3d;
-
-        arr.push_back(jDsc);
-
-    }
-    jObj["points"] = arr;
-
-    //file write
-    std::ofstream file("saved/app_UserPointData_" + getCurrentDateTime("date") +"_" + getCurrentDateTime("now") + ".pts");
-
-    file << std::setw(4) << jObj << '\n';
-    std::cout << std::setw(4) << jObj << '\n';
 }

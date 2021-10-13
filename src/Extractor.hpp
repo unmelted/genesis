@@ -19,6 +19,7 @@
 #include "../util/DefData.hpp"
 #include "../util/Pip.hpp"
 #include "MtrxUtil.hpp"
+#include "Util.hpp"
 
 using namespace std;
 using namespace cv;
@@ -33,10 +34,12 @@ public :
 
     PARAM* p;
     MtrxUtil mtrx;
+    Util genutil;
 
-    vector<string> image_paths;
-    vector<Mat> imgs;
-    vector<SCENE> cal_group;
+    vector<string>image_paths;
+    vector<string>dsc_id;
+    vector<Mat>imgs;
+    vector<SCENE>cal_group;
 
 
 private :
@@ -58,8 +61,7 @@ private :
     int Match();    
     int PostProcess();
     void MakingLog();
-    void Export();
-    void Export_APP();
+
 
     
     void SetCurTrainScene(SCENE* sc) { cur_train = sc; };
