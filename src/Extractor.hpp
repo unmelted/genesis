@@ -59,6 +59,7 @@ private :
     int PostProcess();
     void MakingLog();
     void Export();
+    void Export_APP();
 
     
     void SetCurTrainScene(SCENE* sc) { cur_train = sc; };
