@@ -1480,16 +1480,15 @@ void Extractor::Export() {
     json jObj = json::object();
     //World
     json world;
-    world["X1"] = p->world->four_fpt[0].x;
-    world["Y1"] = p->world->four_fpt[0].y;
-    world["X2"] = p->world->four_fpt[1].x;
-    world["Y2"] = p->world->four_fpt[1].y;
-    world["X3"] = p->world->four_fpt[2].x;
-    world["Y3"] = p->world->four_fpt[2].y;
-    world["X4"] = p->world->four_fpt[3].x;
-    world["Y4"] = p->world->four_fpt[3].y;
-   
-    //jObj["stadium"] = GROUNDTYPE.get();
+    for (int i = 0; i < 4; i++)
+    {
+        string world_x = "X" + to_string(i + 1);
+        string world_y = "Y" + to_string(i + 1);
+        world[world_x] = p->world->four_fpt[i].x;
+        world[world_y] = p->world->four_fpt[i].x;
+    } 
+    GROUNDTYPE ground;
+    jObj["stadium"] = ground;
     jObj["stadium"] = "SoccerHalf";
     jObj["world_coords"] = world;
 
@@ -1520,14 +1519,13 @@ void Extractor::Export() {
 
         //3dPoint
         json point3d = json::object();
-        point3d["X1"] = it->four_fpt[0].x;
-        point3d["Y1"] = it->four_fpt[0].y;
-        point3d["X2"] = it->four_fpt[1].x;
-        point3d["Y2"] = it->four_fpt[1].y;
-        point3d["X3"] = it->four_fpt[2].x;
-        point3d["Y3"] = it->four_fpt[2].y;
-        point3d["X4"] = it->four_fpt[3].x;
-        point3d["Y4"] = it->four_fpt[3].y;
+        for (int i = 0; i < 4; i++)
+        {
+            string pt3d_x = "X" + to_string(i + 1);
+            string pt3d_y = "Y" + to_string(i + 1);
+            point3d[pt3d_x] = it->four_fpt[i].x;
+            point3d[pt3d_y] = it->four_fpt[i].y;
+        }
         point3d["CenterX"] = it->center.x;
         point3d["CenterY"] = it->center.y;
    
@@ -1553,16 +1551,14 @@ void Extractor::Export_APP() {
     json jObj = json::object();
     //World
     json world; json world1;
-    world["X1"] = p->world->four_fpt[0].x;
-    world["Y1"] = p->world->four_fpt[0].y;
-    world["X2"] = p->world->four_fpt[1].x;
-    world["Y2"] = p->world->four_fpt[1].y;
-    world["X3"] = p->world->four_fpt[2].x;
-    world["Y3"] = p->world->four_fpt[2].y;
-    world["X4"] = p->world->four_fpt[3].x;
-    world["Y4"] = p->world->four_fpt[3].y;
+    for (int i = 0; i < 4; i++)
+    {
+        string world_x = "X" + to_string(i + 1);
+        string world_y = "Y" + to_string(i + 1);
+        world[world_x] = p->world->four_fpt[i].x;
+        world[world_y] = p->world->four_fpt[i].x;
+    }
 
-    
     world1["group"] = "Group1";                   //group
     world1["stadium"] = "SoccerHalf";             //stadium
     world1["world_coords"] = world;
@@ -1611,36 +1607,24 @@ void Extractor::Export_APP() {
 
         //3dPoint
         json point3d = json::object();
-        point3d["X1"] = it->four_fpt[0].x;
-        point3d["Y1"] = it->four_fpt[0].y;
-        point3d["X2"] = it->four_fpt[1].x;
-        point3d["Y2"] = it->four_fpt[1].y;
-        point3d["X3"] = it->four_fpt[2].x;
-        point3d["Y3"] = it->four_fpt[2].y;
-        point3d["X4"] = it->four_fpt[3].x;
-        point3d["Y4"] = it->four_fpt[3].y;
+        for (int i = 0; i < 4; i++)
+        {
+            string pt3d_x = "X" + to_string(i + 1);
+            string pt3d_y = "Y" + to_string(i + 1);
+            point3d[pt3d_x] = it->four_fpt[i].x;
+            point3d[pt3d_y] = it->four_fpt[i].y;
+        }
         point3d["CenterX"] = it->center.x;
         point3d["CenterY"] = it->center.y;
-        json pt3d_1;
-        pt3d_1["IsEmpty"] = false;
-        pt3d_1["X"] = it->four_fpt[0].x;
-        pt3d_1["Y"] = it->four_fpt[0].y;
-        point3d["Point1"] = pt3d_1;
-        json pt3d_2;
-        pt3d_2["IsEmpty"] = false;
-        pt3d_2["X"] = it->four_fpt[1].x;
-        pt3d_2["Y"] = it->four_fpt[1].y;
-        point3d["Point2"] = pt3d_2;
-        json pt3d_3;
-        pt3d_3["IsEmpty"] = false;
-        pt3d_3["X"] = it->four_fpt[2].x;
-        pt3d_3["Y"] = it->four_fpt[2].y;
-        point3d["Point3"] = pt3d_3;
-        json pt3d_4;
-        pt3d_4["IsEmpty"] = false;
-        pt3d_4["X"] = it->four_fpt[3].x;
-        pt3d_4["Y"] = it->four_fpt[3].y;
-        point3d["Point4"] = pt3d_4;
+        for (int i = 0; i < 4; i++)
+        {
+            json pt3d;
+            pt3d["IsEmpty"] = false;
+            pt3d["X"] = it->four_fpt[i].x;
+            pt3d["Y"] = it->four_fpt[i].y;
+            string s = "point" + to_string(i + 1);
+            point3d[s] = pt3d;
+        }      
         json cent;
         cent["IsEmpty"] = false;
         cent["X"] = it->center.x;
