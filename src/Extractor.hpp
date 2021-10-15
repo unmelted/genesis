@@ -19,6 +19,7 @@
 #include "../util/DefData.hpp"
 #include "../util/Pip.hpp"
 #include "MtrxUtil.hpp"
+#include "Util.hpp"
 
 using namespace std;
 using namespace cv;
@@ -33,10 +34,12 @@ public :
 
     PARAM* p;
     MtrxUtil mtrx;
+    Util genutil;
 
-    vector<string> image_paths;
-    vector<Mat> imgs;
-    vector<SCENE> cal_group;
+    vector<string>image_paths;
+    vector<string>dsc_id;
+    vector<Mat>imgs;
+    vector<SCENE>cal_group;
 
 
 private :
@@ -56,11 +59,18 @@ private :
     int GetFeature(SCENE* sc);
     vector<KeyPoint> KeypointMasking(vector<KeyPoint>* oip);
     int Match();    
+    int MatchSplit(vector<Point2f> m_train, vector<Point2f>m_query);
     int PostProcess();
     void MakingLog();
-    void Export();
 
-    
+
+    float GetDistance(float x1, float y1, float x2, float y2) {
+        float dx = x1 - x2;
+        float dy = y2 - y2;
+        float distance = sqrt( dx * dx + dy * dy);
+        return distance;
+    };
+
     void SetCurTrainScene(SCENE* sc) { cur_train = sc; };
     void SetCurQueryScene(SCENE* sc) { cur_query = sc; };
     int FindBaseCoordfromWd(int mode = 0);
