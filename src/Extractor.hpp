@@ -59,11 +59,18 @@ private :
     int GetFeature(SCENE* sc);
     vector<KeyPoint> KeypointMasking(vector<KeyPoint>* oip);
     int Match();    
+    int MatchSplit(vector<Point2f> m_train, vector<Point2f>m_query);
     int PostProcess();
     void MakingLog();
 
 
-    
+    float GetDistance(float x1, float y1, float x2, float y2) {
+        float dx = x1 - x2;
+        float dy = y2 - y2;
+        float distance = sqrt( dx * dx + dy * dy);
+        return distance;
+    };
+
     void SetCurTrainScene(SCENE* sc) { cur_train = sc; };
     void SetCurQueryScene(SCENE* sc) { cur_query = sc; };
     int FindBaseCoordfromWd(int mode = 0);

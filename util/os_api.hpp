@@ -1,8 +1,8 @@
 #pragma once
 #include <stdlib.h>
 
-#define CLASS_DEBUG
-#define MEM_DEBUG
+//#define CLASS_DEBUG
+//#define MEM_DEBUG
 
 #ifdef MEM_DEBUG
 
