@@ -122,8 +122,9 @@ typedef struct _PARAM {
 } PARAM;
 
 enum _match {
-     BEST_MATCH     = 0,
-     KNN_MATCH      = 1,
+    BEST_MATCH     = 0,
+    KNN_MATCH      = 1,
+    SPLIT_MATCH    = 2,
 };
 
 enum roitype {
