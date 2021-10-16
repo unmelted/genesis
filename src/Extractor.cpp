@@ -69,7 +69,8 @@ void Extractor::InitializeData(int cnt, int *roi)
             if (p->match_type == BEST_MATCH ||p->match_type == KNN_MATCH )
                 p->circle_fixedpt_radius = 200;
             else if(p->match_type == SPLIT_MATCH)
-                p->circle_fixedpt_radius = 160;
+                p->circle_fixedpt_radius = 80;
+                p->circle_fixedpt_radius_2nd = 120;
         }
         else if (p->circle_masking_type == USER_INPUT_CIRCLE)
             p->count = cnt;
@@ -139,7 +140,7 @@ void Extractor::InitializeData(int cnt, int *roi)
     p->world->center.x = 400.0;
     p->world->center.y = 656.0; */
     // nba 
-    /*
+    
     p->world->four_fpt[0].x = 210.0;
     p->world->four_fpt[0].y = 318.0;
     p->world->four_fpt[1].x = 593.0;
@@ -149,8 +150,9 @@ void Extractor::InitializeData(int cnt, int *roi)
     p->world->four_fpt[3].x = 210.0;
     p->world->four_fpt[3].y = 428.0;
     p->world->center.x = 210.0;
-    p->world->center.y = 372.0; */        
-    //football
+    p->world->center.y = 372.0;        
+    //football 
+    /*
     p->world->four_fpt[0].x = 226.0;
     p->world->four_fpt[0].y = 695.0;
     p->world->four_fpt[1].x = 572.0;
@@ -160,7 +162,7 @@ void Extractor::InitializeData(int cnt, int *roi)
     p->world->four_fpt[3].x = 226.0;
     p->world->four_fpt[3].y = 581.0;
     p->world->center.x = 400.0;
-    p->world->center.y = 674.0; 
+    p->world->center.y = 674.0; */
     //ufc
     /*
     p->world->four_fpt[0].x = 271.0;
@@ -177,9 +179,6 @@ void Extractor::InitializeData(int cnt, int *roi)
 
     p->world->rod_norm = 100;
 
-    /*     p->moved_region = (Pt *)g_os_malloc(sizeof(Pt) * p->count);
-    memcpy(&p->moved_region, &p->region, sizeof(Pt) * p->count);
- */
     p->camera_matrix = (float *)g_os_malloc(sizeof(float) * 9);
     p->skew_coeff = (float *)g_os_malloc(sizeof(float) * 4);
 
@@ -434,7 +433,7 @@ int Extractor::Execute()
             sc.center.x = 1720.0;
             sc.center.y = 1110.0; */
             //nba 30096_10
-            /*
+            
             sc.four_fpt[0].x = 1688.0;
             sc.four_fpt[0].y = 1058.0;
             sc.four_fpt[1].x = 2456.0;
@@ -444,7 +443,7 @@ int Extractor::Execute()
             sc.four_fpt[3].x = 2165.0;
             sc.four_fpt[3].y = 1128.0;
             sc.center.x = 1906.0;
-            sc.center.y = 1092.0; */
+            sc.center.y = 1092.0;
             //ufc
             /*
             sc.four_fpt[0].x = 1052.0;
@@ -458,6 +457,7 @@ int Extractor::Execute()
             sc.center.x = 1092.0;
             sc.center.y = 1080.0; */
             //football
+            /*
             sc.four_fpt[0].x = 1275.0;
             sc.four_fpt[0].y = 165.0;
             sc.four_fpt[1].x = 1212.0;
@@ -467,7 +467,7 @@ int Extractor::Execute()
             sc.four_fpt[3].x = 2364.0;
             sc.four_fpt[3].y = 148.0;
             sc.center.x = 1470.0;
-            sc.center.y = 630.0;
+            sc.center.y = 630.0; */
         }
 
         ImageMasking(&sc);
@@ -613,6 +613,20 @@ int Extractor::GetFeature(SCENE *sc) {
     return ERR_NONE;
 }
 
+int Extractor::GetFeatureWithFixedAnchor(SCENE* sc) {
+
+    Ptr<xfeatures2d::BriefDescriptorExtractor> dscr;
+    dscr = xfeatures2d::BriefDescriptorExtractor::create(p->desc_byte, false);
+    
+    Mat desc;
+    vector<KeyPoint> kpt;
+    dscr->compute(sc->img, kpt, desc);
+
+    sc->ip = kpt;
+    sc->desc = desc;
+
+}
+
 vector<KeyPoint> Extractor::KeypointMasking(vector<KeyPoint> *oip)
 {
     vector<KeyPoint> ip;
@@ -657,13 +671,13 @@ int Extractor::Match() {
     if (cur_query->id == 0) {
         ret = FindBaseCoordfromWd();
     } else {
-        ret = FindHomographyMatch();
+        ret = MatchPlain();
     }
 
     return ret;
 }
 
-int Extractor::FindHomographyMatch() {
+int Extractor::MatchPlain() {
 
     Ptr<DescriptorMatcher> matcher = DescriptorMatcher::create(DescriptorMatcher::FLANNBASED);
     vector<DMatch> matches;
@@ -778,6 +792,7 @@ int Extractor::FindHomographyMatch() {
 }
 
 int Extractor::MatchSplit(vector<Point2f> m_train, vector<Point2f>m_query) {
+
     Logger(" Split Match Start! m_train size %d %d   ", m_train.size(), m_query.size());
     vector<Point2f> mr_train[4];
     vector<Point2f> mr_query[4];
@@ -799,9 +814,6 @@ int Extractor::MatchSplit(vector<Point2f> m_train, vector<Point2f>m_query) {
         }
 
         if(index >= 0) {
-//            mr_train[index][count[index]] = Point2f(m_train[i].x, m_train[i].y);
-//            mr_query[index][count[index]] = Point2f(m_query[i].x, m_query[i].y);            
-
             mr_train[index].push_back(Point2f(m_train[i].x, m_train[i].y));
             mr_query[index].push_back(Point2f(m_query[i].x, m_query[i].y));            
             count[index]++;            
@@ -813,6 +825,8 @@ int Extractor::MatchSplit(vector<Point2f> m_train, vector<Point2f>m_query) {
         }
     }
     Logger("region match count %d %d %d %d ", count[0], count[1], count[2], count[3]);
+    
+    MatchVerify();
 
     for(int k = 0 ; k < 4 ; k ++) {
         if(count[k]> 3) {
@@ -830,6 +844,49 @@ int Extractor::MatchSplit(vector<Point2f> m_train, vector<Point2f>m_query) {
             cur_query->four_fpt[k].y = cur_train->four_fpt[k].y;            
         }
     }
+}
+
+int Extractor::MatchVerify() {
+
+
+}
+
+float Extractor::CrossCorrelation() {
+    int pindex = 1;
+    Mat sc1 = cur_train->img(Rect(cur_train->four_fpt[pindex].x - p->circle_fixedpt_radius, cur_train->four_fpt[pindex].y - p->circle_fixedpt_radius,
+            cur_train->four_fpt[pindex].x + p->circle_fixedpt_radius, cur_train->four_fpt[pindex].y + p->circle_fixedpt_radius));             
+    Mat sc2 = cur_query->img(Rect(cur_query->four_fpt[pindex].x - p->circle_fixedpt_radius, cur_query->four_fpt[pindex].y - p->circle_fixedpt_radius,
+            cur_query->four_fpt[pindex].x + p->circle_fixedpt_radius, cur_query->four_fpt[pindex].y + p->circle_fixedpt_radius));
+
+    vector<uchar> patch1;
+    patch1.assign(sc1.data, sc1.data + sc1.total()*sc1.channels());
+
+    vector<uchar> patch2;
+    patch2.assign(sc2.data, sc2.data + sc2.total()* sc2.channels());
+
+    int tcnt = (p->circle_fixedpt_radius * 2) * (p->circle_fixedpt_radius * 2); //area of rectangle patch
+    double m1, m2, s1, s2, s12, denom, r;
+    m1 = 0; m2 = 0;
+    for ( int i = 0; i < tcnt ; i ++) {
+        m1 += patch1[i];
+        m2 += patch2[i];
+    }
+    m1 /= tcnt;
+    m2 /= tcnt;
+
+    s1 = 0; s2 = 0;
+    for(int i = 0; i < tcnt; i ++) {
+        s1 += (patch1[i] - m1) * (patch1[i] - m1);
+        s2 += (patch2[i] - m2) * (patch2[i] - m2);
+    }
+    denom = sqrt(s1 * s2);
+    s12 = 0;
+    for(int i = 0 ; i < tcnt; i ++) {
+        s12 += (patch1[i] - m1) * (patch2[i] - m2);
+    }
+    r = s12 / denom / tcnt;
+    Logger("Cross correl .. s12 %f denom %f tcnt %f -> %f", s12, denom, tcnt, r);
+
 }
 
 vector<DMatch> Extractor::RefineMatch(vector<DMatch> good) {
@@ -971,9 +1028,6 @@ int Extractor::PostProcess() {
     float err = 0;
     //move centerpoint
     FPt newcen = mtrx.TransformPtbyHomography(cur_train->center, cur_query->matrix_fromimg);
-
-    //err += abs(cur_query->center.x - newcen.x);
-    //err += abs(cur_query->center.y - newcen.y);
     Logger("Query center answer(%f, %f) - (%f, %f)", cur_query->center.x, cur_query->center.y, newcen.x, newcen.y);
     cur_query->center = newcen;
 
@@ -985,15 +1039,11 @@ int Extractor::PostProcess() {
         Logger(" four pt move [%d] answer (%f, %f) - (%f, %f) ", i,
                cur_query->four_fpt[i].x, cur_query->four_fpt[i].y,
                newpt.x, newpt.y);
-        //err += abs(cur_query->four_fpt[i].x - newpt.x);
-        //err += abs(cur_query->four_fpt[i].y - newpt.y);
         cur_query->four_fpt[i].x = newpt.x;
         cur_query->four_fpt[i].y = newpt.y;
     }
 
     FindBaseCoordfromWd(NORMAL_VECTOR_CAL);
-    //Logger("err : %f ", err);
-    //ApplyImage();    
 
 
     //move user circle input
@@ -1006,7 +1056,6 @@ int Extractor::PostProcess() {
             apply_homo = cur_query->matrix_fromimg;
 
         for (int i = 0; i < p->count; i++)  {
-            //Logger("mas %d %d %d ", p->circles[i].center.x, p->circles[i].center.y, p->circles[i].radius);
             Pt newpt = mtrx.TransformPtbyHomography(&p->circles[i].center, apply_homo);
             p->circles[i].center = newpt;
         }
@@ -1339,14 +1388,6 @@ int Extractor::VerifyNumeric()
     return ERR_NONE;
 }
 
-int Extractor::WarpingStep2()
-{
-
-    SetCurTrainScene(&cal_group[0]);
-    SetCurQueryScene(&cal_group[1]);
-    ADJST adj = CalAdjustData();
-    AdjustImage(adj);
-}
 
 int Extractor::WarpingStep1()
 {

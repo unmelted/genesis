@@ -95,6 +95,7 @@ typedef struct _PARAM {
     int count;
     int circle_masking_type;
     int circle_fixedpt_radius;
+    int circle_fixedpt_radius_2nd;
     int match_type;
 
     int blur_ksize;
@@ -105,6 +106,8 @@ typedef struct _PARAM {
     int fast_k;
     int minx;
     int p_scale;
+
+    int anchor_stride;    
 
     int pwidth;
     int pheight;

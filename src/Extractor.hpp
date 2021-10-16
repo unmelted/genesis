@@ -57,37 +57,34 @@ private :
     Mat ProcessImages(Mat& img);
     int ImageMasking(SCENE* sc);
     int GetFeature(SCENE* sc);
+    int GetFeatureWithFixedAnchor(SCENE* sc);    
+
     vector<KeyPoint> KeypointMasking(vector<KeyPoint>* oip);
     int Match();    
+    int MatchPlain();
     int MatchSplit(vector<Point2f> m_train, vector<Point2f>m_query);
-    int PostProcess();
-    void MakingLog();
+    int MatchVerify();
+    float CrossCorrelation();
 
-
-    float GetDistance(float x1, float y1, float x2, float y2) {
-        float dx = x1 - x2;
-        float dy = y2 - y2;
-        float distance = sqrt( dx * dx + dy * dy);
-        return distance;
-    };
+    vector<DMatch> RefineMatch(vector<DMatch> good);
+    vector<DMatch> RemoveOutlier(vector<DMatch> matches);
 
     void SetCurTrainScene(SCENE* sc) { cur_train = sc; };
     void SetCurQueryScene(SCENE* sc) { cur_query = sc; };
     int FindBaseCoordfromWd(int mode = 0);
-    int FindHomographyMatch();
+//    int FindHomographyMatch();
     int FindHomographyP2P(); 
-    vector<DMatch> RefineMatch(vector<DMatch> good);
-    vector<DMatch> RemoveOutlier(vector<DMatch> matches);
+
+    int PostProcess();
 
     void NormalizePoint(SCENE* sc, int maxrange);
     int DecomposeHomography();
     ADJST CalAdjustData();
+
     void DrawNormal();
     void ApplyImage();
 
-    int Warping();
     int WarpingStep1();
-    int WarpingStep2();
     int AdjustImage(ADJST adj);
 
 };
