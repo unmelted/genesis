@@ -69,7 +69,7 @@ void Extractor::InitializeData(int cnt, int *roi)
             if (p->match_type == BEST_MATCH ||p->match_type == KNN_MATCH )
                 p->circle_fixedpt_radius = 200;
             else if(p->match_type == SPLIT_MATCH)
-                p->circle_fixedpt_radius = 80;
+                p->circle_fixedpt_radius = 100;
                 p->circle_fixedpt_radius_2nd = 120;
         }
         else if (p->circle_masking_type == USER_INPUT_CIRCLE)
@@ -101,7 +101,7 @@ void Extractor::InitializeData(int cnt, int *roi)
     } else {
 
         p->blur_ksize = 7;
-        p->blur_sigma = 0.8;
+        p->blur_sigma = 0.9;
         p->desc_byte = 32;
         p->use_ori = true;
         p->nms_k = 9;
@@ -508,13 +508,13 @@ int Extractor::Execute()
         Logger("------- [%d] end  consuming %f ", index, LapTimer(t));
 
         index++;
-        if (index == 4)
+        if (index == 2)
             break;
     }
 
     //Export result to josn file
-    genutil.Export(dsc_id, cal_group, p);
-    genutil.ExportforApp(dsc_id, cal_group, p);
+    //genutil.Export(dsc_id, cal_group, p);
+    //genutil.ExportforApp(dsc_id, cal_group, p);
     Logger("All process time..  %f ", LapTimer(all));
 
     return ERR_NONE;
@@ -820,23 +820,58 @@ int Extractor::MatchSplit(vector<Point2f> m_train, vector<Point2f>m_query) {
 //            Logger("train %f %f query %f %f insert to index %d (%f %f) count %d", m_train[i].x, m_train[i].y,
 //            m_query[i].x, m_query[i].y, index, cur_train->four_fpt[index].x, cur_train->four_fpt[index].y, //count[index]); 
 
-        } else {
+        } /*else {
             Logger("Didn't belong to any range..%f %f ", m_train[i].x, m_train[i].y);
-        }
+        } */
     }
     Logger("region match count %d %d %d %d ", count[0], count[1], count[2], count[3]);
-    
-    MatchVerify();
+    int max_index = -1;
+    int max_val = 0;
+    for(int i = 0; i < 4; i++) {
+        if(count[i] > max_val) {
+            max_index = i;
+            max_val = count[i];
+        }
+    }
 
-    for(int k = 0 ; k < 4 ; k ++) {
-        if(count[k]> 3) {
-            Mat _h = estimateRigidTransform(mr_train[k], mr_query[k], true);
+    if(max_val < 6) {
+        Logger("Can't find any available answer..");
+        return -1;
+    } else 
+        Logger("max value index %d, score %d", max_index, max_val);
+
+    Mat _h = estimateRigidTransform(mr_train[max_index], mr_query[max_index], true);
+    //Mat _h = estimateAffine2D(train_pt, query_pt);            
+    FPt newpt = mtrx.TransformPtbyAffine(cur_train->four_fpt[max_index], _h);
+    Logger("Split match point move[%d] %f %f -> %f %f ", max_index, cur_train->four_fpt[max_index].x, 
+            cur_train->four_fpt[max_index].y, newpt.x, newpt.y);
+    cur_query->four_fpt[max_index].x = newpt.x;
+    cur_query->four_fpt[max_index].y = newpt.y;        
+
+    float ncc_ = ncc(max_index);
+    if( ncc_ >= 0.7) {
+        Logger("Homography OK. apply another point.. ");
+        for(int k = 0 ; k < 4 ; k ++) {
+            if(k != max_index) {
+                FPt newpt = mtrx.TransformPtbyAffine(cur_train->four_fpt[k], _h);
+                cur_query->four_fpt[k].x = newpt.x;
+                cur_query->four_fpt[k].y = newpt.y;        
+            }
+        }
+    }
+    else {
+        Logger("Homography fail. Try to searching again");
+    }
+
+/*     for(int k = 0 ; k < 4 ; k ++) {
+        if(count[max_index]> 3) {
+            Mat _h = estimateRigidTransform(mr_train[max_index], mr_query[max_index], true);
             //Mat _h = estimateAffine2D(train_pt, query_pt);            
-            FPt newpt = mtrx.TransformPtbyAffine(cur_train->four_fpt[k], _h);
-            Logger("Split match point move[%d] %f %f -> %f %f ", k, cur_train->four_fpt[k].x, 
-                    cur_train->four_fpt[k].y, newpt.x, newpt.y);
-            cur_query->four_fpt[k].x = newpt.x;
-            cur_query->four_fpt[k].y = newpt.y;        
+            FPt newpt = mtrx.TransformPtbyAffine(cur_train->four_fpt[max_index], _h);
+            Logger("Split match point move[%d] %f %f -> %f %f ", max_index, cur_train->four_fpt[max_index].x, 
+                    cur_train->four_fpt[max_index].y, newpt.x, newpt.y);
+            cur_query->four_fpt[max_index].x = newpt.x;
+            cur_query->four_fpt[max_index].y = newpt.y;        
         }
         else {
             Logger("Point is not enough.. ");
@@ -844,6 +879,7 @@ int Extractor::MatchSplit(vector<Point2f> m_train, vector<Point2f>m_query) {
             cur_query->four_fpt[k].y = cur_train->four_fpt[k].y;            
         }
     }
+ */
 }
 
 int Extractor::MatchVerify() {
@@ -851,20 +887,86 @@ int Extractor::MatchVerify() {
 
 }
 
-float Extractor::CrossCorrelation() {
-    int pindex = 1;
-    Mat sc1 = cur_train->img(Rect(cur_train->four_fpt[pindex].x - p->circle_fixedpt_radius, cur_train->four_fpt[pindex].y - p->circle_fixedpt_radius,
-            cur_train->four_fpt[pindex].x + p->circle_fixedpt_radius, cur_train->four_fpt[pindex].y + p->circle_fixedpt_radius));             
-    Mat sc2 = cur_query->img(Rect(cur_query->four_fpt[pindex].x - p->circle_fixedpt_radius, cur_query->four_fpt[pindex].y - p->circle_fixedpt_radius,
-            cur_query->four_fpt[pindex].x + p->circle_fixedpt_radius, cur_query->four_fpt[pindex].y + p->circle_fixedpt_radius));
+float Extractor::ncc(int pt_index) {
 
+    int pindex = pt_index;
+    int minx_t, miny_t, maxx_t, maxy_t;
+    int minx_q, miny_q, maxx_q, maxy_q;    
+    int width_t, width_q, height_t, height_q;
+    int width, height;
+
+    if (cur_train->four_fpt[pindex].x - p->circle_fixedpt_radius < 0 )
+        minx_t = 0;
+    else 
+        minx_t = (cur_train->four_fpt[pindex].x - p->circle_fixedpt_radius) / p->p_scale;
+
+    if (cur_train->four_fpt[pindex].x + p->circle_fixedpt_radius > p->pwidth) 
+        maxx_t = p->pwidth / p->p_scale;
+    else
+        maxx_t = (cur_train->four_fpt[pindex].x + p->circle_fixedpt_radius) / p->p_scale;
+    
+    if (cur_train->four_fpt[pindex].y - p->circle_fixedpt_radius < 0 )
+        miny_t = 0;
+    else 
+        miny_t = (cur_train->four_fpt[pindex].y - p->circle_fixedpt_radius)/p->p_scale;
+    
+    if (cur_train->four_fpt[pindex].y + p->circle_fixedpt_radius > p->pheight)
+        maxy_t = p->pheight / p->p_scale;
+    else
+        maxy_t = (cur_train->four_fpt[pindex].y + p->circle_fixedpt_radius)/p->p_scale;
+
+    Logger("sub mat rect %d %d %d %d ", minx_t, miny_t, maxx_t, maxy_t);
+
+    if (cur_query->four_fpt[pindex].x - p->circle_fixedpt_radius < 0 )
+        minx_q = 0;
+    else 
+        minx_q = (cur_query->four_fpt[pindex].x - p->circle_fixedpt_radius) / p->p_scale;
+
+    if (cur_query->four_fpt[pindex].x + p->circle_fixedpt_radius > p->pwidth) 
+        maxx_q = p->pwidth / p->p_scale;
+    else
+        maxx_q = (cur_query->four_fpt[pindex].x + p->circle_fixedpt_radius) / p->p_scale;
+    
+    if (cur_query->four_fpt[pindex].y - p->circle_fixedpt_radius < 0 )
+        miny_q = 0;
+    else 
+        miny_q = (cur_query->four_fpt[pindex].y - p->circle_fixedpt_radius)/p->p_scale;
+    
+    if (cur_query->four_fpt[pindex].y + p->circle_fixedpt_radius > p->pheight)
+        maxy_q = p->pheight / p->p_scale;
+    else
+        maxy_q = (cur_query->four_fpt[pindex].y + p->circle_fixedpt_radius)/p->p_scale;
+
+    width_t = maxx_t - minx_t;
+    width_q = maxx_q - minx_q;
+    height_t = maxy_t - miny_t;
+    height_q = maxy_q - miny_q;
+
+    if( width_t == width_q)
+        width = width_t;
+    else
+        width = min(width_t, width_q);
+
+    if( height_t == height_q )    
+        height = height_t;
+    else
+        height = min(height_t, height_q);
+
+    Mat sc1 = cur_train->img(Rect(minx_t, miny_t, width, height));
+    Mat sc2 = cur_query->img(Rect(minx_q, miny_q, width, height));
+
+    //image debug
+    imwrite("saved/patch1.png", sc1);
+    imwrite("saved/patch2.png", sc2);
+
+    
     vector<uchar> patch1;
     patch1.assign(sc1.data, sc1.data + sc1.total()*sc1.channels());
 
     vector<uchar> patch2;
     patch2.assign(sc2.data, sc2.data + sc2.total()* sc2.channels());
 
-    int tcnt = (p->circle_fixedpt_radius * 2) * (p->circle_fixedpt_radius * 2); //area of rectangle patch
+    int tcnt = (p->circle_fixedpt_radius) * (p->circle_fixedpt_radius); //area of rectangle patch
     double m1, m2, s1, s2, s12, denom, r;
     m1 = 0; m2 = 0;
     for ( int i = 0; i < tcnt ; i ++) {
@@ -884,8 +986,10 @@ float Extractor::CrossCorrelation() {
     for(int i = 0 ; i < tcnt; i ++) {
         s12 += (patch1[i] - m1) * (patch2[i] - m2);
     }
-    r = s12 / denom / tcnt;
-    Logger("Cross correl .. s12 %f denom %f tcnt %f -> %f", s12, denom, tcnt, r);
+    r = s12 / denom;
+
+    Logger("Cross correl .. m1 %f m2 %f s1 %f s2 %f s12 %f denom %f tcnt %d -> %f", m1, m2, s1, s2, s12, denom, tcnt, r);
+    return r;
 
 }
 

@@ -64,7 +64,7 @@ private :
     int MatchPlain();
     int MatchSplit(vector<Point2f> m_train, vector<Point2f>m_query);
     int MatchVerify();
-    float CrossCorrelation();
+    float ncc(int max_index);
 
     vector<DMatch> RefineMatch(vector<DMatch> good);
     vector<DMatch> RemoveOutlier(vector<DMatch> matches);
