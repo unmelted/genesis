@@ -150,7 +150,7 @@ void Extractor::InitializeData(int cnt, int *roi)
     p->world->four_fpt[3].x = 210.0;
     p->world->four_fpt[3].y = 428.0;
     p->world->center.x = 210.0;
-    p->world->center.y = 372.0;        
+    p->world->center.y = 372.0;
     //football 
     /*
     p->world->four_fpt[0].x = 226.0;
@@ -162,7 +162,7 @@ void Extractor::InitializeData(int cnt, int *roi)
     p->world->four_fpt[3].x = 226.0;
     p->world->four_fpt[3].y = 581.0;
     p->world->center.x = 400.0;
-    p->world->center.y = 674.0; */
+    p->world->center.y = 674.0;  */
     //ufc
     /*
     p->world->four_fpt[0].x = 271.0;
@@ -443,7 +443,7 @@ int Extractor::Execute()
             sc.four_fpt[3].x = 2165.0;
             sc.four_fpt[3].y = 1128.0;
             sc.center.x = 1906.0;
-            sc.center.y = 1092.0;
+            sc.center.y = 1092.0; 
             //ufc
             /*
             sc.four_fpt[0].x = 1052.0;
@@ -613,13 +613,16 @@ int Extractor::GetFeature(SCENE *sc) {
     return ERR_NONE;
 }
 
-int Extractor::GetFeatureWithFixedAnchor(SCENE* sc) {
+int Extractor::CreateFeature(SCENE* sc) {
 
     Ptr<xfeatures2d::BriefDescriptorExtractor> dscr;
     dscr = xfeatures2d::BriefDescriptorExtractor::create(p->desc_byte, false);
     
     Mat desc;
     vector<KeyPoint> kpt;
+
+
+
     dscr->compute(sc->img, kpt, desc);
 
     sc->ip = kpt;
@@ -825,6 +828,7 @@ int Extractor::MatchSplit(vector<Point2f> m_train, vector<Point2f>m_query) {
         } */
     }
     Logger("region match count %d %d %d %d ", count[0], count[1], count[2], count[3]);
+
     int max_index = -1;
     int max_val = 0;
     for(int i = 0; i < 4; i++) {
@@ -840,15 +844,42 @@ int Extractor::MatchSplit(vector<Point2f> m_train, vector<Point2f>m_query) {
     } else 
         Logger("max value index %d, score %d", max_index, max_val);
 
-    Mat _h = estimateRigidTransform(mr_train[max_index], mr_query[max_index], true);
-    //Mat _h = estimateAffine2D(train_pt, query_pt);            
+
+    for(int k = 0 ; k < 4 ; k ++) {
+        Mat _h;
+        if(count[k] > 6) {
+            //Mat _h = estimateRigidTransform(mr_train[k], mr_query[k], true);
+            _h = estimateAffine2D(mr_train[k], mr_query[k]);            
+            FPt newpt = mtrx.TransformPtbyAffine(cur_train->four_fpt[k], _h);
+            Logger("Split match point move[%d] %f %f -> %f %f ", k, cur_train->four_fpt[k].x, 
+                    cur_train->four_fpt[k].y, newpt.x, newpt.y);
+            cur_query->four_fpt[k].x = newpt.x;
+            cur_query->four_fpt[k].y = newpt.y;        
+        }
+        else {
+            Logger("Point is not enough..- max_index value apply ");
+            //Mat _h = estimateRigidTransform(mr_train[max_index], mr_query[max_index], true);                
+            _h = estimateAffine2D(mr_train[max_index], mr_query[max_index]);
+            FPt newpt = mtrx.TransformPtbyAffine(cur_train->four_fpt[k], _h);
+            Logger("Split match point move[%d] %f %f -> %f %f ", k, cur_train->four_fpt[k].x, 
+                    cur_train->four_fpt[k].y, newpt.x, newpt.y);
+            cur_query->four_fpt[k].x = newpt.x;
+            cur_query->four_fpt[k].y = newpt.y;        
+
+        }
+
+        float ncc_ = ncc(k, _h);
+    }
+
+    //Mat _h = estimateRigidTransform(mr_train[max_index], mr_query[max_index], true);
+    /*
+    Mat _h = estimateAffine2D(mr_train[max_index], mr_query[max_index]);    
     FPt newpt = mtrx.TransformPtbyAffine(cur_train->four_fpt[max_index], _h);
     Logger("Split match point move[%d] %f %f -> %f %f ", max_index, cur_train->four_fpt[max_index].x, 
             cur_train->four_fpt[max_index].y, newpt.x, newpt.y);
     cur_query->four_fpt[max_index].x = newpt.x;
     cur_query->four_fpt[max_index].y = newpt.y;        
 
-    float ncc_ = ncc(max_index);
     if( ncc_ >= 0.7) {
         Logger("Homography OK. apply another point.. ");
         for(int k = 0 ; k < 4 ; k ++) {
@@ -862,23 +893,6 @@ int Extractor::MatchSplit(vector<Point2f> m_train, vector<Point2f>m_query) {
     else {
         Logger("Homography fail. Try to searching again");
     }
-
-/*     for(int k = 0 ; k < 4 ; k ++) {
-        if(count[max_index]> 3) {
-            Mat _h = estimateRigidTransform(mr_train[max_index], mr_query[max_index], true);
-            //Mat _h = estimateAffine2D(train_pt, query_pt);            
-            FPt newpt = mtrx.TransformPtbyAffine(cur_train->four_fpt[max_index], _h);
-            Logger("Split match point move[%d] %f %f -> %f %f ", max_index, cur_train->four_fpt[max_index].x, 
-                    cur_train->four_fpt[max_index].y, newpt.x, newpt.y);
-            cur_query->four_fpt[max_index].x = newpt.x;
-            cur_query->four_fpt[max_index].y = newpt.y;        
-        }
-        else {
-            Logger("Point is not enough.. ");
-            cur_query->four_fpt[k].x = cur_train->four_fpt[k].x;
-            cur_query->four_fpt[k].y = cur_train->four_fpt[k].y;            
-        }
-    }
  */
 }
 
@@ -887,13 +901,12 @@ int Extractor::MatchVerify() {
 
 }
 
-float Extractor::ncc(int pt_index) {
-
-    int pindex = pt_index;
+float Extractor::ncc(int max_index, Mat _h) {
     int minx_t, miny_t, maxx_t, maxy_t;
     int minx_q, miny_q, maxx_q, maxy_q;    
     int width_t, width_q, height_t, height_q;
     int width, height;
+    int pindex = max_index;
 
     if (cur_train->four_fpt[pindex].x - p->circle_fixedpt_radius < 0 )
         minx_t = 0;
@@ -915,7 +928,6 @@ float Extractor::ncc(int pt_index) {
     else
         maxy_t = (cur_train->four_fpt[pindex].y + p->circle_fixedpt_radius)/p->p_scale;
 
-    Logger("sub mat rect %d %d %d %d ", minx_t, miny_t, maxx_t, maxy_t);
 
     if (cur_query->four_fpt[pindex].x - p->circle_fixedpt_radius < 0 )
         minx_q = 0;
@@ -952,13 +964,19 @@ float Extractor::ncc(int pt_index) {
     else
         height = min(height_t, height_q);
 
+
     Mat sc1 = cur_train->img(Rect(minx_t, miny_t, width, height));
     Mat sc2 = cur_query->img(Rect(minx_q, miny_q, width, height));
 
-    //image debug
-    imwrite("saved/patch1.png", sc1);
-    imwrite("saved/patch2.png", sc2);
 
+    //image debug
+    static int s_index = 0;
+    char filename[40];
+    sprintf(filename, "saved/patch_%d_t.png", s_index);
+    imwrite(filename, sc1);
+    sprintf(filename, "saved/patch_%d_q.png", s_index);    
+    imwrite(filename, sc2);
+    s_index++;
     
     vector<uchar> patch1;
     patch1.assign(sc1.data, sc1.data + sc1.total()*sc1.channels());
@@ -1635,8 +1653,4 @@ int Extractor::AdjustImage(ADJST adj)
     };
     sprintf(filename, "saved/%2d_perspective.png", index);
     imwrite(filename, final);
-}
-
-void Extractor::DrawNormal() {
-
 }

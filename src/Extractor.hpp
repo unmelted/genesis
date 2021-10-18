@@ -57,14 +57,14 @@ private :
     Mat ProcessImages(Mat& img);
     int ImageMasking(SCENE* sc);
     int GetFeature(SCENE* sc);
-    int GetFeatureWithFixedAnchor(SCENE* sc);    
+    int CreateFeature(SCENE* sc);    
 
     vector<KeyPoint> KeypointMasking(vector<KeyPoint>* oip);
     int Match();    
     int MatchPlain();
     int MatchSplit(vector<Point2f> m_train, vector<Point2f>m_query);
     int MatchVerify();
-    float ncc(int max_index);
+    float ncc(int max_index, Mat _h);
 
     vector<DMatch> RefineMatch(vector<DMatch> good);
     vector<DMatch> RemoveOutlier(vector<DMatch> matches);
@@ -81,7 +81,6 @@ private :
     int DecomposeHomography();
     ADJST CalAdjustData();
 
-    void DrawNormal();
     void ApplyImage();
 
     int WarpingStep1();
