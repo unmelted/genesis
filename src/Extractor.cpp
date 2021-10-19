@@ -45,17 +45,17 @@ Extractor::~Extractor()
 void Extractor::InitializeData(int cnt, int *roi)
 {
     p = (PARAM *)g_os_malloc(sizeof(PARAM));
-    p->preset_cali = D3D_RECAL;
-    p->pyramid_step = 2;
-    p->pyramid_scale[0] = 1;
-    p->pyramid_scale[1] = 4;
+    p->calibration_type = RECALIBRATION_3D;
+    p->roi_type = RECTANGLE;
+
+    //PRESET_NONE_3D setting value
+    /*
+    p->calibration_type = PRESET_NONE_3D;
+    p->roi_type = CIRCLE;
+    p->masking_type = FOUR_POINT_BASE;
+    p->match_type = BEST_MATCH; */
 
     p->p_scale = 2;
-    p->roi_type = CIRCLE;
-    p->circle_masking_type = FOUR_POINT_BASE;
-    //p->circle_masking_type = USER_INPUT_CIRCLE;
-    p->match_type = SPLIT_MATCH;
-
     if (p->roi_type == POLYGON)
     {
         p->count = (cnt - 1) / 2;
@@ -69,7 +69,7 @@ void Extractor::InitializeData(int cnt, int *roi)
     }
     else if (p->roi_type == CIRCLE)
     {
-        if (p->circle_masking_type == FOUR_POINT_BASE) {
+        if (p->masking_type == FOUR_POINT_BASE) {
             p->count = 4;
             if (p->match_type == BEST_MATCH ||p->match_type == KNN_MATCH )
                 p->circle_fixedpt_radius = 200;
@@ -77,7 +77,7 @@ void Extractor::InitializeData(int cnt, int *roi)
                 p->circle_fixedpt_radius = 100;
                 p->circle_fixedpt_radius_2nd = 120;
         }
-        else if (p->circle_masking_type == USER_INPUT_CIRCLE)
+        else if (p->masking_type == USER_INPUT_CIRCLE)
             p->count = cnt;
 
         Logger("Initialize circle count %d %d ", cnt, p->count);
@@ -89,6 +89,19 @@ void Extractor::InitializeData(int cnt, int *roi)
             p->circles[i].center.y = int(roi[j + 1] / p->p_scale);
             p->circles[i].radius = int(roi[j + 2] / p->p_scale);
         }
+    }
+    else if(p->roi_type == RECTANGLE) {
+        Logger(" --- rectangle ");
+        p->roi_type = RECTANGLE;
+        p->masking_type = FOUR_POINT_BASE;
+        p->match_type = PYRAMID_MATCH;
+        p->pyramid_step = 2;
+        p->pyramid_scale[0] = 1;
+        p->pyramid_scale[1] = 4;
+        p->pyramid_patch[0] = 100;
+        p->pyramid_patch[1] = 25; 
+        p->anchor_stride = 3;     
+        p->p_scale = 2;           
     }
 
     if(p->p_scale == 1) { 
@@ -347,6 +360,10 @@ void Extractor::SaveImage(SCENE *sc, int type)
 
         sprintf(filename, "saved/%d_keypoint+normal.png", sc->id);
     }
+    else if (type == 5) {
+        img = sc->pyramid[1];
+        sprintf(filename, "saved/%d_pyramid_check.png", sc->id);        
+    }
 
     imwrite(filename, img);
 }
@@ -395,7 +412,8 @@ int Extractor::Execute()
         SCENE sc;
         sc.id = index;
         sc.ori_img = img;
-        sc.img = ProcessImages(img);
+//        sc.img = ProcessImages(img);
+        ProcessImages(&sc);
 
         if (index == 0)
         {
@@ -475,10 +493,14 @@ int Extractor::Execute()
             sc.center.y = 630.0; */
         }
 
-        ImageMasking(&sc);
-        ret = GetFeature(&sc);
-        Logger("[%d] feature extracting  %f ", index, LapTimer(t));
-
+        if(p->match_type != PYRAMID_MATCH) {
+            ImageMasking(&sc);
+            ret = GetFeature(&sc);
+            Logger("[%d] feature extracting  %f ", index, LapTimer(t));
+        }
+        else {
+            CreateFeature(&sc);
+        }
 #ifdef _IMGDEBUG
 //        SaveImage(&sc, 1);
 #endif
@@ -495,7 +517,7 @@ int Extractor::Execute()
             SetCurTrainScene(&cal_group[index - 1]);
             SetCurQueryScene(&cal_group[index]);
         }
-
+        continue;
         ret = Match();
         Logger("return from FindHomography------  %d", ret);
         Logger("[%d] match consuming %f ", index, LapTimer(t));        
@@ -525,29 +547,47 @@ int Extractor::Execute()
     return ERR_NONE;
 }
 
-Mat Extractor::ProcessImages(Mat &img)
-{
+//Mat Extractor::ProcessImages(Mat &img)
+int Extractor::ProcessImages(SCENE* sc) {
+    if(p->match_type != PYRAMID_MATCH) {
+        Mat blur_img;
+        Mat dst;
+        if (p->p_scale != 1)    {
+            resize(sc->ori_img, dst, Size(int(sc->ori_img.cols / p->p_scale), 
+                int(sc->ori_img.rows / p->p_scale)), 0, 0, 1);
+        }
+        cvtColor(dst, blur_img, cv::COLOR_RGBA2GRAY);
+        normalize(blur_img, dst, 0, 255, NORM_MINMAX, -1, noArray());
+        GaussianBlur(dst, blur_img, {p->blur_ksize, p->blur_ksize}, p->blur_sigma, p->blur_sigma);
 
-    Mat blur_img;
-    Mat dst;
-    if (p->p_scale != 1)
-    {
-        resize(img, img, Size(int(img.cols / p->p_scale), int(img.rows / p->p_scale)), 0, 0, 1);
+        sc->img = blur_img;
+    }
+    else {
+        Logger("Process Image start step %d ", p->pyramid_step);        
+        for(int i = 0 ; i < p->pyramid_step; i ++) {
+            Mat blur_img;
+            Mat dst;
+            if(p->pyramid_scale[i] != 1) 
+                resize(sc->ori_img, dst, Size(int(sc->ori_img.cols / p->pyramid_scale[i]), 
+                    int(sc->ori_img.rows / p->pyramid_scale[i])), 0, 0, 1);
+            else dst = sc->ori_img;
+            cvtColor(dst, blur_img, cv::COLOR_RGBA2GRAY);
+            normalize(blur_img, dst, 0, 255, NORM_MINMAX, -1, noArray());
+            GaussianBlur(dst, blur_img, {p->blur_ksize, p->blur_ksize}, p->blur_sigma, p->blur_sigma);
+            sc->pyramid[i] = blur_img;
+        }
+        //SaveImage(sc, 5);
     }
 
-    cvtColor(img, blur_img, cv::COLOR_RGBA2GRAY);
-    normalize(blur_img, dst, 0, 255, NORM_MINMAX, -1, noArray());
-    GaussianBlur(dst, blur_img, {p->blur_ksize, p->blur_ksize}, p->blur_sigma, p->blur_sigma);
-
-    return blur_img;
+    return ERR_NONE;
 }
 
-int Extractor::ImageMasking(SCENE *sc)
+int Extractor::ImageMasking(SCENE* sc)
 {
     Logger("Image masking function start ");
     Mat mask = Mat::zeros(sc->img.rows, sc->img.cols, CV_8UC1);
 
-    if (p->circle_masking_type == FOUR_POINT_BASE)
+    if (p->masking_type == FOUR_POINT_BASE)
     {
         for (int i = 0; i < 4; i++)
         {
@@ -564,7 +604,7 @@ int Extractor::ImageMasking(SCENE *sc)
             }
         }
     }
-    else if (p->circle_masking_type == USER_INPUT_CIRCLE) {
+    else if (p->masking_type == USER_INPUT_CIRCLE) {
         for (int i = 0; i < p->count; i++) {
             Logger("masking point 3 %d %d %d ", p->circles[i].center.x, p->circles[i].center.y, p->circles[i].radius);
             circle(mask,
@@ -1172,9 +1212,8 @@ int Extractor::PostProcess() {
 
     FindBaseCoordfromWd(NORMAL_VECTOR_CAL);
 
-
     //move user circle input
-    if (p->roi_type == CIRCLE && p->circle_masking_type == USER_INPUT_CIRCLE)
+    if (p->roi_type == CIRCLE && p->masking_type == USER_INPUT_CIRCLE)
     {
         Mat apply_homo;
         if (p->p_scale != 1)
@@ -1452,69 +1491,6 @@ ADJST Extractor::CalAdjustData()
 
     return newadj;
 }
-
-int Extractor::VerifyNumeric()
-{
-
-    verify_mode = true;
-
-    int index = 0;
-    for (Mat &img : imgs)
-    {
-        SCENE sc;
-        sc.id = index;
-        sc.ori_img = img;
-
-        if (index == 0)
-        {
-            sc.id = 0;
-            sc.four_fpt[0].x = 916.3685;
-            sc.four_fpt[0].y = 1266.8764;
-            sc.four_fpt[1].x = 1535.5683;
-            sc.four_fpt[1].y = 836.3326;
-            sc.four_fpt[2].x = 2905.2381;
-            sc.four_fpt[2].y = 881.4742;
-            sc.four_fpt[3].x = 2403.9367;
-            sc.four_fpt[3].y = 1468.9617;
-            sc.center.x = 1944.2695;
-            sc.center.y = 1077.5728;
-        }
-        else if (index == 1)
-        {
-            sc.id = 1;
-            sc.four_fpt[0].x = 952.9364;
-            sc.four_fpt[0].y = 1288.5572;
-            sc.four_fpt[1].x = 1440.4313;
-            sc.four_fpt[1].y = 840.5394;
-            sc.four_fpt[2].x = 2800.3415;
-            sc.four_fpt[2].y = 855.5865;
-            sc.four_fpt[3].x = 2479.0112;
-            sc.four_fpt[3].y = 1454.5618;
-            sc.center.x = 1914.4328;
-            sc.center.y = 1073.7937;
-        }
-
-        sc.img = ProcessImages(sc.ori_img);
-        int ret = GetFeature(&sc);
-        cal_group.push_back(sc);
-
-        SetCurTrainScene(p->world);
-        SetCurQueryScene(&cal_group[index]);
-        ret = FindBaseCoordfromWd();
-
-        //PostProcess();
-        CalAdjustData();
-
-        index++;
-        Logger("Verify Done.");
-
-        if (index == 1)
-            break;
-    }
-
-    return ERR_NONE;
-}
-
 
 int Extractor::WarpingStep1()
 {

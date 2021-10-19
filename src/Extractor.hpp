@@ -30,7 +30,6 @@ public :
     Extractor(string& imgset, int cnt , int* roi);
     ~Extractor();
     int Execute();
-    int VerifyNumeric();
 
     PARAM* p;
     MtrxUtil mtrx;
@@ -54,7 +53,8 @@ private :
     void SaveImage(SCENE* sc, int type = 0);
     void InitializeData(int cnt, int* roi);
     
-    Mat ProcessImages(Mat& img);
+//    Mat ProcessImages(Mat& img);
+    int ProcessImages(SCENE* sc);
     int ImageMasking(SCENE* sc);
     int GetFeature(SCENE* sc);
     int CreateFeature(SCENE* sc);    

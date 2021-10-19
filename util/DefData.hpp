@@ -57,6 +57,9 @@ typedef struct _maindata {
     Mat img;
     Mat ori_img;
     Mat mask_img;
+
+    //for pyramid matching
+    Mat pyramid[3];
     
     //Pt four_pt[4];
     FPt four_fpt[4];    
@@ -91,16 +94,18 @@ typedef struct _adj {
 
 typedef struct _PARAM {
     int ground;     //Groud type
-    int preset_cali;
+    int calibration_type;
     int roi_type;
     int count;
-    int circle_masking_type;
+    int masking_type;
     int circle_fixedpt_radius;
     int circle_fixedpt_radius_2nd;
     int match_type;
 
     int pyramid_step;
     int pyramid_scale[3];
+    int pyramid_patch[3];
+    int anchor_stride;    
 
     int blur_ksize;
     float blur_sigma;
@@ -111,7 +116,6 @@ typedef struct _PARAM {
     int minx;
     int p_scale;
 
-    int anchor_stride;    
 
     int pwidth;
     int pheight;
@@ -132,20 +136,23 @@ enum _match {
     BEST_MATCH     = 0,
     KNN_MATCH      = 1,
     SPLIT_MATCH    = 2,
+    PYRAMID_MATCH  = 3,
 };
 
 enum _preset_calibration_type {
-    PRESET_NONE = 0,
-    D2D_RECAL  = 1,
-    D3D_RECAL  = 2, 
+    PRESET_NONE_2D      = 0,
+    PRESET_NONE_3D      = 1,
+    RECALIBRATION_2D    = 2,
+    RECALIBRATION_3D    = 3, 
 };
 
 enum roitype {
     POLYGON     = 1,
     CIRCLE      = 2,
+    RECTANGLE   = 3,
 };
 
-enum roi_circle_type {
+enum roi_base_type {
     FOUR_POINT_BASE     = 1,
     USER_INPUT_CIRCLE   = 2,
 };
@@ -173,4 +180,5 @@ typedef enum _groundtype
     VolleyballHalf,
     VolleyballGround,
     Football
+
 } GROUNDTYPE;
