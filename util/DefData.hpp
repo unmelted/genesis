@@ -91,12 +91,16 @@ typedef struct _adj {
 
 typedef struct _PARAM {
     int ground;     //Groud type
+    int preset_cali;
     int roi_type;
     int count;
     int circle_masking_type;
     int circle_fixedpt_radius;
     int circle_fixedpt_radius_2nd;
     int match_type;
+
+    int pyramid_step;
+    int pyramid_scale[3];
 
     int blur_ksize;
     float blur_sigma;
@@ -128,6 +132,12 @@ enum _match {
     BEST_MATCH     = 0,
     KNN_MATCH      = 1,
     SPLIT_MATCH    = 2,
+};
+
+enum _preset_calibration_type {
+    PRESET_NONE = 0,
+    D2D_RECAL  = 1,
+    D3D_RECAL  = 2, 
 };
 
 enum roitype {

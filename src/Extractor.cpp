@@ -45,6 +45,11 @@ Extractor::~Extractor()
 void Extractor::InitializeData(int cnt, int *roi)
 {
     p = (PARAM *)g_os_malloc(sizeof(PARAM));
+    p->preset_cali = D3D_RECAL;
+    p->pyramid_step = 2;
+    p->pyramid_scale[0] = 1;
+    p->pyramid_scale[1] = 4;
+
     p->p_scale = 2;
     p->roi_type = CIRCLE;
     p->circle_masking_type = FOUR_POINT_BASE;
