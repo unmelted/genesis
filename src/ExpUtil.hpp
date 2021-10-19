@@ -16,10 +16,10 @@
 
 
 #include <cmath>
-#include "../common/DefData.hpp"
+#include "../commong/DefData.hpp"
 #include "../common/json.hpp"
 
-class Util {
+class ExpUtil {
 
 public:
     void Export(vector<string>image_path, vector<SCENE>cal_group, PARAM* p);

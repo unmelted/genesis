@@ -95,17 +95,18 @@ void Extractor::InitializeData(int cnt, int *roi)
         p->roi_type = RECTANGLE;
         p->masking_type = FOUR_POINT_BASE;
         p->match_type = PYRAMID_MATCH;
-        p->pyramid_step = 2;
+        p->pyramid_step = 3;
         p->pyramid_scale[0] = 1;
-        p->pyramid_scale[1] = 4;
-        p->pyramid_patch[0] = 100;
-        p->pyramid_patch[1] = 25; 
+        p->pyramid_scale[1] = 2;
+        p->pyramid_scale[1] = 4;        
+        p->pyramid_patch[0] = 101;
+        p->pyramid_patch[1] = 51; 
+        p->pyramid_patch[2] = 25;
         p->anchor_stride = 3;     
         p->p_scale = 2;           
     }
 
     if(p->p_scale == 1) { 
-
         p->blur_ksize = 15;
         p->blur_sigma = 0.9;
         p->desc_byte = 32;
@@ -134,29 +135,6 @@ void Extractor::InitializeData(int cnt, int *roi)
     p->focal = 3840;
 
     p->world = new SCENE();
-    //soccer 1 (without player)
-    /*
-    p->world->four_fpt[0].x = 330.0;
-    p->world->four_fpt[0].y = 601.0;
-    p->world->four_fpt[1].x = 473.0;
-    p->world->four_fpt[1].y = 601.0;
-    p->world->four_fpt[2].x = 490.0;
-    p->world->four_fpt[2].y = 710.0;
-    p->world->four_fpt[3].x = 310.0;
-    p->world->four_fpt[3].y = 710.0;
-    p->world->center.x = 400.0;
-    p->world->center.y = 656.0; */
-    /* soccer 2 (with player)
-    p->world->four_fpt[0].x = 202.0;
-    p->world->four_fpt[0].y = 601.0;
-    p->world->four_fpt[1].x = 599.0;
-    p->world->four_fpt[1].y = 601.0;
-    p->world->four_fpt[2].x = 599.0;
-    p->world->four_fpt[2].y = 762.0;
-    p->world->four_fpt[3].x = 202.0;
-    p->world->four_fpt[3].y = 761.0;
-    p->world->center.x = 400.0;
-    p->world->center.y = 656.0; */
     // nba 
     
     p->world->four_fpt[0].x = 210.0;
@@ -181,22 +159,8 @@ void Extractor::InitializeData(int cnt, int *roi)
     p->world->four_fpt[3].y = 581.0;
     p->world->center.x = 400.0;
     p->world->center.y = 674.0;  */
-    //ufc
-    /*
-    p->world->four_fpt[0].x = 271.0;
-    p->world->four_fpt[0].y = 88.0;
-    p->world->four_fpt[1].x = 528.0;
-    p->world->four_fpt[1].y = 88.0;
-    p->world->four_fpt[2].x = 528.0;
-    p->world->four_fpt[2].y = 711.0;
-    p->world->four_fpt[3].x = 271.0;
-    p->world->four_fpt[3].y = 711.0;
-    p->world->center.x = 400.0;
-    p->world->center.y = 400.0;*/
-
 
     p->world->rod_norm = 100;
-
     p->camera_matrix = (float *)g_os_malloc(sizeof(float) * 9);
     p->skew_coeff = (float *)g_os_malloc(sizeof(float) * 4);
 
@@ -397,9 +361,8 @@ vector<Mat> Extractor::LoadImages(const string &path)
     }
     return images;
 }
+int Extractor::Execute() {
 
-int Extractor::Execute()
-{
     int index = 0;
     int ret = -1;
     TIMER* all;
@@ -418,45 +381,7 @@ int Extractor::Execute()
         if (index == 0)
         {
             sc.id = 0;
-            //soccer 1 
-            /*
-            sc.four_fpt[0].x = 916.3685;
-            sc.four_fpt[0].y = 1266.8764;
-            sc.four_fpt[1].x = 1535.5683;
-            sc.four_fpt[1].y = 836.3326;
-            sc.four_fpt[2].x = 2905.2381;
-            sc.four_fpt[2].y = 881.4742;
-            sc.four_fpt[3].x = 2403.9367;
-            sc.four_fpt[3].y = 1468.9617;
-            sc.center.x = 1944.2695;
-            sc.center.y = 1077.5728; */
-
-            //soccer 2 (with player)
-            /*
-            sc.four_fpt[0].x = 156.8897;
-            sc.four_fpt[0].y = 1803.5595;
-            sc.four_fpt[1].x = 1941.0336;
-            sc.four_fpt[1].y = 542.6697;
-            sc.four_fpt[2].x = 3731.3256;
-            sc.four_fpt[2].y = 664.0180;
-            sc.four_fpt[3].x = 2920.8808;
-            sc.four_fpt[3].y = 2068.9079;
-            sc.center.x = 2250.0673;
-            sc.center.y = 1179.5054; */
-            //soccer 3
-            /*
-            sc.four_fpt[0].x = 2421.0;
-            sc.four_fpt[0].y = 1064.0;
-            sc.four_fpt[1].x = 1792.0;
-            sc.four_fpt[1].y = 1249.0;
-            sc.four_fpt[2].x = 809.0;
-            sc.four_fpt[2].y = 1180.0;
-            sc.four_fpt[3].x = 1738.0;
-            sc.four_fpt[3].y = 990.0;
-            sc.center.x = 1720.0;
-            sc.center.y = 1110.0; */
-            //nba 30096_10
-            
+            //nba 30096_10            
             sc.four_fpt[0].x = 1688.0;
             sc.four_fpt[0].y = 1058.0;
             sc.four_fpt[1].x = 2456.0;
@@ -467,18 +392,6 @@ int Extractor::Execute()
             sc.four_fpt[3].y = 1128.0;
             sc.center.x = 1906.0;
             sc.center.y = 1092.0; 
-            //ufc
-            /*
-            sc.four_fpt[0].x = 1052.0;
-            sc.four_fpt[0].y = 852.0;
-            sc.four_fpt[1].x = 2056.0;
-            sc.four_fpt[1].y = 772.0;
-            sc.four_fpt[2].x = 2934.0;
-            sc.four_fpt[2].y = 1720.0;
-            sc.four_fpt[3].x = 1708.0;
-            sc.four_fpt[3].y = 1852.0;            
-            sc.center.x = 1092.0;
-            sc.center.y = 1080.0; */
             //football
             /*
             sc.four_fpt[0].x = 1275.0;
@@ -501,19 +414,14 @@ int Extractor::Execute()
         else {
             CreateFeature(&sc);
         }
-#ifdef _IMGDEBUG
-//        SaveImage(&sc, 1);
-#endif
 
         if (sc.id == 0) {
             cal_group.push_back(sc);
-
             SetCurTrainScene(p->world);
             SetCurQueryScene(&cal_group[index]);
         }
         else {
             cal_group.push_back(sc);
-
             SetCurTrainScene(&cal_group[index - 1]);
             SetCurQueryScene(&cal_group[index]);
         }
