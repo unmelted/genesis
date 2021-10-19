@@ -16,8 +16,8 @@
 #include <filesystem>
 #include <fstream>
 #include <cmath>
-#include "../util/DefData.hpp"
-#include "../util/Pip.hpp"
+#include "../common/DefData.hpp"
+#include "../common/Pip.hpp"
 #include "MtrxUtil.hpp"
 #include "Util.hpp"
 

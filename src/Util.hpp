@@ -16,8 +16,8 @@
 
 
 #include <cmath>
-#include "../util/DefData.hpp"
-#include "../util/json.hpp"
+#include "../common/DefData.hpp"
+#include "../common/json.hpp"
 
 class Util {
 

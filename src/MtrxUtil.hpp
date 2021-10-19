@@ -15,8 +15,7 @@
 */
 
 #include <cmath>
-#include "../util/DefData.hpp"
-#include "../util/Pip.hpp"
+#include "../common/DefData.hpp"
 
 
 using namespace std;
@@ -41,5 +40,5 @@ public:
 
     FPt TransformPtbyAffine(FPt in, Mat& aff);
     void TestCal(Mat& M1, Mat& M2);
-    
+
 };
