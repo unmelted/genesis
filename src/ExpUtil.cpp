@@ -14,10 +14,10 @@
     Notes           : Uility - logging, json export
 */
 
-#include "Util.hpp"
+#include "ExpUtil.hpp"
 using json = nlohmann::json;
 
-void Util::Export(vector<string>image_paths, vector<SCENE>cal_group, PARAM* p) {
+void ExpUtil::Export(vector<string>image_paths, vector<SCENE>cal_group, PARAM* p) {
 
     //world coord 
     //world point1 x = p->world->four_fpt[0].x;
@@ -106,7 +106,7 @@ void Util::Export(vector<string>image_paths, vector<SCENE>cal_group, PARAM* p) {
     //std::cout << std::setw(4) << jObj << '\n';
 }
 
-void Util::ExportforApp(vector<string>image_paths, vector<SCENE>cal_group, PARAM* p) {
+void ExpUtil::ExportforApp(vector<string>image_paths, vector<SCENE>cal_group, PARAM* p) {
 
 
     json jObj = json::object();

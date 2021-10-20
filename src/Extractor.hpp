@@ -16,10 +16,10 @@
 #include <filesystem>
 #include <fstream>
 #include <cmath>
-#include "../util/DefData.hpp"
-#include "../util/Pip.hpp"
+#include "../common/DefData.hpp"
+#include "../common/Pip.hpp"
 #include "MtrxUtil.hpp"
-#include "Util.hpp"
+#include "ExpUtil.hpp"
 
 using namespace std;
 using namespace cv;
@@ -30,11 +30,10 @@ public :
     Extractor(string& imgset, int cnt , int* roi);
     ~Extractor();
     int Execute();
-    int VerifyNumeric();
 
     PARAM* p;
     MtrxUtil mtrx;
-    Util genutil;
+    ExpUtil genutil;
 
     vector<string>image_paths;
     vector<string>dsc_id;
@@ -54,17 +53,18 @@ private :
     void SaveImage(SCENE* sc, int type = 0);
     void InitializeData(int cnt, int* roi);
     
-    Mat ProcessImages(Mat& img);
+//    Mat ProcessImages(Mat& img);
+    int ProcessImages(SCENE* sc);
     int ImageMasking(SCENE* sc);
     int GetFeature(SCENE* sc);
-    int GetFeatureWithFixedAnchor(SCENE* sc);    
+    int CreateFeature(SCENE* sc, bool train = false, bool query = false);    
 
     vector<KeyPoint> KeypointMasking(vector<KeyPoint>* oip);
     int Match();    
     int MatchPlain();
     int MatchSplit(vector<Point2f> m_train, vector<Point2f>m_query);
     int MatchVerify();
-    float ncc(int max_index);
+    float ncc(int max_index, Mat _h);
 
     vector<DMatch> RefineMatch(vector<DMatch> good);
     vector<DMatch> RemoveOutlier(vector<DMatch> matches);
@@ -81,7 +81,6 @@ private :
     int DecomposeHomography();
     ADJST CalAdjustData();
 
-    void DrawNormal();
     void ApplyImage();
 
     int WarpingStep1();

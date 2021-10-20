@@ -1,0 +1,73 @@
+            //soccer 1 
+            /*
+            sc.four_fpt[0].x = 916.3685;
+            sc.four_fpt[0].y = 1266.8764;
+            sc.four_fpt[1].x = 1535.5683;
+            sc.four_fpt[1].y = 836.3326;
+            sc.four_fpt[2].x = 2905.2381;
+            sc.four_fpt[2].y = 881.4742;
+            sc.four_fpt[3].x = 2403.9367;
+            sc.four_fpt[3].y = 1468.9617;
+            sc.center.x = 1944.2695;
+            sc.center.y = 1077.5728; */
+
+            //soccer 2 (with player)
+            /*
+            sc.four_fpt[0].x = 156.8897;
+            sc.four_fpt[0].y = 1803.5595;
+            sc.four_fpt[1].x = 1941.0336;
+            sc.four_fpt[1].y = 542.6697;
+            sc.four_fpt[2].x = 3731.3256;
+            sc.four_fpt[2].y = 664.0180;
+            sc.four_fpt[3].x = 2920.8808;
+            sc.four_fpt[3].y = 2068.9079;
+            sc.center.x = 2250.0673;
+            sc.center.y = 1179.5054; */
+            //soccer 3
+            /*
+            sc.four_fpt[0].x = 2421.0;
+            sc.four_fpt[0].y = 1064.0;
+            sc.four_fpt[1].x = 1792.0;
+            sc.four_fpt[1].y = 1249.0;
+            sc.four_fpt[2].x = 809.0;
+            sc.four_fpt[2].y = 1180.0;
+            sc.four_fpt[3].x = 1738.0;
+            sc.four_fpt[3].y = 990.0;
+            sc.center.x = 1720.0;
+            sc.center.y = 1110.0; */
+            //nba 30096_10
+            
+            sc.four_fpt[0].x = 1688.0;
+            sc.four_fpt[0].y = 1058.0;
+            sc.four_fpt[1].x = 2456.0;
+            sc.four_fpt[1].y = 473.0;
+            sc.four_fpt[2].x = 2831.0;
+            sc.four_fpt[2].y = 510.0;
+            sc.four_fpt[3].x = 2165.0;
+            sc.four_fpt[3].y = 1128.0;
+            sc.center.x = 1906.0;
+            sc.center.y = 1092.0; 
+            //ufc
+            /*
+            sc.four_fpt[0].x = 1052.0;
+            sc.four_fpt[0].y = 852.0;
+            sc.four_fpt[1].x = 2056.0;
+            sc.four_fpt[1].y = 772.0;
+            sc.four_fpt[2].x = 2934.0;
+            sc.four_fpt[2].y = 1720.0;
+            sc.four_fpt[3].x = 1708.0;
+            sc.four_fpt[3].y = 1852.0;            
+            sc.center.x = 1092.0;
+            sc.center.y = 1080.0; */
+            //football
+            /*
+            sc.four_fpt[0].x = 1275.0;
+            sc.four_fpt[0].y = 165.0;
+            sc.four_fpt[1].x = 1212.0;
+            sc.four_fpt[1].y = 1560.0;
+            sc.four_fpt[2].x = 3273.0;
+            sc.four_fpt[2].y = 1461.0;
+            sc.four_fpt[3].x = 2364.0;
+            sc.four_fpt[3].y = 148.0;
+            sc.center.x = 1470.0;
+            sc.center.y = 630.0; */

@@ -22,7 +22,7 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <vector>
-#include "util/DefData.hpp"
+#include "common/DefData.hpp"
 #include "src/Extractor.hpp"
 
 using namespace std;
@@ -75,7 +75,7 @@ void Process(int cnt, int* region, char* img_path) {
         string imgset(img_path);    
         ext = new Extractor(imgset, cnt, region);
         ext->Execute();
-        //ext->VerifyNumeric();
+
         //ext->DrawInfo();
         
 }
