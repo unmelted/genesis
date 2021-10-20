@@ -33,7 +33,7 @@ public :
 
     PARAM* p;
     MtrxUtil mtrx;
-    Util genutil;
+    ExpUtil genutil;
 
     vector<string>image_paths;
     vector<string>dsc_id;
@@ -57,7 +57,7 @@ private :
     int ProcessImages(SCENE* sc);
     int ImageMasking(SCENE* sc);
     int GetFeature(SCENE* sc);
-    int CreateFeature(SCENE* sc);    
+    int CreateFeature(SCENE* sc, bool train = false, bool query = false);    
 
     vector<KeyPoint> KeypointMasking(vector<KeyPoint>* oip);
     int Match();    

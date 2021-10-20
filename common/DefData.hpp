@@ -60,7 +60,8 @@ typedef struct _maindata {
 
     //for pyramid matching
     Mat pyramid[3];
-    
+    vector<KeyPoint>pyramid_ip[3];
+
     //Pt four_pt[4];
     FPt four_fpt[4];    
     FPt center;
@@ -96,7 +97,7 @@ typedef struct _PARAM {
     int ground;     //Groud type
     int calibration_type;
     int roi_type;
-    int count;
+    int roi_count;
     int masking_type;
     int circle_fixedpt_radius;
     int circle_fixedpt_radius_2nd;
@@ -105,7 +106,8 @@ typedef struct _PARAM {
     int pyramid_step;
     int pyramid_scale[3];
     int pyramid_patch[3];
-    int anchor_stride;    
+    int stride[3];
+    int base_kernel;
 
     int blur_ksize;
     float blur_sigma;
@@ -155,6 +157,7 @@ enum roitype {
 enum roi_base_type {
     FOUR_POINT_BASE     = 1,
     USER_INPUT_CIRCLE   = 2,
+    INNER_2POINT_BASE   = 3,
 };
 
 enum _coordwd { 
