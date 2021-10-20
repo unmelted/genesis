@@ -351,7 +351,13 @@ void Extractor::SaveImage(SCENE *sc, int type)
         imwrite(filename, img);
         drawKeypoints(sc->pyramid[2], sc->pyramid_ip[2], img);
         sprintf(filename, "saved/%d_pr2_keypoint.png", sc->id);
-    }
+
+/*         for(int i = 0 ; i < sc->pyramid_desc[1].rows; i ++){
+            for(int j = 0 ; j < sc->pyramid_desc[1].cols; j ++)) {
+                Logger("desc[%d][%d] %f %d", j, i, sc->pyramid_desc[1].at<);
+            }
+        }
+ */    }
 
     imwrite(filename, img);
 }
@@ -453,7 +459,8 @@ int Extractor::Execute() {
         else {
             if(sc.id == 0) {
                 CreateFeature(&sc, true, false);
-                cal_group.push_back(sc);                
+                cal_group.push_back(sc);         
+                index++;       
                 continue;
             }
             else {
@@ -481,7 +488,7 @@ int Extractor::Execute() {
         Logger("------- [%d] end  consuming %f ", index, LapTimer(t));
 
         index++;
-        if (index == 1)
+        if (index == 2)
             break;
     }
 
@@ -608,16 +615,15 @@ int Extractor::CreateFeature(SCENE* sc, bool train, bool query) {
     float rk = 0;
     Ptr<xfeatures2d::BriefDescriptorExtractor> dscr;
     dscr = xfeatures2d::BriefDescriptorExtractor::create(p->desc_byte, false);    
-    Mat desc;
-    vector<KeyPoint> kpt;
 
     if(train) {
         for(int i = p->pyramid_step -1; i >= 0; i --){
+            Mat desc;
             int scl = p->pyramid_scale[i];            
             for(int j = 0 ; j < p->roi_count; j++) {
                 float cen_x = float(sc->four_fpt[j].x)/scl;
                 float cen_y = float(sc->four_fpt[j].y)/scl;
-                Logger("step %d roicnt %d scl %d ", i, j, scl);                                
+                Logger("train step %d roicnt %d scl %d ", i, j, scl);                                
                 if(i == 2) {
                     Logger("fpt %4.2f %4.2f cen %4.2f %4.2f ", sc->four_fpt[j].x, sc->four_fpt[j].y, 
                             cen_x, cen_y);
@@ -645,9 +651,15 @@ int Extractor::CreateFeature(SCENE* sc, bool train, bool query) {
                     }
                 }
             }
+            dscr->compute(sc->pyramid[i], sc->pyramid_ip[i], sc->pyramid_desc[i]);
         }
         SaveImage(sc, 6);
         Logger("train kpt size %d %d %d ", sc->pyramid_ip[0].size(), sc->pyramid_ip[1].size(), sc->pyramid_ip[2].size());
+        for(int i = 0; i < 3; i ++) {
+            Logger("train desc shape[%d] %d %d", i, sc->pyramid_desc[i].cols, sc->pyramid_desc[i].rows);
+            cout << sc->pyramid_desc[i] << endl;
+        }
+
     }
     else if (query) {
         for(int i = p->pyramid_step -1; i >= 0; i --){
@@ -655,7 +667,7 @@ int Extractor::CreateFeature(SCENE* sc, bool train, bool query) {
             for(int j = 0 ; j < p->roi_count; j++) {
                 float cen_x = float(sc->four_fpt[j].x)/scl;
                 float cen_y = float(sc->four_fpt[j].y)/scl;                
-                Logger("step %d roicnt %d scl %d ", i, j, scl);                
+                Logger("query step %d roicnt %d scl %d ", i, j, scl);                
                 if(i == 2) {
                     rk = p->base_kernel / 2;
                     Logger("fpt %4.2f %4.2f cen %4.2f %4.2f ", sc->four_fpt[j].x, sc->four_fpt[j].y, 
@@ -692,11 +704,6 @@ int Extractor::CreateFeature(SCENE* sc, bool train, bool query) {
         SaveImage(sc, 6);
         Logger("query kpt size %d %d %d ", sc->pyramid_ip[0].size(), sc->pyramid_ip[1].size(), sc->pyramid_ip[2].size());        
     }
-
-
-    dscr->compute(sc->img, kpt, desc);
-    //sc->desc = desc;
-
 }
 
 vector<KeyPoint> Extractor::KeypointMasking(vector<KeyPoint> *oip)
