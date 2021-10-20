@@ -435,29 +435,35 @@ int Extractor::Execute() {
             sc.center.y = 630.0; */
         }
 
-        if(p->match_type != PYRAMID_MATCH) {
+        if(p->match_type == BEST_MATCH || p->match_type == KNN_MATCH) {
             ImageMasking(&sc);
             ret = GetFeature(&sc);
             Logger("[%d] feature extracting  %f ", index, LapTimer(t));
+            if (sc.id == 0) {
+                cal_group.push_back(sc);
+                SetCurTrainScene(p->world);
+                SetCurQueryScene(&cal_group[index]);
+            }
+            else {
+                cal_group.push_back(sc);
+                SetCurTrainScene(&cal_group[index - 1]);
+                SetCurQueryScene(&cal_group[index]);
+            }
         }
         else {
-            if(sc.id == 0)
+            if(sc.id == 0) {
+                CreateFeature(&sc, true, false);
+                cal_group.push_back(sc);                
+                continue;
+            }
+            else {
                 CreateFeature(&sc, false, true);
-            //else 
-                //CreateFeature(&sc, false, true);
+                cal_group.push_back(sc);
+                SetCurTrainScene(&cal_group[index - 1]);
+                SetCurQueryScene(&cal_group[index]);
+            }
         }
 
-        if (sc.id == 0) {
-            cal_group.push_back(sc);
-            SetCurTrainScene(p->world);
-            SetCurQueryScene(&cal_group[index]);
-        }
-        else {
-            cal_group.push_back(sc);
-            SetCurTrainScene(&cal_group[index - 1]);
-            SetCurQueryScene(&cal_group[index]);
-        }
-        continue;
         ret = Match();
         Logger("return from FindHomography------  %d", ret);
         Logger("[%d] match consuming %f ", index, LapTimer(t));        
@@ -688,9 +694,7 @@ int Extractor::CreateFeature(SCENE* sc, bool train, bool query) {
     }
 
 
-    //dscr->compute(sc->img, kpt, desc);
-
-    //sc->ip = kpt;
+    dscr->compute(sc->img, kpt, desc);
     //sc->desc = desc;
 
 }
