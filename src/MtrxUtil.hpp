@@ -27,6 +27,7 @@ class MtrxUtil {
 public:
 
     Point2f GetRotatePoint(Point2f ptCenter, Point2f ptRot, double dbAngle);
+    FPt GetRotatePoint(FPt center, FPt target, double angle);
     Mat GetRotationMatrix(float rad, float cx, float cy);
     Mat GetScaleMatrix(float scalex, float scaley, float cx, float cy);
     Mat GetScaleMatrix(float scalex, float scaley);
@@ -39,6 +40,6 @@ public:
     Point2f TransformPtbyHomography(Point2f* in, Mat& homography);
 
     FPt TransformPtbyAffine(FPt in, Mat& aff);
-    void TestCal(Mat& M1, Mat& M2);
+    int Hamming(uchar* arr1, uchar* arr2, int size);
 
 };

@@ -37,6 +37,24 @@ Point2f MtrxUtil::GetRotatePoint(Point2f ptCenter, Point2f ptRot, double dbAngle
 
 }
 
+FPt MtrxUtil::GetRotatePoint(FPt center, FPt target, double angle) {
+
+    FPt rpt;
+    float dx = target.x - center.x;
+    float dy = -(target.y - center.y);
+
+    double cosx = cos(angle);
+    double sinx = sin(angle);
+    rpt.x = (float)(dx * cosx - dy * sinx);
+    rpt.y = (float)(dx * sinx - dy * cosx);
+
+    rpt.x = rpt.x + center.x;
+    rpt.y = -(rpt.y - center.y);
+
+    return rpt;
+}
+
+
 Mat MtrxUtil::GetRotationMatrix(float rad, float cx, float cy) {
 
     Mat m = Mat::eye(3, 3, CV_32FC1);
@@ -206,13 +224,22 @@ FPt MtrxUtil::TransformPtbyAffine(FPt in, Mat& aff) {
     return newpt;
 }
 
-void MtrxUtil::TestCal(Mat& M1, Mat& M2) {
+int MtrxUtil::Hamming(uchar* arr1, uchar* arr2, int size) {
+    int distance = 0;
 
-    Mat M3 = M1 * M2;
-    for (int i = 0; i < M3.rows; i++)
-        for (int j = 0; j < M3.cols; j++) {
-            Logger(" [%d][%d] %f ", M3.at<double>(i,j));
+    for(int i = 0; i < size ; i ++) {
+/*         int result = arr1[i]^arr2[i];
+        int count = 0;
+
+        while(result > 0){
+            count += result & 1;
+            result >> =1;
         }
+ */        
+        distance += __builtin_popcount(arr1[i]^arr2[i]); //gcc
+        //distance += _mm_popcnt_u64(arr1[i]^arr2[i]); for msvc <nmmintrin.h>
+    }
 
-
+    return distance;
+    
 }
