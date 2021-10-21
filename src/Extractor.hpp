@@ -57,11 +57,12 @@ private :
     int ProcessImages(SCENE* sc);
     int ImageMasking(SCENE* sc);
     int GetFeature(SCENE* sc);
-    int CreateFeature(SCENE* sc, bool train = false, bool query = false);    
+    int CreateFeature(SCENE* sc, bool train = false, bool query = false, int step = -1);    
 
     vector<KeyPoint> KeypointMasking(vector<KeyPoint>* oip);
     int Match();    
     int MatchPlain();
+    int MatchPyramid();    
     int MatchSplit(vector<Point2f> m_train, vector<Point2f>m_query);
     int MatchVerify();
     float ncc(int max_index, Mat _h);

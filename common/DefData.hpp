@@ -51,6 +51,15 @@ typedef struct _cc {
     int radius;
 } Cr;
 
+typedef struct _matchpair {
+    FPt train;
+    FPt query;
+    FPt distance;
+    int pyramid_step;
+    int kernel_size;
+    
+} MATCHPAIR;
+
 typedef struct _maindata {
     int id = 0;
     char filename[100];
@@ -61,7 +70,9 @@ typedef struct _maindata {
     //for pyramid matching
     Mat pyramid[3];
     vector<KeyPoint>pyramid_ip[3];
-
+    int pyramid_ip_per_pt[3];
+    Mat pyramid_desc[3];
+    
     //Pt four_pt[4];
     FPt four_fpt[4];    
     FPt center;
@@ -102,6 +113,7 @@ typedef struct _PARAM {
     int circle_fixedpt_radius;
     int circle_fixedpt_radius_2nd;
     int match_type;
+    int submatch_type;
 
     int pyramid_step;
     int pyramid_scale[3];
@@ -135,10 +147,15 @@ typedef struct _PARAM {
 } PARAM;
 
 enum _match {
-    BEST_MATCH     = 0,
-    KNN_MATCH      = 1,
-    SPLIT_MATCH    = 2,
-    PYRAMID_MATCH  = 3,
+    PLAIN_MATCH    = 1,
+    PYRAMID_MATCH  = 4,
+};
+
+enum _submatch {
+    SUBMATCH_NONE   = -1,
+    BEST_MATCH     = 1,
+    KNN_MATCH      = 2,
+    SPLIT_MATCH    = 3,
 };
 
 enum _preset_calibration_type {
