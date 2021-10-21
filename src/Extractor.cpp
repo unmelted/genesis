@@ -457,19 +457,20 @@ int Extractor::Execute() {
         else {
             if(sc.id == 0) {
                 CreateFeature(&sc, true, false);
-                cal_group.push_back(sc);                                         
+                Logger("[%d] feature extracting  %f ", index, LapTimer(t));                
+                cal_group.push_back(sc);
                 index++;       
                 continue;
                 //break;
             }
             else {
                 CreateFeature(&sc, false, true);    
+                Logger("[%d] feature extracting  %f ", index, LapTimer(t));                                
                 cal_group.push_back(sc);                
                 SetCurTrainScene(&cal_group[index - 1]);
                 SetCurQueryScene(&cal_group[index]);
             }
         }
-
         ret = Match();
         Logger("return from FindHomography------  %d", ret);
         Logger("[%d] match consuming %f ", index, LapTimer(t));        
@@ -775,8 +776,6 @@ int Extractor::MatchPyramid() {
     vector<MATCHPAIR> pairs;
 
     for(int i = p->pyramid_step -1; i >= 0; i --) {    
-        int ip_cnt = cur_query->pyramid_ip[i].size();
-
         vector<uchar> t_desc;
         t_desc.assign(cur_train->pyramid_desc[i].data, 
             cur_train->pyramid_desc[i].data + cur_train->pyramid_desc[i].total());
@@ -794,6 +793,7 @@ int Extractor::MatchPyramid() {
             memcpy((void *)&t_seg[0], &t_desc[j*p->desc_byte], sizeof(uchar)* p->desc_byte);            
             int start = j * cur_query->pyramid_ip_per_pt[i]; 
             int end = (j + 1)* cur_query->pyramid_ip_per_pt[i];
+            Logger("start %d end %d ", start, end);
             for(int k = start ; k < end; k++) {
                 memcpy((void *)&q_seg[0], &q_desc[p->desc_byte * k], sizeof(uchar)* p->desc_byte);            
                 int dist = mtrx.Hamming(t_seg, q_seg, p->desc_byte);
@@ -805,6 +805,8 @@ int Extractor::MatchPyramid() {
                 //Logger("distance step %d/%d/%d  dist %d ", i, j, k,  dist);
             }
             Logger("best distance %d index %d", best, best_index);
+            Logger("best coord train %f %f query %f %f ", cur_train->pyramid_ip[i][j].pt.x, cur_train->pyramid_ip[i][j].pt.y,
+                cur_query->pyramid_ip[i][best_index].pt.x, cur_query->pyramid_ip[i][best_index].pt.y);
             for(int k = 0 ; k < p->desc_byte; k ++) {
                 Logger(" t_seg %d q_seg %d ", t_seg[k], best_q[k]);
             }
