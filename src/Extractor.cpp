@@ -111,9 +111,9 @@ void Extractor::InitializeData(int cnt, int *roi)
             p->pyramid_patch[1] = 51; 
             p->pyramid_patch[2] = 25;
             p->p_scale = 2;           
-            p->stride[0] = 3;
-            p->stride[1] = 3;            
-            p->stride[2] = 3;            
+            p->stride[0] = 4;
+            p->stride[1] = 4;            
+            p->stride[2] = 4;            
             p->base_kernel = 25;
 
         }
@@ -678,17 +678,13 @@ int Extractor::CreateFeature(SCENE* sc, bool train, bool query, int step) {
                 Logger("query step %d roicnt %d scl %d ", i, j, scl);                
                 if(i == 2) {
                     rk = p->base_kernel / 2;
-                    int cnt  = 0;
-                    for(int a = cen_x - rk; a <= cen_x + rk ; a += 4) {
-                        for(int b = cen_y - rk; b <= cen_y + rk; b += 4) {
+                    sc->pyramid_ip_per_pt[i] = pow(ceil((float)p->base_kernel / (float)p->stride[i]), 2);
+                    for(int a = cen_x - rk; a <= cen_x + rk ; a += p->stride[i]) {
+                        for(int b = cen_y - rk; b <= cen_y + rk; b += p->stride[i]) {
                             KeyPoint kp = KeyPoint(float(a), float(b), p->base_kernel, -1, 0, 0, j);
                             sc->pyramid_ip[i].push_back(kp);
-                            cnt ++;
-                            if(j == 1 || j == 2)
-                                Logger(" %d push x %3.2f y %3.2f ",j, float(a), float(b));
                         }
                     }
-                    Logger("j %d -- push cnt %d ", j, cnt);
                 }
                 /*
                 else if( i == 1) {
@@ -796,8 +792,9 @@ int Extractor::MatchPyramid() {
             uchar q_seg[p->desc_byte];    
             uchar best_q[p->desc_byte];
             memcpy((void *)&t_seg[0], &t_desc[j*p->desc_byte], sizeof(uchar)* p->desc_byte);            
-
-            for(int k = 0 ; k < cur_query->pyramid_ip[i].size(); k++) {
+            int start = j * cur_query->pyramid_ip_per_pt[i]; 
+            int end = (j + 1)* cur_query->pyramid_ip_per_pt[i];
+            for(int k = start ; k < end; k++) {
                 memcpy((void *)&q_seg[0], &q_desc[p->desc_byte * k], sizeof(uchar)* p->desc_byte);            
                 int dist = mtrx.Hamming(t_seg, q_seg, p->desc_byte);
                 if(dist < best) {

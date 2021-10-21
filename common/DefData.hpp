@@ -70,6 +70,7 @@ typedef struct _maindata {
     //for pyramid matching
     Mat pyramid[3];
     vector<KeyPoint>pyramid_ip[3];
+    int pyramid_ip_per_pt[3];
     Mat pyramid_desc[3];
     
     //Pt four_pt[4];
