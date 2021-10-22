@@ -54,9 +54,17 @@ typedef struct _cc {
 typedef struct _matchpair {
     FPt train;
     FPt query;
-    FPt distance;
-    int pyramid_step;
+    int distance;
+    int pyramid_sacle;
     int kernel_size;
+
+    _matchpair(FPt tpt, FPt qpt, int dist, int scl, int ksize ) {
+        train = tpt;
+        query = qpt;
+        distance = dist;
+        pyramid_sacle = scl;
+        kernel_size = ksize;
+    };
     
 } MATCHPAIR;
 
@@ -70,8 +78,9 @@ typedef struct _maindata {
     //for pyramid matching
     Mat pyramid[3];
     vector<KeyPoint>pyramid_ip[3];
-    int pyramid_ip_per_pt[3];
+    int pyramid_ip_per_pt[3];    
     Mat pyramid_desc[3];
+    vector<MATCHPAIR>pyramid_pair[3];
     
     //Pt four_pt[4];
     FPt four_fpt[4];    
