@@ -111,10 +111,11 @@ void Extractor::InitializeData(int cnt, int *roi)
             p->pyramid_patch[1] = 51; 
             p->pyramid_patch[2] = 25;
             p->p_scale = 2;           
-            p->stride[0] = 5;
-            p->stride[1] = 5;            
-            p->stride[2] = 5;            
-            p->base_kernel = 30;
+            p->stride[0] = 4;
+            p->stride[1] = 4;            
+            p->stride[2] = 4;            
+            p->base_kernel = 35;
+            p->best_cut = 40.0;
 
         }
     }
@@ -346,31 +347,34 @@ void Extractor::SaveImage(SCENE *sc, int type)
 
     }
     else if (type == 6) {
-        drawKeypoints(sc->pyramid[0], sc->pyramid_ip[0], img);
-        sprintf(filename, "saved/%d_pr0_keypoint.png", sc->id);
-        imwrite(filename, img);
-        drawKeypoints(sc->pyramid[1], sc->pyramid_ip[1], img);
-        sprintf(filename, "saved/%d_pr1_keypoint.png", sc->id);
-        imwrite(filename, img);
-        drawKeypoints(sc->pyramid[2], sc->pyramid_ip[2], img);
-        sprintf(filename, "saved/%d_pr2_keypoint.png", sc->id);
+        for(int step = 2 ; step >= 0; step --){ 
+            int scl = p->pyramid_scale[step];
+            int cnt = sc->pyramid_ip[step].size(); 
+            for (int i = 0; i < cnt; i++) {
+                img = sc->pyramid[step];
+                circle(img,
+                    Point((int)sc->pyramid_ip[step][i].pt.x, (int)sc->pyramid_ip[step][i].pt.y), 
+                    1, Scalar(0), -1);
 
-/*         for(int i = 0 ; i < sc->pyramid_desc[1].rows; i ++){
-            for(int j = 0 ; j < sc->pyramid_desc[1].cols; j ++)) {
-                Logger("desc[%d][%d] %f %d", j, i, sc->pyramid_desc[1].at<);
             }
+            sprintf(filename, "saved/%d_%d_pr_sel_point.png", sc->id, step);
+            imwrite(filename, img);
+            if(step == 1)
+                break;
         }
- */    
+        return;
+
     } else if (type == 7) {
         int step = 2;
         img = sc->pyramid[step];
+        int scl = p->pyramid_scale[step];
         for (int i = 0; i < 4; i++) {
             Logger(" pyramid pair %d %d " , (int)sc->pyramid_pair[step][i].query.x, 
                                     (int)sc->pyramid_pair[step][i].query.y);
             circle(img,
-                Point((int)sc->pyramid_pair[step][i].query.x, (int)sc->pyramid_pair[step][i].query.y), 4, Scalar(0), -1);
+                Point((int)sc->pyramid_pair[step][i].query.x/scl, (int)sc->pyramid_pair[step][i].query.y/scl), 4, Scalar(0), -1);
 
-            sprintf(filename, "saved/%d_pr2_select_point.png", sc->id);
+            sprintf(filename, "saved/%d_%d_pr2_best_point.png", sc->id, step);
         }
     }
  
@@ -529,7 +533,6 @@ int Extractor::ProcessImages(SCENE* sc) {
         sc->img = blur_img;
     }
     else {
-        Logger("Process Image start step %d ", p->pyramid_step);        
         for(int i = 0 ; i < p->pyramid_step; i ++) {
             Mat blur_img;
             Mat dst;
@@ -542,7 +545,7 @@ int Extractor::ProcessImages(SCENE* sc) {
             GaussianBlur(dst, blur_img, {p->blur_ksize, p->blur_ksize}, p->blur_sigma, p->blur_sigma);
             sc->pyramid[i] = blur_img;
         }
-        SaveImage(sc, 5);
+//        SaveImage(sc, 5);
     }
 
     return ERR_NONE;
@@ -649,6 +652,7 @@ int Extractor::CreateFeature(SCENE* sc, bool train, bool query, int step) {
                     KeyPoint kp = KeyPoint(cen_x, cen_y, p->base_kernel, -1, 0, 0, j);
                     sc->pyramid_ip[i].push_back(kp);
                 }
+                /*
                 if( i == 1 || i == 0) {
                     rk = p->base_kernel / 2;
                     deg_cnt = 8;                    
@@ -657,11 +661,7 @@ int Extractor::CreateFeature(SCENE* sc, bool train, bool query, int step) {
                         FPt newpt = mtrx.GetRotatePoint(FPt(cen_x, cen_y), FPt(cen_x, + cen_y - rk), deg_step* a);
                         KeyPoint kp = KeyPoint(float(newpt.x), float(newpt.y), rk, -1, 0, 0, j);
                         sc->pyramid_ip[i].push_back(kp);
-                        //Logger("2nd push ip [%d] deg %f  - %4.2f %4.2f size %3.2f ", a, deg_step * a, float(newpt.x), /////float(newpt.y));
-
                     }
-//                    for(int a = cen_x - rk ; a <= cen_x + rk ; a += rk) {
-//                        for(int b = cen_y - rk ; b <= cen_y + rk ; b += rk) {
                 }
                 if(i == 0) {
                     rk = p->base_kernel;       
@@ -671,19 +671,13 @@ int Extractor::CreateFeature(SCENE* sc, bool train, bool query, int step) {
                         FPt newpt = mtrx.GetRotatePoint(FPt(cen_x, cen_y), FPt(cen_x, + cen_y - rk), deg_step* a);
                         KeyPoint kp = KeyPoint(float(newpt.x), float(newpt.y), rk, -1, 0, 0, j);
                         sc->pyramid_ip[i].push_back(kp);                        
-                        //Logger("3rd push ip [%d] deg %f %4.2f %4.2f size %3.2f ", a, deg_step*a, float(newpt.x), float/////(newpt.y), rk);
                     }
-                }
+                } */
             }
             dscr->compute(sc->pyramid[i], sc->pyramid_ip[i], sc->pyramid_desc[i]);
         }
         SaveImage(sc, 6);
         Logger("train kpt size %d %d %d ", sc->pyramid_ip[0].size(), sc->pyramid_ip[1].size(), sc->pyramid_ip[2].size());
-/*         for(int i = 0; i < 3; i ++) {
-            Logger("train desc shape[%d] %d %d", i, sc->pyramid_desc[i].cols, sc->pyramid_desc[i].rows);
-            cout << sc->pyramid_desc[i] << endl;
-        }
- */
     }
     else if (query) {
         Mat desc;        
@@ -692,9 +686,7 @@ int Extractor::CreateFeature(SCENE* sc, bool train, bool query, int step) {
             int scl = p->pyramid_scale[i];            
             for(int j = 0 ; j < p->roi_count; j++) {
                 float cen_x = float(cal_group.back().four_fpt[j].x)/scl;
-                float cen_y = float(cal_group.back().four_fpt[j].y)/scl;                
-                Logger("query step %d roicnt %d scl %d ", i, j, scl);                
-
+                float cen_y = float(cal_group.back().four_fpt[j].y)/scl;                                
                 rk = p->base_kernel / 2;
                 sc->pyramid_ip_per_pt[i] = pow(ceil((float)p->base_kernel / (float)p->stride[i]), 2);
                 for(int a = cen_x - rk; a <= cen_x + rk ; a += p->stride[i]) {
@@ -704,25 +696,54 @@ int Extractor::CreateFeature(SCENE* sc, bool train, bool query, int step) {
 
                     }
                 }        
-                Logger("j %d query ip size %d ", j, sc->pyramid_ip[i].size());                
             }
             dscr->compute(sc->pyramid[i], sc->pyramid_ip[i], sc->pyramid_desc[i]);            
+            Logger("step %d query ip size %d /per pt %d ", i, sc->pyramid_ip[i].size(), sc->pyramid_ip_per_pt[i]); 
+            Logger("step %d desc dimension %d %d ", i, sc->pyramid_desc[i].cols, sc->pyramid_desc[i].rows);
         }
         else if( step == 1) {
+            /* retangle plane extract
             int i = 1;
             int scl = p->pyramid_scale[i];                        
-            rk = p->base_kernel;
+            rk = p->base_kernel/2;
             sc->pyramid_ip_per_pt[i] = pow(ceil((float)p->base_kernel*2 / (float)p->stride[i]), 2);                
             for(int j = 0 ; j < p->roi_count; j++) {            
-                float cen_x = float(cal_group.back().four_fpt[j].x)/scl;
-                float cen_y = float(cal_group.back().four_fpt[j].y)/scl;                
+                float cen_x = float(cur_query->pyramid_pair[i+1][j].query.x)/scl;
+                float cen_y = float(cur_query->pyramid_pair[i+1][j].query.y)/scl;
 
                 for(int a = cen_x - rk ; a <= cen_x + rk ; a += p->stride[i]) {
                     for(int b = cen_y - rk ; b <= cen_y + rk ; b += p->stride[i]) {
                         KeyPoint kp = KeyPoint(float(a), float(b), rk, -1, 0, 0, j);
                         sc->pyramid_ip[i].push_back(kp);
-                        Logger("2nd push ip %4.2f %4.2f size %3.2f ", float(a), float(b), rk);
                     }
+                }
+            }
+            dscr->compute(sc->pyramid[i], sc->pyramid_ip[i], sc->pyramid_desc[i]);            
+            Logger("step %d query ip size %d /per pt %d ", i, sc->pyramid_ip[i].size(), sc->pyramid_ip_per_pt[i]); 
+            Logger("step %d desc dimension %d %d ", i, sc->pyramid_desc[i].cols, sc->pyramid_desc[i].rows);
+            */
+            int i = 1;
+            int scl = p->pyramid_scale[i];
+            sc->pyramid_ip_per_pt[i] = 49;
+            for(int j = 0 ; j < p->roi_count; j++) {
+                float cen_x = float(cur_query->pyramid_pair[i+1][j].query.x)/scl;
+                float cen_y = float(cur_query->pyramid_pair[i+1][j].query.y)/scl;
+
+                KeyPoint kp = KeyPoint(cen_x, cen_y, p->base_kernel, -1, 0, 0, j);
+                sc->pyramid_ip[i].push_back(kp);
+
+                int polar_step = 4;
+                for(int k = 0 ; k < polar_step; k ++) {
+                    rk = (p->base_kernel / 2 )/ polar_step * (k + 1);
+                    deg_cnt = (k >= polar_step/2) ? 16: 8;                    
+                    deg_step = 2 * M_PI / deg_cnt;
+                    for(int a = 0 ; a < deg_cnt; a ++){
+                        FPt newpt = mtrx.GetRotatePoint(FPt(cen_x, cen_y), FPt(cen_x, + cen_y - rk), deg_step* a);
+                        KeyPoint kp = KeyPoint(float(newpt.x), float(newpt.y), rk, -1, 0, 0, j);
+                        sc->pyramid_ip[i].push_back(kp);
+                        //Logger("2nd push ip [%d] deg %f  - %4.2f %4.2f size %3.2f ", a, deg_step * a, float(newpt.x), /////float(newpt.y));
+                    }
+                    Logger("push kpt k %d size %d ", k, sc->pyramid_ip[i].size());
                 }
             }
         } /*
@@ -790,7 +811,7 @@ int Extractor::Match() {
         }
     }
     else if(p->match_type == PYRAMID_MATCH) {
-        MatchPyramid();
+        ret = MatchPyramid();
     }
     
     return ret;
@@ -799,10 +820,11 @@ int Extractor::Match() {
 int Extractor::MatchPyramid() {
     Logger("MatchPyramid start.. "); 
     vector<MATCHPAIR> pairs;
-
+    int best_sum = 0;
     //for(int i = p->pyramid_step -1; i >= 0; i --) 
     //First match
     {   int i = 2;
+        int scl = p->pyramid_scale[i];                
         vector<uchar> t_desc;
         t_desc.assign(cur_train->pyramid_desc[i].data, 
             cur_train->pyramid_desc[i].data + cur_train->pyramid_desc[i].total());
@@ -831,22 +853,23 @@ int Extractor::MatchPyramid() {
                 }
                 //Logger("distance step %d/%d/%d  dist %d ", i, j, k,  dist);
             }
-            cur_query->pyramid_pair[i].push_back(MATCHPAIR(FPt(cur_train->pyramid_ip[i][j].pt.x,cur_train->pyramid_ip[i][j].pt.y),
-                FPt(cur_query->pyramid_ip[i][best_index].pt.x, cur_query->pyramid_ip[i][best_index].pt.y), 
-                best, p->pyramid_scale[i], 
-                int(cur_query->pyramid_ip[i][best_index].size)));
+            best_sum += best;            
+            cur_query->pyramid_pair[i].push_back(MATCHPAIR(FPt(cur_train->pyramid_ip[i][j].pt.x * scl,cur_train->pyramid_ip[i][j].pt.y * scl), FPt(cur_query->pyramid_ip[i][best_index].pt.x * scl, cur_query->pyramid_ip[i][best_index].pt.y * scl), 
+                best, scl, int(cur_query->pyramid_ip[i][best_index].size)));
 
             Logger("best distance %d index %d", best, best_index);
             Logger("best coord train %f %f query %f %f ", cur_train->pyramid_ip[i][j].pt.x, cur_train->pyramid_ip[i][j].pt.y, cur_query->pyramid_ip[i][best_index].pt.x, cur_query->pyramid_ip[i][best_index].pt.y);
             Logger("pyramid_pair size %d ", cur_query->pyramid_pair[i].size());
-/*             for(int k = 0 ; k < p->desc_byte; k ++) {
-                Logger(" t_seg %d q_seg %d ", t_seg[k], best_q[k]);
-            }*/
         }
         SaveImage(cur_query, 7);            
     }
     //first step best match verify. if best distance is greater than threshold, return fail.
-    return 0;
+    Logger("best sum %d ave %f ", best_sum, float(best_sum/p->roi_count));
+    if( float(best_sum)/ float(p->roi_count) > p->best_cut) 
+        return -1;
+
+    CreateFeature(cur_query, false, true, 1);
+    /*
     {
         int i = 1;        
         vector<uchar> t_desc;
@@ -868,7 +891,7 @@ int Extractor::MatchPyramid() {
 
             }
         }
-    }
+    } */
 }
 
 int Extractor::MatchPlain() {

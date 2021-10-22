@@ -129,6 +129,7 @@ typedef struct _PARAM {
     int pyramid_patch[3];
     int stride[3];
     int base_kernel;
+    float best_cut;
 
     int blur_ksize;
     float blur_sigma;
