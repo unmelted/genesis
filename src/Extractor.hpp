@@ -50,7 +50,7 @@ private :
 
     int UpdateConfig();    
     vector<Mat>LoadImages(const string& path);
-    void SaveImage(SCENE* sc, int type = 0);
+    void SaveImage(SCENE* sc, int type = 0, int opt = -1);
     void InitializeData(int cnt, int* roi);
     
 //    Mat ProcessImages(Mat& img);

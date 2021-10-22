@@ -54,9 +54,17 @@ typedef struct _cc {
 typedef struct _matchpair {
     FPt train;
     FPt query;
-    FPt distance;
-    int pyramid_step;
+    int distance;
+    int pyramid_sacle;
     int kernel_size;
+
+    _matchpair(FPt tpt, FPt qpt, int dist, int scl, int ksize ) {
+        train = tpt;
+        query = qpt;
+        distance = dist;
+        pyramid_sacle = scl;
+        kernel_size = ksize;
+    };
     
 } MATCHPAIR;
 
@@ -70,8 +78,9 @@ typedef struct _maindata {
     //for pyramid matching
     Mat pyramid[3];
     vector<KeyPoint>pyramid_ip[3];
-    int pyramid_ip_per_pt[3];
+    int pyramid_ip_per_pt[3];    
     Mat pyramid_desc[3];
+    vector<MATCHPAIR>pyramid_pair[3];
     
     //Pt four_pt[4];
     FPt four_fpt[4];    
@@ -120,6 +129,7 @@ typedef struct _PARAM {
     int pyramid_patch[3];
     int stride[3];
     int base_kernel;
+    float best_cut;
 
     int blur_ksize;
     float blur_sigma;
@@ -180,6 +190,11 @@ enum roi_base_type {
 enum _coordwd { 
     FIRST_MATCH = 0,
     NORMAL_VECTOR_CAL = 1,
+};
+
+enum _keypoint_array {
+    PLANE       = 0,
+    CIRCULAR    = 1,
 };
 
 typedef enum _groundtype
