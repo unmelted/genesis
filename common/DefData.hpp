@@ -192,6 +192,11 @@ enum _coordwd {
     NORMAL_VECTOR_CAL = 1,
 };
 
+enum _keypoint_array {
+    PLANE       = 0,
+    CIRCULAR    = 1,
+};
+
 typedef enum _groundtype
 {
     BaseballHome,
