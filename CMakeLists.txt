@@ -20,12 +20,12 @@ add_definitions(-D_IMGDEBUG)
 set(PRJ_PATH        ${CMAKE_CURRENT_SOURCE_DIR})
 file(GLOB PRJ_SRC      ${PRJ_PATH}/src/*.cpp
                             ${PRJ_PATH}/src/detector/*.cpp
-                            ${PRJ_PATH}/common/*.cpp
+                            ${PRJ_PATH}/src/common/*.cpp
                             ${PRJ_PATH}/genesis.cpp)
 
 file(GLOB PRJ_INC      ${PRJ_PATH}/src/*.hpp
                             ${PRJ_PATH}/src/detector/*.hpp
-                            ${PRJ_PATH}/common/*.hpp
+                            ${PRJ_PATH}/src/common/*.hpp
                             ${PRJ_PATH}/include/*.hpp
                             )
 

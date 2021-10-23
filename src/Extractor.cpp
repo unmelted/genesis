@@ -24,10 +24,10 @@ Extractor::Extractor(string &imgset, int cnt, int *roi)
 {
     mtrx = MtrxUtil();
     genutil = ExpUtil();
+    imgutil = ImgUtil();
     t = new TIMER();    
     InitializeData(cnt, roi);
-    imgs = LoadImages(imgset);
-
+    imgs = imgutil.LoadImages(imgset, &dsc_id);
 
 }
 
@@ -280,151 +280,6 @@ void Extractor::NormalizePoint(SCENE *sc, int maxrange)
 #endif
 }
 
-void Extractor::SaveImage(SCENE *sc, int type, int opt)
-{
-    if (type == 0)
-        return;
-
-    if (type == 1)
-    {
-        Mat img;
-        char filename[50] = { 0, };
-        drawKeypoints(sc->img, sc->ip, img);
-        sprintf(filename, "saved/%d_keypoint.png", sc->id);
-        imwrite(filename, img);        
-    }
-    else if (type == 2)
-    {
-        Mat img;
-        char filename[50] = { 0, };
-        img = sc->mask_img;
-        sprintf(filename, "saved/%d_masking.png", sc->id);
-        imwrite(filename, img);                
-    }
-    else if (type == 3)
-    {
-        Mat img;
-        char filename[50] = { 0, };
-        drawKeypoints(sc->img, sc->ip, img);
-        for (int i = 0; i < 4; i++)
-        {
-            circle(img,
-                    Point((int)cal_group.back().four_fpt[i].x/p->p_scale, (int)cal_group.back().four_fpt[i].y/p->p_scale), 6, Scalar(255), -1);
-
-        }        
-        sprintf(filename, "saved/%d_keypoint.png", sc->id);
-        imwrite(filename, img);        
-    }
-    else if (type == 4) {
-        Mat img;
-        char filename[50] = { 0, };
-
-        vector<Scalar> color;
-        color.push_back(Scalar(0, 0, 255));
-        color.push_back(Scalar(0, 255, 0));
-        color.push_back(Scalar(255, 0, 0));
-        color.push_back(Scalar(255, 255, 0));
-        color.push_back(Scalar(255, 0, 255));
-        color.push_back(Scalar(0, 255, 255));        
-
-        drawKeypoints(sc->img, sc->ip, img);
-        for (int i = 0; i < 4; i++)       {
-            circle(img,
-                    Point((int)cal_group.back().four_fpt[i].x/p->p_scale, (int)cal_group.back().four_fpt[i].y/p->p_scale), 6, Scalar(255), -1);
-        }
-
-        Point2f tp1 = Point2f(cur_query->projected_normal.at<Point2f>(0).x/p->p_scale, 
-                cur_query->projected_normal.at<Point2f>(0).y/p->p_scale);
-
-        for (int i = 1 ; i < cur_query->projected_normal.rows; i ++) {
-            Logger("projected point %f %f ", cur_query->projected_normal.at<Point2f>(i).x,
-                    cur_query->projected_normal.at<Point2f>(i).y);
-            Point2f tp2 = Point2f(cur_query->projected_normal.at<Point2f>(i).x/p->p_scale, 
-                    cur_query->projected_normal.at<Point2f>(i).y/p->p_scale);
-
-            line(img, tp1, tp2, color[i], 2);
-        }
-
-        sprintf(filename, "saved/%d_keypoint+normal.png", sc->id);
-        imwrite(filename, img);        
-    }
-    else if (type == 5) {
-        Mat img;
-        char filename[50] = { 0, };
-        img = sc->pyramid[1];
-        sprintf(filename, "saved/%d_pyramid_check1.png", sc->id);        
-        imwrite(filename, img);        
-        img = sc->pyramid[2];
-        sprintf(filename, "saved/%d_pyramid_check2.png", sc->id);
-        imwrite(filename, img);                
-
-    }
-    else if (type == 6) {
-        Mat img;
-        char filename[50] = { 0, };
-        for(int step = 2 ; step >= 0; step --){ 
-            int scl = p->pyramid_scale[step];
-            int cnt = sc->pyramid_ip[step].size(); 
-            img = sc->pyramid[step].clone();            
-            for (int i = 0; i < cnt; i++) {
-                circle(img,
-                    Point((int)sc->pyramid_ip[step][i].pt.x, (int)sc->pyramid_ip[step][i].pt.y), 
-                    1, Scalar(125, 125,0), -1);
-
-            }
-            sprintf(filename, "saved/%d_%d_pr_sel_point.png", sc->id, step);
-            imwrite(filename, img);
-        }
-
-    } else if (type == 7) {
-        Mat img;
-        char filename[50] = { 0, };
-        int step = opt;
-        img = sc->pyramid[step].clone();
-        int scl = p->pyramid_scale[step];
-        for (int i = 0; i < 4; i++) {
-/*             Logger(" pyramid pair %d %d " , (int)sc->pyramid_pair[step][i].query.x, 
-                                    (int)sc->pyramid_pair[step][i].query.y);
- */            
-            circle(img,
-                Point((int)sc->pyramid_pair[step][i].query.x/scl, (int)sc->pyramid_pair[step][i].query.y/scl), 2, Scalar(255), -1);
-
-            sprintf(filename, "saved/%d_%d_pr2_best_point.png", sc->id, step);
-            imwrite(filename, img);
-        }
-    }
- 
-}
-
-vector<Mat> Extractor::LoadImages(const string &path)
-{
-    const int FK = 3500;
-    const int FHD = 1900;
-
-    namespace fs = std::__fs::filesystem;
-
-    for (const auto &entry : fs::directory_iterator(path))
-    {
-        if (fs::is_regular_file(entry) &&
-            entry.path().extension().string() == ".png")
-        {
-            image_paths.push_back(entry.path().string());
-        }
-    }
-
-    sort(begin(image_paths), end(image_paths), less<string>());
-    vector<Mat> images;
-    int len = path.length();
-    for (const string &ip : image_paths)
-    {        
-        images.push_back(imread(ip));
-        string dsc = ip.substr(len, len + 6);
-        dsc = dsc.substr(0, 7);
-        dsc_id.push_back(dsc);
-        Logger("Read image : %s , desc_id %s ", ip.c_str(), dsc.c_str());
-    }
-    return images;
-}
 int Extractor::Execute() {
 
     int index = 0;
@@ -510,7 +365,7 @@ int Extractor::Execute() {
         if (ret > 0) {
             PostProcess();
 #ifdef _IMGDEBUG
-            SaveImage(&sc, 4);
+            imgutil.SaveImage(&sc, 4, cur_train, p);
 #endif            
         }
         else {
@@ -560,7 +415,7 @@ int Extractor::ProcessImages(SCENE* sc) {
             GaussianBlur(dst, blur_img, {p->blur_ksize, p->blur_ksize}, p->blur_sigma, p->blur_sigma);
             sc->pyramid[i] = blur_img;
         }
-//        SaveImage(sc, 5);
+        imgutil.SaveImage(sc, 5);
     }
 
     return ERR_NONE;
@@ -741,7 +596,7 @@ int Extractor::CreateFeature(SCENE* sc, bool train, bool query, int step) {
                 Logger("step %d desc dimension %d %d ", i, sc->pyramid_desc[i].cols, sc->pyramid_desc[i].rows);
             }
         }          
-        SaveImage(sc, 6);
+        imgutil.SaveImage(sc, 6);
         Logger("query kpt size %d %d %d ", sc->pyramid_ip[0].size(), sc->pyramid_ip[1].size(), sc->pyramid_ip[2].size());
     }
 }
@@ -844,7 +699,7 @@ int Extractor::MatchPyramid() {
             Logger("best coord train %f %f query %f %f ", cur_train->pyramid_ip[i][j].pt.x, cur_train->pyramid_ip[i][j].pt.y, cur_query->pyramid_ip[i][best_index].pt.x, cur_query->pyramid_ip[i][best_index].pt.y);
         }
 
-        SaveImage(cur_query, 7, i);            
+        imgutil.SaveImage(cur_query, 7, 0, 0, i);
         Logger("best sum %d ave %f ", best_sum, float(best_sum/p->roi_count));
         float ave = float(best_sum)/ float(p->roi_count);
         int score = 100 - int(ave);

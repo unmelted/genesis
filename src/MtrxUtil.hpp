@@ -15,7 +15,7 @@
 */
 
 #include <cmath>
-#include "../common/DefData.hpp"
+#include "DefData.hpp"
 
 
 using namespace std;

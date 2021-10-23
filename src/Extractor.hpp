@@ -13,13 +13,14 @@
     Description     : Extractor.Hpp
     Notes           : Feature Extractor From Image.
 */
-#include <filesystem>
-#include <fstream>
+
 #include <cmath>
-#include "../common/DefData.hpp"
-#include "../common/Pip.hpp"
+#include "DefData.hpp"
+#include "common/Pip.hpp"
 #include "MtrxUtil.hpp"
 #include "ExpUtil.hpp"
+#include "ImgUtil.hpp"
+
 
 using namespace std;
 using namespace cv;
@@ -34,8 +35,7 @@ public :
     PARAM* p;
     MtrxUtil mtrx;
     ExpUtil genutil;
-
-    vector<string>image_paths;
+    ImgUtil imgutil;
     vector<string>dsc_id;
     vector<Mat>imgs;
     vector<SCENE>cal_group;
@@ -49,8 +49,6 @@ private :
     SCENE* cur_query = 0;
 
     int UpdateConfig();    
-    vector<Mat>LoadImages(const string& path);
-    void SaveImage(SCENE* sc, int type = 0, int opt = -1);
     void InitializeData(int cnt, int* roi);
     
 //    Mat ProcessImages(Mat& img);

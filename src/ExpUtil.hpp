@@ -16,8 +16,8 @@
 
 
 #include <cmath>
-#include "../common/DefData.hpp"
-#include "../common/json.hpp"
+#include "DefData.hpp"
+#include "common/json.hpp"
 
 class ExpUtil {
 

@@ -11,8 +11,8 @@
 #include <vector>
 #include <stdio.h>
 #include <string.h>
-#include "TimeUtil.hpp"
-#include "Image.hpp"
+#include "common/TimeUtil.hpp"
+#include "common/Image.hpp"
 
 using namespace cv;
 using namespace std;
