@@ -13,7 +13,7 @@
     Description     : MtrxUtil.hpp
     Notes           : Matrix calculate uility
 */
-
+#pragma once
 #include <cmath>
 #include "DefData.hpp"
 

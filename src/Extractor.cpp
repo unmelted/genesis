@@ -699,7 +699,7 @@ int Extractor::MatchPyramid() {
             Logger("best coord train %f %f query %f %f ", cur_train->pyramid_ip[i][j].pt.x, cur_train->pyramid_ip[i][j].pt.y, cur_query->pyramid_ip[i][best_index].pt.x, cur_query->pyramid_ip[i][best_index].pt.y);
         }
 
-        imgutil.SaveImage(cur_query, 7, 0, 0, i);
+        imgutil.SaveImage(cur_query, 7, 0, p, i);
         Logger("best sum %d ave %f ", best_sum, float(best_sum/p->roi_count));
         float ave = float(best_sum)/ float(p->roi_count);
         int score = 100 - int(ave);
@@ -1362,15 +1362,6 @@ int Extractor::FindBaseCoordfromWd(int mode)
     return 1;
 }
 
-void Extractor::ApplyImage() {
-
-    Mat dst;
-    char filename[30] = { 0, };    
-    warpAffine(cur_query->ori_img, dst, cur_query->rod_rotation_matrix, Size(cur_query->ori_img.cols, cur_query->ori_img.rows));
-    sprintf(filename, "saved/%d_applyadjust.png", cur_query->id);
-    imwrite(filename, dst);
-
-}
 
 ADJST Extractor::CalAdjustData()
 {
@@ -1588,40 +1579,4 @@ int Extractor::FindHomographyP2P()
     double newx = mret.at<double>(0) / mret.at<double>(2);
     double newy = mret.at<double>(1) / mret.at<double>(2);
     Logger("transformed cetner by P2P : %f %f ", newx, newy);
-}
-
-int Extractor::AdjustImage(ADJST adj)
-{
-    Size sz = Size(cur_query->ori_img.cols, cur_query->ori_img.rows);
-    double angle = adj.angle + 90;
-    double rad = angle * M_PI / 180.0;
-    Logger("Adjust Image angle %f rad %f ", angle, rad);
-
-    //Mat flipm = Mat::eye(3, 3, CV_32FC1);
-    Mat mrot = mtrx.GetRotationMatrix(rad, adj.rotate_centerx, adj.rotate_centery);
-    Mat mscale = mtrx.GetScaleMatrix(adj.scale, adj.scale, adj.rotate_centerx, adj.rotate_centery);
-    Mat mtran = mtrx.GetTranslationMatrix(adj.trans_x, adj.trans_y);
-    Mat mscaleout = mtrx.GetScaleMatrix(1, 1);
-
-    Mat mfm = mscaleout * mtran * mscale * mrot;
-    Logger("5 assembed mfm matrix ");
-    for (int i = 0; i < mfm.rows; i++)
-        for (int j = 0; j < mfm.cols; j++)
-            Logger("[%d][%d] %f ", i, j, mfm.at<float>(i, j));
-
-    Mat mret = mfm(Rect(0, 0, 3, 2));
-    Logger("6 mret = submatrix of mfm");
-    for (int i = 0; i < mret.rows; i++)
-        for (int j = 0; j < mret.cols; j++)
-            Logger("[%d][%d] %f ", i, j, mret.at<float>(i, j));
-
-    Mat final;
-    warpAffine(cur_query->ori_img, final, mret, Size(cur_query->ori_img.cols, cur_query->ori_img.rows));
-
-    static int index = 0;
-    char filename[30] = {
-        0,
-    };
-    sprintf(filename, "saved/%2d_perspective.png", index);
-    imwrite(filename, final);
 }
