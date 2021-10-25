@@ -94,6 +94,9 @@ void ImgUtil::SaveImage(SCENE *sc, int type, SCENE* sc2, PARAM* p, int opt)
     else if (type == 5) {
         Mat img;
         char filename[50] = { 0, };
+        img = sc->pyramid[0];
+        sprintf(filename, "saved/%d_pyramid_check0.png", sc->id);        
+        imwrite(filename, img);        
         img = sc->pyramid[1];
         sprintf(filename, "saved/%d_pyramid_check1.png", sc->id);        
         imwrite(filename, img);        
@@ -232,7 +235,7 @@ int ImgUtil::AdjustImage(SCENE* sc, ADJST adj) {
 }
 
 void ImgUtil::ColorCorrection(Mat& ref, Mat& src, Mat& out) {
-    const float HISTMATCH = 0.000001;1
+    const float HISTMATCH = 0.000001;
     const int HIST_MAX = 256;    
     Mat ref_hist, src_hist;
     Mat ref_hist_acc, src_hist_acc;
@@ -242,8 +245,6 @@ void ImgUtil::ColorCorrection(Mat& ref, Mat& src, Mat& out) {
     float graylevel[] = {0, HIST_MAX};
     const float* range[] = { graylevel };
 
-    cvtColor(ref, ref, cv::COLOR_RGBA2GRAY);
-    cvtColor(src, src, cv::COLOR_RGBA2GRAY);    
     calcHist(&ref, 1, 0, Mat(),
         ref_hist, 1, histSize, range, true, false);
     calcHist(&src, 1, 0, Mat(),
@@ -270,9 +271,9 @@ void ImgUtil::ColorCorrection(Mat& ref, Mat& src, Mat& out) {
     minMaxLoc(src_hist_acc, &min, &max);
     normalize(src_hist_acc, src_hist_acc, min/max , 1.0, NORM_MINMAX);
 
-    Mat lut(1, 256, CV_8UC);
+    Mat lut(1, 256, CV_8UC1);
     uchar *M = lut.ptr<uchar>();
-    uhar last = 0;
+    uchar last = 0;
 
     for( int j = 0 ; j < src_hist_acc.rows; j ++) {
         float F1 = src_cdf[j];

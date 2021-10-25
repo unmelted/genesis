@@ -26,12 +26,15 @@ Extractor::Extractor(string &imgset, int cnt, int *roi)
     genutil = ExpUtil();
     imgutil = ImgUtil();
     t = new TIMER();    
-
-    Mat test =  imread("/Users/4dreplay/work/genesis/py/001029_6400_gray.png");
-    imgutil.CalculateCDFHistogram(test);
-    
-    //InitializeData(cnt, roi);
-    //imgs = imgutil.LoadImages(imgset, &dsc_id);
+/*
+    Mat ref_test =  imread("/Users/4dreplay/work/genesis/py/001029_6400_gray.png");
+    Mat src_test =  imread("/Users/4dreplay/work/genesis/py/001029_20_gray.png");    
+    Mat out; 
+    imgutil.ColorCorrection(ref_test, src_test, out);
+    imwrite("saved/color_coreection.png", out);
+*/    
+    InitializeData(cnt, roi);
+    imgs = imgutil.LoadImages(imgset, &dsc_id);
 
 }
 
@@ -407,15 +410,20 @@ int Extractor::ProcessImages(SCENE* sc) {
         sc->img = blur_img;
     }
     else {
+        Mat dst, out;
+        cvtColor(sc->ori_img, dst, cv::COLOR_RGBA2GRAY);
+        if(sc->id == 1) {
+            Mat ref;
+            cvtColor(cal_group.back().ori_img, ref, cv::COLOR_RGBA2GRAY);
+            imgutil.ColorCorrection(ref, dst, out);
+            dst = out;
+        }
         for(int i = 0 ; i < p->pyramid_step; i ++) {
             Mat blur_img;
-            Mat dst;
             if(p->pyramid_scale[i] != 1) 
-                resize(sc->ori_img, dst, Size(int(sc->ori_img.cols / p->pyramid_scale[i]), 
+                resize(dst, dst, Size(int(sc->ori_img.cols / p->pyramid_scale[i]), 
                     int(sc->ori_img.rows / p->pyramid_scale[i])), 0, 0, 1);
-            else dst = sc->ori_img;
-            cvtColor(dst, blur_img, cv::COLOR_RGBA2GRAY);
-            normalize(blur_img, dst, 0, 255, NORM_MINMAX, -1, noArray());
+//            else dst = sc->ori_img;
             GaussianBlur(dst, blur_img, {p->blur_ksize, p->blur_ksize}, p->blur_sigma, p->blur_sigma);
             sc->pyramid[i] = blur_img;
         }
@@ -936,7 +944,7 @@ int Extractor::MatchSplit(vector<Point2f> m_train, vector<Point2f>m_query) {
 }
 
 int Extractor::MatchVerify() {
-    
+
 }
 
 float Extractor::ncc(int max_index, Mat _h) {
