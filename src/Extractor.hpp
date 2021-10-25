@@ -13,13 +13,14 @@
     Description     : Extractor.Hpp
     Notes           : Feature Extractor From Image.
 */
-#include <filesystem>
-#include <fstream>
+
 #include <cmath>
-#include "../common/DefData.hpp"
-#include "../common/Pip.hpp"
+#include "DefData.hpp"
+#include "common/Pip.hpp"
 #include "MtrxUtil.hpp"
 #include "ExpUtil.hpp"
+#include "ImgUtil.hpp"
+
 
 using namespace std;
 using namespace cv;
@@ -34,8 +35,8 @@ public :
     PARAM* p;
     MtrxUtil mtrx;
     ExpUtil genutil;
+    ImgUtil imgutil;
 
-    vector<string>image_paths;
     vector<string>dsc_id;
     vector<Mat>imgs;
     vector<SCENE>cal_group;
@@ -49,8 +50,6 @@ private :
     SCENE* cur_query = 0;
 
     int UpdateConfig();    
-    vector<Mat>LoadImages(const string& path);
-    void SaveImage(SCENE* sc, int type = 0, int opt = -1);
     void InitializeData(int cnt, int* roi);
     
 //    Mat ProcessImages(Mat& img);
@@ -60,6 +59,9 @@ private :
     int CreateFeature(SCENE* sc, bool train = false, bool query = false, int step = -1);    
 
     vector<KeyPoint> KeypointMasking(vector<KeyPoint>* oip);
+
+    void SetCurTrainScene(SCENE* sc) { cur_train = sc; };
+    void SetCurQueryScene(SCENE* sc) { cur_query = sc; };
     int Match();    
     int MatchPlain();
     int MatchPyramid();    
@@ -70,10 +72,7 @@ private :
     vector<DMatch> RefineMatch(vector<DMatch> good);
     vector<DMatch> RemoveOutlier(vector<DMatch> matches);
 
-    void SetCurTrainScene(SCENE* sc) { cur_train = sc; };
-    void SetCurQueryScene(SCENE* sc) { cur_query = sc; };
     int FindBaseCoordfromWd(int mode = 0);
-//    int FindHomographyMatch();
     int FindHomographyP2P(); 
 
     int PostProcess();
@@ -82,9 +81,7 @@ private :
     int DecomposeHomography();
     ADJST CalAdjustData();
 
-    void ApplyImage();
 
     int WarpingStep1();
-    int AdjustImage(ADJST adj);
 
 };

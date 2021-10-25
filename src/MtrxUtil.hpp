@@ -13,9 +13,9 @@
     Description     : MtrxUtil.hpp
     Notes           : Matrix calculate uility
 */
-
+#pragma once
 #include <cmath>
-#include "../common/DefData.hpp"
+#include "DefData.hpp"
 
 
 using namespace std;

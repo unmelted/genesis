@@ -154,7 +154,7 @@ int CopyImage(IMG* src, IMG* dst)
     dst->mm = src->mm;
     dst->ss = src->ss;
 
-    return ERR_NONE;
+    return 0;
 }
 
 void ClearImage(IMG* in)

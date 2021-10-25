@@ -1,5 +1,9 @@
 
 rm libgenesis.dylib
+rm -rf generated/CMakeFiles
+rm generated/cmake_install.cmake
+rm generated/CMakeCache.txt
+
 make -j4
 
 FILE=libgenesis.dylib
@@ -13,3 +17,14 @@ if [ -f "$FILE" ];then
     streamlit run app.py
 fi
 
+if [ ! -d "generated" ];then
+    mkdir generated
+fi
+
+if [ ! -d "log" ];then
+    mkdir log
+fi
+
+if [ ! -d "saved" ];then
+    mkdir log
+fi

@@ -16,6 +16,6 @@
 
 
 #include <iostream>
-#include "DefData.hpp"
+#include "../DefData.hpp"
  
 bool isInside(Pt polygon[], int n, Pt p);

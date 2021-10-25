@@ -22,7 +22,7 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <vector>
-#include "common/DefData.hpp"
+#include "src/DefData.hpp"
 #include "src/Extractor.hpp"
 
 using namespace std;
