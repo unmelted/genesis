@@ -8,13 +8,13 @@ import matplotlib as plt
 
 SOURCE_IMAGE = "001029_20.png"
 SOURCE_IMAGE_G = "001029_20_gray.png"
-REFERENCE_IMAGE = "001029_6400.png"
+REFERENCE_IMAGE = "001029_6400_gray.png"
 REFERENCE_IMAGE_G = "001029_6400_gray.png"
 OUTPUT_IMAGE = "001029_modify.png"
 OUTPUT_IMAGE_G = "001029_modify_gray.png"
 
 
-def calculate_cdf(histogram):
+def calculate_cdf(histogram, flag = False):
     """
     This method calculates the cumulative distribution function
     :param array histogram: The values of the histogram
@@ -23,10 +23,12 @@ def calculate_cdf(histogram):
     """
     # Get the cumulative sum of the elements
     cdf = histogram.cumsum()
+    if(flag) :
+        print(cdf, cdf.max())
  
     # Normalize the cdf
     normalized_cdf = cdf / float(cdf.max())
- 
+    
     return normalized_cdf
  
 def calculate_lookup(src_cdf, ref_cdf):
@@ -141,13 +143,16 @@ def main():
     output_image = match_histograms(image_src, image_ref)
 
 
-    # gray1 = cv2.cvtColor(image_ref, cv2.COLOR_BGR2GRAY)
+    gray1 = cv2.imread(cv2.samples.findFile(image_ref_name))
+    gray_hist, bingray = np.histogram(gray1.flatten(), 256, [0,256])
+    gray_ref = calculate_cdf(gray_hist, True)
+
     # gray2 = cv2.cvtColor(image_src, cv2.COLOR_BGR2GRAY)    
     # gray3 = cv2.cvtColor(output_image, cv2.COLOR_BGR2GRAY)    
  
     # Save the output images
     cv2.imwrite(OUTPUT_IMAGE, output_image)
-    # cv2.imwrite(REFERENCE_IMAGE_G, gray1)
+    cv2.imwrite(REFERENCE_IMAGE_G, gray1)
     # cv2.imwrite(SOURCE_IMAGE_G, gray2)
     # cv2.imwrite(OUTPUT_IMAGE_G, gray3)
     

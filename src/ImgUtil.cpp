@@ -230,3 +230,62 @@ int ImgUtil::AdjustImage(SCENE* sc, ADJST adj) {
 
     return ERR_NONE;
 }
+
+void ImgUtil::ColorCorrection(Mat& ref, Mat& src, Mat& out) {
+    const float HISTMATCH = 0.000001;1
+    const int HIST_MAX = 256;    
+    Mat ref_hist, src_hist;
+    Mat ref_hist_acc, src_hist_acc;
+    double min, max;
+    int channel[] = { 0 };
+    const int histSize[] = { HIST_MAX };
+    float graylevel[] = {0, HIST_MAX};
+    const float* range[] = { graylevel };
+
+    cvtColor(ref, ref, cv::COLOR_RGBA2GRAY);
+    cvtColor(src, src, cv::COLOR_RGBA2GRAY);    
+    calcHist(&ref, 1, 0, Mat(),
+        ref_hist, 1, histSize, range, true, false);
+    calcHist(&src, 1, 0, Mat(),
+        src_hist, 1, histSize, range, true, false);
+
+    minMaxLoc(ref_hist, &min, &max);
+    normalize(ref_hist, ref_hist, min/max , 1.0, NORM_MINMAX);
+    minMaxLoc(src_hist, &min, &max);
+    normalize(src_hist, src_hist, min/max , 1.0, NORM_MINMAX);
+
+    ref_hist.copyTo(ref_hist_acc);
+    src_hist.copyTo(src_hist_acc);
+
+    float* ref_cdf = ref_hist_acc.ptr<float>();
+    float* src_cdf = src_hist_acc.ptr<float>();
+
+    for(int i = 1 ; i < HIST_MAX; i ++) {
+        ref_cdf[i] += ref_cdf[i -1];
+        src_cdf[i] += src_cdf[i -1];        
+    }
+
+    minMaxLoc(ref_hist_acc, &min, &max);
+    normalize(ref_hist_acc, ref_hist_acc, min/max , 1.0, NORM_MINMAX);
+    minMaxLoc(src_hist_acc, &min, &max);
+    normalize(src_hist_acc, src_hist_acc, min/max , 1.0, NORM_MINMAX);
+
+    Mat lut(1, 256, CV_8UC);
+    uchar *M = lut.ptr<uchar>();
+    uhar last = 0;
+
+    for( int j = 0 ; j < src_hist_acc.rows; j ++) {
+        float F1 = src_cdf[j];
+        
+        for (uchar k = last; k < ref_hist_acc.rows; k++) {
+            float F2 = ref_cdf[k];
+            if (abs(F2- F1) < HISTMATCH || F2 > F1) {
+                M[j] = k;
+                last = k;
+                break;
+            }
+        }
+    }
+
+    LUT(src, lut, out);
+}

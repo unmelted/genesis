@@ -32,5 +32,9 @@ class ImgUtil {
         vector<Mat>LoadImages(const string& path, vector<string>* dsc_id);     
         void SimpleColorBalance(Mat& in, Mat& out, float percent);
         int AdjustImage(SCENE* sc, ADJST adj);
+        void ColorCorrection(Mat& ref, Mat& src, Mat& out);
+
+    private:
+
 
 };

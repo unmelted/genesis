@@ -26,8 +26,12 @@ Extractor::Extractor(string &imgset, int cnt, int *roi)
     genutil = ExpUtil();
     imgutil = ImgUtil();
     t = new TIMER();    
-    InitializeData(cnt, roi);
-    imgs = imgutil.LoadImages(imgset, &dsc_id);
+
+    Mat test =  imread("/Users/4dreplay/work/genesis/py/001029_6400_gray.png");
+    imgutil.CalculateCDFHistogram(test);
+    
+    //InitializeData(cnt, roi);
+    //imgs = imgutil.LoadImages(imgset, &dsc_id);
 
 }
 
@@ -365,7 +369,7 @@ int Extractor::Execute() {
         if (ret > 0) {
             PostProcess();
 #ifdef _IMGDEBUG
-            imgutil.SaveImage(&sc, 4, cur_train, p);
+//            imgutil.SaveImage(&sc, 4, cur_train, p);
 #endif            
         }
         else {
@@ -672,7 +676,7 @@ int Extractor::MatchPyramid() {
 
         Logger("desc size %d %d  ", t_desc.size(), q_desc.size());
         for(int j = 0; j < p->roi_count; j++) {
-            int best = 100000;
+            int best = INT8_MAX;
             int best_index = -1;
             uchar t_seg[p->desc_byte];
             uchar q_seg[p->desc_byte];    
@@ -932,8 +936,7 @@ int Extractor::MatchSplit(vector<Point2f> m_train, vector<Point2f>m_query) {
 }
 
 int Extractor::MatchVerify() {
-
-
+    
 }
 
 float Extractor::ncc(int max_index, Mat _h) {
@@ -1170,6 +1173,9 @@ vector<DMatch> Extractor::RemoveOutlier(vector<DMatch> matches) {
 }
 
 int Extractor::PostProcess() {
+
+    if(p->match_type == PYRAMID_MATCH)
+        return ERR_NONE;
 
     if (cur_query->id == 0) {
         FindBaseCoordfromWd(NORMAL_VECTOR_CAL);
