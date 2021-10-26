@@ -122,7 +122,8 @@ void Extractor::InitializeData(int cnt, int *roi)
             p->stride[1] = 2;            
             p->stride[2] = 4;            
             p->base_kernel = 35;
-            p->best_cut = 60.0;
+            p->best_cut = 75.0;
+            p->pixel_diff_cut = 4.0;
 
         }
     }
@@ -157,7 +158,7 @@ void Extractor::InitializeData(int cnt, int *roi)
 
     p->world = new SCENE();
     // nba 
-    
+    /*
     p->world->four_fpt[0].x = 210.0;
     p->world->four_fpt[0].y = 318.0;
     p->world->four_fpt[1].x = 593.0;
@@ -167,8 +168,8 @@ void Extractor::InitializeData(int cnt, int *roi)
     p->world->four_fpt[3].x = 210.0;
     p->world->four_fpt[3].y = 428.0;
     p->world->center.x = 210.0;
-    p->world->center.y = 372.0;
-    //football 
+    p->world->center.y = 372.0; */
+    //football
     /*
     p->world->four_fpt[0].x = 226.0;
     p->world->four_fpt[0].y = 695.0;
@@ -179,7 +180,9 @@ void Extractor::InitializeData(int cnt, int *roi)
     p->world->four_fpt[3].x = 226.0;
     p->world->four_fpt[3].y = 581.0;
     p->world->center.x = 400.0;
-    p->world->center.y = 674.0;  */
+    p->world->center.y = 674.0; */
+    p->world->center.x = 400.0;
+    p->world->center.y = 674.0;    
 
     p->world->rod_norm = 100;
     p->camera_matrix = (float *)g_os_malloc(sizeof(float) * 9);
@@ -303,12 +306,12 @@ int Extractor::Execute() {
         sc.id = index;
         sc.ori_img = imgs[i];
         ProcessImages(&sc);
-        //image.pop();
 
         if (index == 0)
         {
             sc.id = 0;
-            //nba 30096_10            
+            //nba 30096_10         
+            /*   
             sc.four_fpt[0].x = 1688.0;
             sc.four_fpt[0].y = 1058.0;
             sc.four_fpt[1].x = 2456.0;
@@ -318,7 +321,7 @@ int Extractor::Execute() {
             sc.four_fpt[3].x = 2165.0;
             sc.four_fpt[3].y = 1128.0;
             sc.center.x = 1906.0;
-            sc.center.y = 1092.0; 
+            sc.center.y = 1092.0;  */
             //football
             /*
             sc.four_fpt[0].x = 1275.0;
@@ -331,6 +334,16 @@ int Extractor::Execute() {
             sc.four_fpt[3].y = 148.0;
             sc.center.x = 1470.0;
             sc.center.y = 630.0; */
+
+            sc.four_fpt[0].x = 1631.0;
+            sc.four_fpt[0].y = 836.0;
+            sc.four_fpt[1].x = 817.0;
+            sc.four_fpt[1].y = 1239.0;
+            sc.four_fpt[2].x = 2185.0;
+            sc.four_fpt[2].y = 1464.0;
+            sc.four_fpt[3].x = 3001.0;
+            sc.four_fpt[3].y = 900.0;
+
         }
 
         if(p->match_type == PLAIN_MATCH) {
@@ -361,8 +374,8 @@ int Extractor::Execute() {
                 CreateFeature(&sc, false, true);    
                 Logger("[%d] feature extracting  %f ", index, LapTimer(t));
                 cal_group.push_back(sc);                
+                SetCurTrainScene(&cal_group[0]);                         
                 //SetCurTrainScene(&cal_group[index - 1]);
-                SetCurTrainScene(&cal_group[0]);
                 SetCurQueryScene(&cal_group[index]);
             }
         }
@@ -383,8 +396,8 @@ int Extractor::Execute() {
         Logger("------- [%d] end  consuming %f ", index, LapTimer(t));
 
         index++;
-//        if (index == 2)
-//            break;
+        // if (index == 2)
+        //     break;
     }
 
     //Export result to josn file
@@ -413,9 +426,9 @@ int Extractor::ProcessImages(SCENE* sc) {
     else {
         Mat dst, out;
         cvtColor(sc->ori_img, dst, cv::COLOR_RGBA2GRAY);
-        if(sc->id == 1) {
+        if(sc->id > 0) {
             Mat ref;
-            cvtColor(cal_group.back().ori_img, ref, cv::COLOR_RGBA2GRAY);
+            cvtColor(cal_group[0].ori_img, ref, cv::COLOR_RGBA2GRAY);
             imgutil.ColorCorrection(ref, dst, out);
             dst = out;
         }
@@ -561,7 +574,7 @@ int Extractor::CreateFeature(SCENE* sc, bool train, bool query, int step) {
                     cen_y = float(cur_query->pyramid_pair[i+1][j].query.y)/scl;
                 } else if (step == 2) {
                     rk = p->base_kernel / 2;              
-                    sc->pyramid_ip_per_pt[i] = pow(ceil((float)p->base_kernel / (float)p->stride[i]), 2);            
+                    sc->pyramid_ip_per_pt[i] = pow(ceil((float)p->base_kernel / (float)p->stride[i]), 2);
                     cen_x = float(cal_group.back().four_fpt[j].x)/scl;
                     cen_y = float(cal_group.back().four_fpt[j].y)/scl;                                
 
@@ -671,10 +684,10 @@ int Extractor::Match() {
 int Extractor::MatchPyramid() {
     int result = -1;
     Logger("MatchPyramid start.. "); 
-    int best_sum = 0;
 
     for(int i = p->pyramid_step -1; i >= 0; i --) 
     {
+        int best_sum = 0;        
         int scl = p->pyramid_scale[i];                
         vector<uchar> t_desc;
         t_desc.assign(cur_train->pyramid_desc[i].data, 
@@ -725,14 +738,35 @@ int Extractor::MatchPyramid() {
             CreateFeature(cur_query, false, true, i-1);
     }
 
-    if(result > 60) {
-        Logger(" --- ");
+    if(result > p->best_cut) {
+        float diff_x = 0;
+        float diff_y = 0;
+        float ave_diff_x = 0; float ave_diff_y = 0;
+
         for(int i = 0 ; i < p->roi_count ; i ++) {
-            Logger(" %f %f ", cur_query->pyramid_pair[0][i].query.x,  cur_query->pyramid_pair[0][i].query.y);
-            cur_query->four_fpt[i].x = cur_query->pyramid_pair[0][i].query.x;
-            cur_query->four_fpt[i].y = cur_query->pyramid_pair[0][i].query.y;
+            diff_x += abs(cur_train->four_fpt[i].x - cur_query->pyramid_pair[0][i].query.x);
+            diff_y += abs(cur_train->four_fpt[i].y - cur_query->pyramid_pair[0][i].query.y);
+        }
+        ave_diff_x = diff_x / p->roi_count;
+        ave_diff_y = diff_y / p->roi_count;
+        Logger("ave diff %f %f ", ave_diff_x, ave_diff_y);
+
+        for(int i = 0 ; i < p->roi_count ; i ++) {
+            if( abs(cur_train->four_fpt[i].x - cur_query->pyramid_pair[0][i].query.x) > (ave_diff_x + p->pixel_diff_cut) || abs(cur_train->four_fpt[i].y - cur_query->pyramid_pair[0][i].query.y) > (ave_diff_y + p->pixel_diff_cut)) {
+                result = -1;
+                Logger(" Pixel Diff cut out![%d]-- %f %f  ",i, abs(cur_query->pyramid_pair[0][i].query.x - ave_diff_x), abs(cur_query->pyramid_pair[0][i].query.y - ave_diff_y));
+                break;
+            }
+        }
+
+        if(result > p->best_cut) {
+            for(int i = 0 ; i < p->roi_count ; i ++) {
+                cur_query->four_fpt[i].x = cur_query->pyramid_pair[0][i].query.x;
+                cur_query->four_fpt[i].y = cur_query->pyramid_pair[0][i].query.y;
+            }
         }
     }
+
     return result;
 }
 

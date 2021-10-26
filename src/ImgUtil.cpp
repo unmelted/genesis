@@ -283,6 +283,10 @@ void ImgUtil::ColorCorrection(Mat& ref, Mat& src, Mat& out) {
             }
         }
     }
-
+    
+    Logger("color correction .. ");
     LUT(src, lut, out);
+    // imwrite("saved/cc_ref.png", ref);
+    // imwrite("saved/cc_src.png", src);    
+    // imwrite("saved/cc_out.png", out); 
 }
