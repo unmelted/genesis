@@ -147,14 +147,11 @@ vector<Mat> ImgUtil::LoadImages(const string &path, vector<string>* dsc_id)
     const int FK = 3500;
     const int FHD = 1900;
     vector<string>image_paths;
-
     namespace fs = std::__fs::filesystem;
 
-    for (const auto &entry : fs::directory_iterator(path))
-    {
+    for (const auto &entry : fs::directory_iterator(path)) {
         if (fs::is_regular_file(entry) &&
-            entry.path().extension().string() == ".png")
-        {
+            entry.path().extension().string() == ".png") {
             image_paths.push_back(entry.path().string());
         }
     }
@@ -162,8 +159,7 @@ vector<Mat> ImgUtil::LoadImages(const string &path, vector<string>* dsc_id)
     sort(begin(image_paths), end(image_paths), less<string>());
     vector<Mat> images;
     int len = path.length();
-    for (const string &ip : image_paths)
-    {        
+    for (const string &ip : image_paths) {        
         images.push_back(imread(ip));
         string dsc = ip.substr(len, len + 6);
         dsc = dsc.substr(0, 7);

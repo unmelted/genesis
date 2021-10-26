@@ -361,7 +361,8 @@ int Extractor::Execute() {
                 CreateFeature(&sc, false, true);    
                 Logger("[%d] feature extracting  %f ", index, LapTimer(t));
                 cal_group.push_back(sc);                
-                SetCurTrainScene(&cal_group[index - 1]);
+                //SetCurTrainScene(&cal_group[index - 1]);
+                SetCurTrainScene(&cal_group[0]);
                 SetCurQueryScene(&cal_group[index]);
             }
         }
@@ -382,8 +383,8 @@ int Extractor::Execute() {
         Logger("------- [%d] end  consuming %f ", index, LapTimer(t));
 
         index++;
-        if (index == 2)
-            break;
+//        if (index == 2)
+//            break;
     }
 
     //Export result to josn file
@@ -427,7 +428,7 @@ int Extractor::ProcessImages(SCENE* sc) {
             GaussianBlur(dst, blur_img, {p->blur_ksize, p->blur_ksize}, p->blur_sigma, p->blur_sigma);
             sc->pyramid[i] = blur_img;
         }
-        imgutil.SaveImage(sc, 5);
+//        imgutil.SaveImage(sc, 5);
     }
 
     return ERR_NONE;
@@ -692,7 +693,7 @@ int Extractor::MatchPyramid() {
             memcpy((void *)&t_seg[0], &t_desc[j*p->desc_byte], sizeof(uchar)* p->desc_byte);            
             int start = j * cur_query->pyramid_ip_per_pt[i]; 
             int end = (j + 1)* cur_query->pyramid_ip_per_pt[i];
-            Logger("start %d end %d ", start, end);
+//            Logger("start %d end %d ", start, end);
             for(int k = start ; k < end; k++) {
                 memcpy((void *)&q_seg[0], &q_desc[p->desc_byte * k], sizeof(uchar)* p->desc_byte);            
                 int dist = mtrx.Hamming(t_seg, q_seg, p->desc_byte);
@@ -724,6 +725,14 @@ int Extractor::MatchPyramid() {
             CreateFeature(cur_query, false, true, i-1);
     }
 
+    if(result > 60) {
+        Logger(" --- ");
+        for(int i = 0 ; i < p->roi_count ; i ++) {
+            Logger(" %f %f ", cur_query->pyramid_pair[0][i].query.x,  cur_query->pyramid_pair[0][i].query.y);
+            cur_query->four_fpt[i].x = cur_query->pyramid_pair[0][i].query.x;
+            cur_query->four_fpt[i].y = cur_query->pyramid_pair[0][i].query.y;
+        }
+    }
     return result;
 }
 
@@ -1182,8 +1191,12 @@ vector<DMatch> Extractor::RemoveOutlier(vector<DMatch> matches) {
 
 int Extractor::PostProcess() {
 
-    if(p->match_type == PYRAMID_MATCH)
+    if(p->match_type == PYRAMID_MATCH) {
+        for(int i = 0 ; i < p->roi_count ; i ++)
+            Logger("DIFF %2.3f %2.3f ", cur_train->four_fpt[i].x - cur_query->four_fpt[i].x,
+                cur_train->four_fpt[i].y - cur_query->four_fpt[i].y);
         return ERR_NONE;
+    }
 
     if (cur_query->id == 0) {
         FindBaseCoordfromWd(NORMAL_VECTOR_CAL);
