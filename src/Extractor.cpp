@@ -407,6 +407,14 @@ int Extractor::Execute() {
 
     return ERR_NONE;
 }
+int Extractor::ExecuteSever(string ref_path, string cur_path, string ref_pts_path, string& out_pts_path) {
+    
+}
+
+int Extractor::ExecuteClient(string ref_file, string current_file, vector<Point2f>in_pt, vector<Point2f>* out_pt) 
+{
+
+}
 
 //Mat Extractor::ProcessImages(Mat &img)
 int Extractor::ProcessImages(SCENE* sc) {
