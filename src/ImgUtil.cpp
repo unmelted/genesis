@@ -94,6 +94,9 @@ void ImgUtil::SaveImage(SCENE *sc, int type, SCENE* sc2, PARAM* p, int opt)
     else if (type == 5) {
         Mat img;
         char filename[50] = { 0, };
+        img = sc->pyramid[0];
+        sprintf(filename, "saved/%d_pyramid_check0.png", sc->id);        
+        imwrite(filename, img);        
         img = sc->pyramid[1];
         sprintf(filename, "saved/%d_pyramid_check1.png", sc->id);        
         imwrite(filename, img);        
@@ -144,14 +147,11 @@ vector<Mat> ImgUtil::LoadImages(const string &path, vector<string>* dsc_id)
     const int FK = 3500;
     const int FHD = 1900;
     vector<string>image_paths;
-
     namespace fs = std::__fs::filesystem;
 
-    for (const auto &entry : fs::directory_iterator(path))
-    {
+    for (const auto &entry : fs::directory_iterator(path)) {
         if (fs::is_regular_file(entry) &&
-            entry.path().extension().string() == ".png")
-        {
+            entry.path().extension().string() == ".png") {
             image_paths.push_back(entry.path().string());
         }
     }
@@ -159,8 +159,7 @@ vector<Mat> ImgUtil::LoadImages(const string &path, vector<string>* dsc_id)
     sort(begin(image_paths), end(image_paths), less<string>());
     vector<Mat> images;
     int len = path.length();
-    for (const string &ip : image_paths)
-    {        
+    for (const string &ip : image_paths) {        
         images.push_back(imread(ip));
         string dsc = ip.substr(len, len + 6);
         dsc = dsc.substr(0, 7);
@@ -229,4 +228,65 @@ int ImgUtil::AdjustImage(SCENE* sc, ADJST adj) {
     imwrite(filename, final);
 
     return ERR_NONE;
+}
+
+void ImgUtil::ColorCorrection(Mat& ref, Mat& src, Mat& out) {
+    const float HISTMATCH = 0.000001;
+    const int HIST_MAX = 256;    
+    Mat ref_hist, src_hist;
+    Mat ref_hist_acc, src_hist_acc;
+    double min, max;
+    int channel[] = { 0 };
+    const int histSize[] = { HIST_MAX };
+    float graylevel[] = {0, HIST_MAX};
+    const float* range[] = { graylevel };
+
+    calcHist(&ref, 1, 0, Mat(),
+        ref_hist, 1, histSize, range, true, false);
+    calcHist(&src, 1, 0, Mat(),
+        src_hist, 1, histSize, range, true, false);
+
+    minMaxLoc(ref_hist, &min, &max);
+    normalize(ref_hist, ref_hist, min/max , 1.0, NORM_MINMAX);
+    minMaxLoc(src_hist, &min, &max);
+    normalize(src_hist, src_hist, min/max , 1.0, NORM_MINMAX);
+
+    ref_hist.copyTo(ref_hist_acc);
+    src_hist.copyTo(src_hist_acc);
+
+    float* ref_cdf = ref_hist_acc.ptr<float>();
+    float* src_cdf = src_hist_acc.ptr<float>();
+
+    for(int i = 1 ; i < HIST_MAX; i ++) {
+        ref_cdf[i] += ref_cdf[i -1];
+        src_cdf[i] += src_cdf[i -1];        
+    }
+
+    minMaxLoc(ref_hist_acc, &min, &max);
+    normalize(ref_hist_acc, ref_hist_acc, min/max , 1.0, NORM_MINMAX);
+    minMaxLoc(src_hist_acc, &min, &max);
+    normalize(src_hist_acc, src_hist_acc, min/max , 1.0, NORM_MINMAX);
+
+    Mat lut(1, 256, CV_8UC1);
+    uchar *M = lut.ptr<uchar>();
+    uchar last = 0;
+
+    for( int j = 0 ; j < src_hist_acc.rows; j ++) {
+        float F1 = src_cdf[j];
+        
+        for (uchar k = last; k < ref_hist_acc.rows; k++) {
+            float F2 = ref_cdf[k];
+            if (abs(F2- F1) < HISTMATCH || F2 > F1) {
+                M[j] = k;
+                last = k;
+                break;
+            }
+        }
+    }
+    
+    Logger("color correction .. ");
+    LUT(src, lut, out);
+    // imwrite("saved/cc_ref.png", ref);
+    // imwrite("saved/cc_src.png", src);    
+    // imwrite("saved/cc_out.png", out); 
 }

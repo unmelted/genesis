@@ -130,7 +130,8 @@ typedef struct _PARAM {
     int stride[3];
     int base_kernel;
     float best_cut;
-
+    float pixel_diff_cut;
+    
     int blur_ksize;
     float blur_sigma;
     int desc_byte;

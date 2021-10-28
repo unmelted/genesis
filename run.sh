@@ -1,4 +1,3 @@
-
 rm libgenesis.dylib
 rm -rf generated/CMakeFiles
 rm generated/cmake_install.cmake
