@@ -1,3 +1,19 @@
+  
+/*****************************************************************************
+*                                                                            *
+*                            DefData         								 *
+*                                                                            *
+*   Copyright (C) 2021 By 4dreplay, Incoporated. All Rights Reserved.        *
+******************************************************************************
+
+    File Name       : DefData.hpp
+    Author(S)       : Me Eunkyung
+    Created         : 17 Sep 2021
+
+    Description     : Data structure definition for Kelly Genesis
+    Notes           : 
+*/
+
 #pragma once
 
 #include <iostream>

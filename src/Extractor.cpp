@@ -19,6 +19,14 @@
 using namespace std;
 using namespace cv;
 
+Extractor::Extractor() {
+
+    mtrx = MtrxUtil();
+    genutil = ExpUtil();
+    imgutil = ImgUtil();
+    t = new TIMER();    
+    LoadConfig();
+}
 
 Extractor::Extractor(string &imgset, int cnt, int *roi)
 {
@@ -26,6 +34,7 @@ Extractor::Extractor(string &imgset, int cnt, int *roi)
     genutil = ExpUtil();
     imgutil = ImgUtil();
     t = new TIMER();    
+    LoadConfig();    
 /*
     Mat ref_test =  imread("/Users/4dreplay/work/genesis/py/001029_6400_gray.png");
     Mat src_test =  imread("/Users/4dreplay/work/genesis/py/001029_20_gray.png");    
@@ -47,6 +56,10 @@ Extractor::~Extractor()
     g_os_free(p->skew_coeff);
     g_os_free(p);
     delete t;
+}
+
+void Extractor::LoadConfig() {
+
 }
 
 void Extractor::InitializeData(int cnt, int *roi)

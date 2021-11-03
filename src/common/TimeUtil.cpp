@@ -5,7 +5,7 @@
  *  Copyright (c) 2019, nepes inc, All rights reserved.
  *
  */
-
+#define _CRT_SECURE_NO_WARNINGS
 #include "TimeUtil.hpp"
 
 using namespace std;
@@ -83,7 +83,7 @@ void PassTime()
     int msc = currentTimeMillis % 1000;
     long nowTime = currentTimeMillis / 1000;
 
-    tm *ts = localtime(&nowTime);
+    tm *ts = localtime((const time_t *)&nowTime);
 
     int year = ts->tm_year + 1900;
     int month = ts->tm_mon + 1;
