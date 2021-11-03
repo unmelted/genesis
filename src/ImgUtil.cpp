@@ -13,7 +13,7 @@
     Description     : ImgUtil.cpp
     Notes           : Utility related image.
 */
-
+#define _CRT_SECURE_NO_WARNINGS
 #include "ImgUtil.hpp"
 
 using namespace std;
@@ -147,6 +147,7 @@ vector<Mat> ImgUtil::LoadImages(const string &path, vector<string>* dsc_id)
     const int FK = 3500;
     const int FHD = 1900;
     vector<string>image_paths;
+    /*
     namespace fs = std::__fs::filesystem;
 
     for (const auto &entry : fs::directory_iterator(path)) {
@@ -154,7 +155,7 @@ vector<Mat> ImgUtil::LoadImages(const string &path, vector<string>* dsc_id)
             entry.path().extension().string() == ".png") {
             image_paths.push_back(entry.path().string());
         }
-    }
+    } */
 
     sort(begin(image_paths), end(image_paths), less<string>());
     vector<Mat> images;

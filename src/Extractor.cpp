@@ -13,7 +13,7 @@
     Description     : Extractor.Cpp
     Notes           : Feature Extractor From Image.
 */
-
+#define _CRT_SECURE_NO_WARNINGS
 #include "Extractor.hpp"
 
 using namespace std;

@@ -13,8 +13,11 @@
     Description     : MtrxUtil.Cpp
     Notes           : Matrix calculate uility
 */
-
 #include "MtrxUtil.hpp"
+
+#if defined _WIN_
+#include <nmmintrin.h>
+#endif
 
 Point2f MtrxUtil::GetRotatePoint(Point2f ptCenter, Point2f ptRot, double dbAngle)
 {
@@ -203,6 +206,7 @@ int MtrxUtil::TransformPtsbyHomography(Pt* in, Mat& homography, int cnt) {
         in[i].y = tp.y;
     }
 
+    return ERR_NONE;
 }
 
 FPt MtrxUtil::TransformPtbyAffine(FPt in, Mat& aff) {
