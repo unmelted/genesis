@@ -13,7 +13,6 @@ find_package( OpenCV REQUIRED )
 
 set(CMAKE_CXX_FLAGS "-Wno-invalid-source-encoding -Wno-deprecated-register -Wno-writable-strings -Wno-parentheses -O2 -g")
 #set(LIB_INCLUDE_DIR "/usr/local/include")
-#set(OPENCV_INCLUDE_DIRS "/usr/local/include/opencv4/opencv2/")
 add_definitions(-D_DEBUG)
 add_definitions(-D_IMGDEBUG)
 
@@ -31,7 +30,7 @@ file(GLOB PRJ_INC      ${PRJ_PATH}/src/*.hpp
 
 set(CMAKE_INCLUDE_CURRENT_DIR ON)
 include_directories(${PRJ_INC} ${OpenCV_INCLUDE_DIRS})
-##message(${PRJ_INC})
+message(${OpenCV_INCLUDE_DIRS})
 add_library(genesis SHARED ${PRJ_SRC})
 target_link_libraries(genesis ${OpenCV_LIBS})
 

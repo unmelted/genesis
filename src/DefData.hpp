@@ -12,7 +12,7 @@
 #include <stdio.h>
 #include <string.h>
 #include "common/TimeUtil.hpp"
-#include "common/Image.hpp"
+#include "common/os_api.hpp"
 
 using namespace cv;
 using namespace std;

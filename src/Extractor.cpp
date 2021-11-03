@@ -215,6 +215,7 @@ int Extractor::UpdateConfig()
     //read config file and update parameter
 
     //or Reset
+    return ERR_NONE;
 }
 
 void Extractor::NormalizePoint(SCENE *sc, int maxrange)
@@ -407,6 +408,7 @@ int Extractor::Execute() {
 
     return ERR_NONE;
 }
+/*
 int Extractor::ExecuteSever(string ref_path, string cur_path, string ref_pts_path, string& out_pts_path) {
     
 }
@@ -415,7 +417,7 @@ int Extractor::ExecuteClient(string ref_file, string current_file, vector<Point2
 {
 
 }
-
+*/
 //Mat Extractor::ProcessImages(Mat &img)
 int Extractor::ProcessImages(SCENE* sc) {
     if(p->match_type == PLAIN_MATCH) {
@@ -491,7 +493,7 @@ int Extractor::ImageMasking(SCENE* sc)
 #if defined _IMGDEBUG
 //    SaveImage(sc, 2);
 #endif
-    
+    return ERR_NONE;    
 }
 
 int Extractor::GetFeature(SCENE *sc) {
@@ -633,6 +635,8 @@ int Extractor::CreateFeature(SCENE* sc, bool train, bool query, int step) {
         imgutil.SaveImage(sc, 6);
         Logger("query kpt size %d %d %d ", sc->pyramid_ip[0].size(), sc->pyramid_ip[1].size(), sc->pyramid_ip[2].size());
     }
+    
+    return ERR_NONE;
 }
 
 vector<KeyPoint> Extractor::KeypointMasking(vector<KeyPoint> *oip)
@@ -992,10 +996,7 @@ int Extractor::MatchSplit(vector<Point2f> m_train, vector<Point2f>m_query) {
         Logger("Homography fail. Try to searching again");
     }
  */
-}
-
-int Extractor::MatchVerify() {
-
+    return ERR_NONE;
 }
 
 float Extractor::ncc(int max_index, Mat _h) {
@@ -1285,6 +1286,7 @@ int Extractor::PostProcess() {
             p->circles[i].center = newpt;
         }
     }
+    return ERR_NONE;
 }
 
 int Extractor::FindBaseCoordfromWd(int mode)
@@ -1588,6 +1590,8 @@ int Extractor::WarpingStep1()
     Logger("estimated center point %f %f ", mresult.at<double>(0), mresult.at<double>(1));
     Logger("error  %f %f ", cur_query->center.x - mresult.at<double>(0), cur_query->center.y - mresult.at<double>(1));
     //ROI Warping
+
+    return ERR_NONE;
 }
 
 int Extractor::DecomposeHomography()
@@ -1615,6 +1619,8 @@ int Extractor::DecomposeHomography()
         Logger("plane normal from homography decomposition: %f %f %f ", normal_decom_t.at<double>(0),
                normal_decom_t.at<double>(1), normal_decom_t.at<double>(2));
     }
+
+    return ERR_NONE;
 }
 
 int Extractor::FindHomographyP2P()
@@ -1648,4 +1654,6 @@ int Extractor::FindHomographyP2P()
     double newx = mret.at<double>(0) / mret.at<double>(2);
     double newy = mret.at<double>(1) / mret.at<double>(2);
     Logger("transformed cetner by P2P : %f %f ", newx, newy);
+
+    return ERR_NONE;
 }
