@@ -63,6 +63,7 @@ extern "C" {
 
         Logger( "received count %d path %s", cnt, img_path);
         Process(cnt, buffers, img_path);
+        return 1;
     }
 
     void Exit() {

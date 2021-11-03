@@ -141,13 +141,13 @@ void ImgUtil::SaveImage(SCENE *sc, int type, SCENE* sc2, PARAM* p, int opt)
     }
  
 }
-
 vector<Mat> ImgUtil::LoadImages(const string &path, vector<string>* dsc_id)
 {
+#if defined _MAC_    
     const int FK = 3500;
     const int FHD = 1900;
     vector<string>image_paths;
-    /*
+
     namespace fs = std::__fs::filesystem;
 
     for (const auto &entry : fs::directory_iterator(path)) {
@@ -155,7 +155,7 @@ vector<Mat> ImgUtil::LoadImages(const string &path, vector<string>* dsc_id)
             entry.path().extension().string() == ".png") {
             image_paths.push_back(entry.path().string());
         }
-    } */
+    }
 
     sort(begin(image_paths), end(image_paths), less<string>());
     vector<Mat> images;
@@ -168,6 +168,7 @@ vector<Mat> ImgUtil::LoadImages(const string &path, vector<string>* dsc_id)
         Logger("Read image : %s , desc_id %s ", ip.c_str(), dsc.c_str());
     }
     return images;
+#endif    
 }
 
 void ImgUtil::SimpleColorBalance(Mat& in, Mat& out, float percent){

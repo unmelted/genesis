@@ -14,7 +14,9 @@
     Notes           : Utility related image.
 */
 #pragma once
+#if defined _MAC_
 #include <filesystem>
+#endif
 #include "DefData.hpp"
 #include "MtrxUtil.hpp"
 

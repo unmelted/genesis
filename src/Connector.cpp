@@ -18,13 +18,16 @@
 
 int CheckValidity() {
 
+    return ERR_NONE;
 }
 
 int ConvertFromESMtoGenesis() {
 
+    return ERR_NONE;
 }
 
 int ConvertFromGenesistoESM() {
 
+    return ERR_NONE;
 }
 

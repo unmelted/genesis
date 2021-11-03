@@ -19,7 +19,7 @@
 using namespace std;
 using namespace cv;
 
-Extractor::Extractor() {
+Extractor::Extractor(void) {
 
     mtrx = MtrxUtil();
     genutil = ExpUtil();
@@ -58,8 +58,9 @@ Extractor::~Extractor()
     delete t;
 }
 
-void Extractor::LoadConfig() {
+int Extractor::LoadConfig() {
 
+    return ERR_NONE;
 }
 
 void Extractor::InitializeData(int cnt, int *roi)
@@ -425,12 +426,13 @@ int Extractor::Execute() {
 int Extractor::ExecuteSever(string ref_path, string cur_path, string ref_pts_path, string& out_pts_path) {
     
 }
+*/
 
 int Extractor::ExecuteClient(string ref_file, string current_file, vector<Point2f>in_pt, vector<Point2f>* out_pt) 
 {
-
+    return ERR_NONE;
 }
-*/
+
 //Mat Extractor::ProcessImages(Mat &img)
 int Extractor::ProcessImages(SCENE* sc) {
     if(p->match_type == PLAIN_MATCH) {
