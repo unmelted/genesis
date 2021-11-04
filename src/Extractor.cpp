@@ -428,7 +428,7 @@ int Extractor::ExecuteSever(string ref_path, string cur_path, string ref_pts_pat
 }
 */
 
-int Extractor::ExecuteClient(string ref_file, string current_file, vector<Point2f>in_pt, vector<Point2f>* out_pt) 
+int Extractor::ExecuteClient(string ref_file, string current_file, FPt* in_pt, FPt* out_pt)
 {
     return ERR_NONE;
 }

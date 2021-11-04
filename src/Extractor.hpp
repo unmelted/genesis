@@ -34,8 +34,7 @@ public :
     int Execute();
     
     int ExecuteSever(string ref_path, string cur_path, string ref_pts_path, string& out_pts_path);
-    int ExecuteClient(string ref_file, string current_file, vector<Point2f>in_pt, vector<Point2f>* out_pt);
-
+    int ExecuteClient(string ref_file, string current_file, FPt* in_pt, FPt* out_pt);
     PARAM* p;
     MtrxUtil mtrx;
     ExpUtil genutil;
