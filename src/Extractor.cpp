@@ -465,8 +465,10 @@ int Extractor::ExecuteClient(Mat ref_file, Mat cur_file, FPt* in_pt, FPt* out_pt
     Logger("return from FindHomography------  %d", ret);
     Logger("match consuming %f ", LapTimer(t));        
 
-    if(ret > 0 )
-        PostProcess();
+    for(int i = 0; i < p->roi_count; i ++) {
+         out_pt[i].x = cur.four_fpt[i].x;
+         out_pt[i].y = cur.four_fpt[i].y;
+    }
 
     Logger("------- end  consuming %f ", LapTimer(t));
 

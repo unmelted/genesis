@@ -64,7 +64,11 @@ void ImgUtil::SaveImage(SCENE *sc, int type, SCENE* sc2, PARAM* p, int opt)
                     Point((int)sc2->four_fpt[i].x/p->p_scale, (int)sc2->four_fpt[i].y/p->p_scale), 6, Scalar(255), -1);
 
         }        
+#if defined _WIN_                
         sprintf(filename, "saved\\%d_keypoint.png", sc->id);
+#else
+        sprintf(filename, "saved/%d_keypoint.png", sc->id);        
+#endif        
         imwrite(filename, img);        
     }
     else if (type == 4) {
@@ -167,7 +171,7 @@ void ImgUtil::SaveImage(SCENE *sc, int type, SCENE* sc2, PARAM* p, int opt)
 #if defined _WIN_
             sprintf(filename, "saved\\%d_%d_pr2_best_point.png", sc->id, step);
 #else            
-            sprintf(filename, "saved\\%d_%d_pr2_best_point.png", sc->id, step);
+            sprintf(filename, "saved/%d_%d_pr2_best_point.png", sc->id, step);
 #endif            
             imwrite(filename, img);
         }
