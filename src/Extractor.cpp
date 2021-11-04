@@ -1,4 +1,4 @@
-
+﻿
 /*****************************************************************************
 *                                                                            *
 *                            Extractor      								 *
@@ -13,12 +13,21 @@
     Description     : Extractor.Cpp
     Notes           : Feature Extractor From Image.
 */
-
+#define _CRT_SECURE_NO_WARNINGS
 #include "Extractor.hpp"
 
 using namespace std;
 using namespace cv;
 
+Extractor::Extractor(void) {
+
+    mtrx = MtrxUtil();
+    genutil = ExpUtil();
+    imgutil = ImgUtil();
+    t = new TIMER();    
+    LoadConfig();
+    InitializeData();    
+}
 
 Extractor::Extractor(string &imgset, int cnt, int *roi)
 {
@@ -26,13 +35,8 @@ Extractor::Extractor(string &imgset, int cnt, int *roi)
     genutil = ExpUtil();
     imgutil = ImgUtil();
     t = new TIMER();    
-/*
-    Mat ref_test =  imread("/Users/4dreplay/work/genesis/py/001029_6400_gray.png");
-    Mat src_test =  imread("/Users/4dreplay/work/genesis/py/001029_20_gray.png");    
-    Mat out; 
-    imgutil.ColorCorrection(ref_test, src_test, out);
-    imwrite("saved/color_coreection.png", out);
-*/    
+    LoadConfig();    
+
     InitializeData(cnt, roi);
     imgs = imgutil.LoadImages(imgset, &dsc_id);
 
@@ -40,18 +44,37 @@ Extractor::Extractor(string &imgset, int cnt, int *roi)
 
 Extractor::~Extractor()
 {
-    g_os_free(p->region);
-    g_os_free(p->moved_region);
-    g_os_free(p->world);
+    Logger("finish 1 ");
+    if(p->region != NULL)
+        g_os_free(p->region);
+    Logger("finish 2 ");        
+    if(p->circles != NULL)        
+        g_os_free(p->circles);
+    Logger("finish 3 ");        
+    if(p->moved_region != NULL)        
+        g_os_free(p->moved_region);
+    delete p->world;
+    Logger("finish 4 ");    
     g_os_free(p->camera_matrix);
     g_os_free(p->skew_coeff);
     g_os_free(p);
+    Logger("finish 5 ");
     delete t;
+    Logger("finish 6 ");        
+    meminfo();    
+}
+
+int Extractor::LoadConfig() {
+
+    return ERR_NONE;
 }
 
 void Extractor::InitializeData(int cnt, int *roi)
 {
     p = (PARAM *)g_os_malloc(sizeof(PARAM));
+    p->initialize();
+    Logger("P initialize done . %p", p);
+
     p->calibration_type = RECALIBRATION_3D;
     p->match_type = PYRAMID_MATCH;
     p->submatch_type = SUBMATCH_NONE;
@@ -215,6 +238,7 @@ int Extractor::UpdateConfig()
     //read config file and update parameter
 
     //or Reset
+    return ERR_NONE;
 }
 
 void Extractor::NormalizePoint(SCENE *sc, int maxrange)
@@ -407,13 +431,48 @@ int Extractor::Execute() {
 
     return ERR_NONE;
 }
-int Extractor::ExecuteSever(string ref_path, string cur_path, string ref_pts_path, string& out_pts_path) {
-    
-}
 
-int Extractor::ExecuteClient(string ref_file, string current_file, vector<Point2f>in_pt, vector<Point2f>* out_pt) 
+int Extractor::ExecuteClient(Mat ref_file, Mat cur_file, FPt* in_pt, FPt* out_pt)
 {
+    Logger("ExecuteClint start");
+    int ret = -1;
+    StartTimer(t);
 
+    SCENE ref; SCENE cur;    
+    ref.id = 0;
+    ref.ori_img = ref_file;
+    for(int i = 0; i < p->roi_count; i ++) {
+        ref.four_fpt[i].x = in_pt[i].x;
+        ref.four_fpt[i].y = in_pt[i].y;
+    }
+    Logger("four pt insert ");
+    // imwrite("check_ref.png", ref_file);
+    // imwrite("check_cur.png", cur_file);    
+    ProcessImages(&ref);
+    CreateFeature(&ref, true, false);    
+    cal_group.push_back(ref);    
+
+    cur.id = 1;        
+    cur.ori_img = cur_file;
+    ProcessImages(&cur);    
+    CreateFeature(&cur, false, true);
+    cal_group.push_back(cur);        
+
+    SetCurTrainScene(&ref);
+    SetCurQueryScene(&cur);
+    Logger("check 2 ");    
+    ret = Match();
+    Logger("return from FindHomography------  %d", ret);
+    Logger("match consuming %f ", LapTimer(t));        
+
+    for(int i = 0; i < p->roi_count; i ++) {
+         out_pt[i].x = cur.four_fpt[i].x;
+         out_pt[i].y = cur.four_fpt[i].y;
+    }
+
+    Logger("------- end  consuming %f ", LapTimer(t));
+
+    return ERR_NONE;
 }
 
 //Mat Extractor::ProcessImages(Mat &img)
@@ -438,7 +497,7 @@ int Extractor::ProcessImages(SCENE* sc) {
             Mat ref;
             cvtColor(cal_group[0].ori_img, ref, cv::COLOR_RGBA2GRAY);
             imgutil.ColorCorrection(ref, dst, out);
-            dst = out;
+            dst = out;            
         }
         for(int i = 0 ; i < p->pyramid_step; i ++) {
             Mat blur_img;
@@ -491,7 +550,7 @@ int Extractor::ImageMasking(SCENE* sc)
 #if defined _IMGDEBUG
 //    SaveImage(sc, 2);
 #endif
-    
+    return ERR_NONE;    
 }
 
 int Extractor::GetFeature(SCENE *sc) {
@@ -630,9 +689,11 @@ int Extractor::CreateFeature(SCENE* sc, bool train, bool query, int step) {
                 Logger("step %d desc dimension %d %d ", i, sc->pyramid_desc[i].cols, sc->pyramid_desc[i].rows);
             }
         }          
-        imgutil.SaveImage(sc, 6);
+        imgutil.SaveImage(sc, 6, 0, p, 0);
         Logger("query kpt size %d %d %d ", sc->pyramid_ip[0].size(), sc->pyramid_ip[1].size(), sc->pyramid_ip[2].size());
     }
+    
+    return ERR_NONE;
 }
 
 vector<KeyPoint> Extractor::KeypointMasking(vector<KeyPoint> *oip)
@@ -704,13 +765,14 @@ int Extractor::MatchPyramid() {
         q_desc.assign(cur_query->pyramid_desc[i].data, 
             cur_query->pyramid_desc[i].data + cur_query->pyramid_desc[i].total());
 
-        Logger("desc size %d %d  ", t_desc.size(), q_desc.size());
+        Logger("desc size %d %d  roi_count %d ", t_desc.size(), q_desc.size(), p->roi_count);
         for(int j = 0; j < p->roi_count; j++) {
             int best = INT8_MAX;
             int best_index = -1;
-            uchar t_seg[p->desc_byte];
-            uchar q_seg[p->desc_byte];    
-            uchar best_q[p->desc_byte];
+            static const int desc_size = 32; //p->desc_byte;
+            uchar t_seg[desc_size];
+            uchar q_seg[desc_size];
+            uchar best_q[desc_size];
             memcpy((void *)&t_seg[0], &t_desc[j*p->desc_byte], sizeof(uchar)* p->desc_byte);            
             int start = j * cur_query->pyramid_ip_per_pt[i]; 
             int end = (j + 1)* cur_query->pyramid_ip_per_pt[i];
@@ -992,10 +1054,7 @@ int Extractor::MatchSplit(vector<Point2f> m_train, vector<Point2f>m_query) {
         Logger("Homography fail. Try to searching again");
     }
  */
-}
-
-int Extractor::MatchVerify() {
-
+    return ERR_NONE;
 }
 
 float Extractor::ncc(int max_index, Mat _h) {
@@ -1285,6 +1344,7 @@ int Extractor::PostProcess() {
             p->circles[i].center = newpt;
         }
     }
+    return ERR_NONE;
 }
 
 int Extractor::FindBaseCoordfromWd(int mode)
@@ -1588,6 +1648,8 @@ int Extractor::WarpingStep1()
     Logger("estimated center point %f %f ", mresult.at<double>(0), mresult.at<double>(1));
     Logger("error  %f %f ", cur_query->center.x - mresult.at<double>(0), cur_query->center.y - mresult.at<double>(1));
     //ROI Warping
+
+    return ERR_NONE;
 }
 
 int Extractor::DecomposeHomography()
@@ -1615,6 +1677,8 @@ int Extractor::DecomposeHomography()
         Logger("plane normal from homography decomposition: %f %f %f ", normal_decom_t.at<double>(0),
                normal_decom_t.at<double>(1), normal_decom_t.at<double>(2));
     }
+
+    return ERR_NONE;
 }
 
 int Extractor::FindHomographyP2P()
@@ -1648,4 +1712,6 @@ int Extractor::FindHomographyP2P()
     double newx = mret.at<double>(0) / mret.at<double>(2);
     double newy = mret.at<double>(1) / mret.at<double>(2);
     Logger("transformed cetner by P2P : %f %f ", newx, newy);
+
+    return ERR_NONE;
 }

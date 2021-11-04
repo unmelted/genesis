@@ -1,3 +1,19 @@
+  
+/*****************************************************************************
+*                                                                            *
+*                            DefData         								 *
+*                                                                            *
+*   Copyright (C) 2021 By 4dreplay, Incoporated. All Rights Reserved.        *
+******************************************************************************
+
+    File Name       : DefData.hpp
+    Author(S)       : Me Eunkyung
+    Created         : 17 Sep 2021
+
+    Description     : Data structure definition for Kelly Genesis
+    Notes           : 
+*/
+
 #pragma once
 
 #include <iostream>
@@ -12,7 +28,7 @@
 #include <stdio.h>
 #include <string.h>
 #include "common/TimeUtil.hpp"
-#include "common/Image.hpp"
+#include "common/os_api.hpp"
 
 using namespace cv;
 using namespace std;
@@ -154,6 +170,13 @@ typedef struct _PARAM {
     Pt* region;     // Point array for polygon (ROI)
     Cr* circles;
     Pt* moved_region;
+
+    void initialize() { 
+        world = NULL;    // World Coord 4 point
+        region = NULL;     // Point array for polygon (ROI)
+        circles = NULL;
+        moved_region = NULL;
+    };
 
 } PARAM;
 

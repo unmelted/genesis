@@ -1,4 +1,4 @@
-
+﻿
 /*****************************************************************************
 *                                                                            *
 *                            ImgUtil          								 *
@@ -13,7 +13,7 @@
     Description     : ImgUtil.cpp
     Notes           : Utility related image.
 */
-
+#define _CRT_SECURE_NO_WARNINGS
 #include "ImgUtil.hpp"
 
 using namespace std;
@@ -33,7 +33,11 @@ void ImgUtil::SaveImage(SCENE *sc, int type, SCENE* sc2, PARAM* p, int opt)
         Mat img;
         char filename[50] = { 0, };
         drawKeypoints(sc->img, sc->ip, img);
+#if defined _WIN_        
+        sprintf(filename, "saved\\%d_keypoint.png", sc->id);
+#else
         sprintf(filename, "saved/%d_keypoint.png", sc->id);
+#endif
         imwrite(filename, img);        
     }
     else if (type == 2)
@@ -41,7 +45,12 @@ void ImgUtil::SaveImage(SCENE *sc, int type, SCENE* sc2, PARAM* p, int opt)
         Mat img;
         char filename[50] = { 0, };
         img = sc->mask_img;
-        sprintf(filename, "saved/%d_masking.png", sc->id);
+#if defined _WIN_        
+        sprintf(filename, "saved\\%d_masking.png", sc->id);        
+#else
+        sprintf(filename, "saved/%d_keypoint.png", sc->id);        
+#endif
+
         imwrite(filename, img);                
     }
     else if (type == 3)
@@ -55,7 +64,11 @@ void ImgUtil::SaveImage(SCENE *sc, int type, SCENE* sc2, PARAM* p, int opt)
                     Point((int)sc2->four_fpt[i].x/p->p_scale, (int)sc2->four_fpt[i].y/p->p_scale), 6, Scalar(255), -1);
 
         }        
-        sprintf(filename, "saved/%d_keypoint.png", sc->id);
+#if defined _WIN_                
+        sprintf(filename, "saved\\%d_keypoint.png", sc->id);
+#else
+        sprintf(filename, "saved/%d_keypoint.png", sc->id);        
+#endif        
         imwrite(filename, img);        
     }
     else if (type == 4) {
@@ -88,20 +101,37 @@ void ImgUtil::SaveImage(SCENE *sc, int type, SCENE* sc2, PARAM* p, int opt)
             line(img, tp1, tp2, color[i], 2);
         }
 
-        sprintf(filename, "saved/%d_keypoint+normal.png", sc->id);
+#if defined _WIN_        
+        sprintf(filename, "saved\\%d_keypoint+normal.png", sc->id);        
+#else
+        sprintf(filename, "saved/%d_masking.png", sc->id);                
+#endif
+
         imwrite(filename, img);        
     }
     else if (type == 5) {
         Mat img;
         char filename[50] = { 0, };
         img = sc->pyramid[0];
+#if defined _WIN_                    
+        sprintf(filename, "saved\\%d_pyramid_check0.png", sc->id);        
+#else
         sprintf(filename, "saved/%d_pyramid_check0.png", sc->id);        
+#endif        
         imwrite(filename, img);        
         img = sc->pyramid[1];
+#if defined _WIN_                            
+        sprintf(filename, "saved\\%d_pyramid_check1.png", sc->id);        
+#else        
         sprintf(filename, "saved/%d_pyramid_check1.png", sc->id);        
+#endif        
         imwrite(filename, img);        
         img = sc->pyramid[2];
+#if defined _WIN_                            
+        sprintf(filename, "saved\\%d_pyramid_check2.png", sc->id);
+#else
         sprintf(filename, "saved/%d_pyramid_check2.png", sc->id);
+#endif                
         imwrite(filename, img);                
 
     }
@@ -118,7 +148,11 @@ void ImgUtil::SaveImage(SCENE *sc, int type, SCENE* sc2, PARAM* p, int opt)
                     1, Scalar(125, 125,0), -1);
 
             }
-            sprintf(filename, "saved/%d_%d_pr_sel_point.png", sc->id, step);
+#if defined _WIN_
+            sprintf(filename, "saved\\%d_%d_pr_sel_point.png", sc->id, step);
+#else            
+            sprintf(filename, "saved/%d_%d_pr_sel_point.png", sc->id, step);            
+#endif            
             imwrite(filename, img);
         }
 
@@ -134,19 +168,23 @@ void ImgUtil::SaveImage(SCENE *sc, int type, SCENE* sc2, PARAM* p, int opt)
  */            
             circle(img,
                 Point((int)sc->pyramid_pair[step][i].query.x/scl, (int)sc->pyramid_pair[step][i].query.y/scl), 2, Scalar(255), -1);
-
+#if defined _WIN_
+            sprintf(filename, "saved\\%d_%d_pr2_best_point.png", sc->id, step);
+#else            
             sprintf(filename, "saved/%d_%d_pr2_best_point.png", sc->id, step);
+#endif            
             imwrite(filename, img);
         }
     }
  
 }
-
 vector<Mat> ImgUtil::LoadImages(const string &path, vector<string>* dsc_id)
 {
+#if defined _MAC_    
     const int FK = 3500;
     const int FHD = 1900;
     vector<string>image_paths;
+
     namespace fs = std::__fs::filesystem;
 
     for (const auto &entry : fs::directory_iterator(path)) {
@@ -166,6 +204,10 @@ vector<Mat> ImgUtil::LoadImages(const string &path, vector<string>* dsc_id)
         dsc_id->push_back(dsc);
         Logger("Read image : %s , desc_id %s ", ip.c_str(), dsc.c_str());
     }
+
+#else
+    vector<Mat> images;
+#endif    
     return images;
 }
 

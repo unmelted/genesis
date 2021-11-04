@@ -1,4 +1,4 @@
-  
+﻿  
 /*****************************************************************************
 *                                                                            *
 *                            MtrxUtil         								 *
@@ -13,8 +13,11 @@
     Description     : MtrxUtil.Cpp
     Notes           : Matrix calculate uility
 */
-
 #include "MtrxUtil.hpp"
+
+#if defined _WIN_ || _WINDOWS
+#include <nmmintrin.h>
+#endif
 
 Point2f MtrxUtil::GetRotatePoint(Point2f ptCenter, Point2f ptRot, double dbAngle)
 {
@@ -203,6 +206,7 @@ int MtrxUtil::TransformPtsbyHomography(Pt* in, Mat& homography, int cnt) {
         in[i].y = tp.y;
     }
 
+    return ERR_NONE;
 }
 
 FPt MtrxUtil::TransformPtbyAffine(FPt in, Mat& aff) {
@@ -236,8 +240,15 @@ int MtrxUtil::Hamming(uchar* arr1, uchar* arr2, int size) {
             result >> =1;
         }
  */        
+
+#if defined _MAC_
         distance += __builtin_popcount(arr1[i]^arr2[i]); //gcc
-        //distance += _mm_popcnt_u64(arr1[i]^arr2[i]); for msvc <nmmintrin.h>
+#endif
+#if defined _WIN_ ||  _WINDOWS
+        //Logger("windows popcnt ! ");
+        distance += _mm_popcnt_u64(arr1[i]^arr2[i]); // for msvc <nmmintrin.h>
+
+#endif
     }
 
     return distance;
