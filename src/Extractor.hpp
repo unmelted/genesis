@@ -1,4 +1,4 @@
-
+﻿
 /*****************************************************************************
 *                                                                            *
 *                            Extractor      								 *
@@ -13,7 +13,7 @@
     Description     : Extractor.Hpp
     Notes           : Feature Extractor From Image.
 */
-
+#define _USE_MATH_DEFINES
 #include <cmath>
 #include "DefData.hpp"
 #include "common/Pip.hpp"
@@ -34,7 +34,7 @@ public :
     int Execute();
     
     int ExecuteSever(string ref_path, string cur_path, string ref_pts_path, string& out_pts_path);
-    int ExecuteClient(string ref_file, string current_file, FPt* in_pt, FPt* out_pt);
+    int ExecuteClient(Mat ref_file, Mat cur_file, FPt* in_pt, FPt* out_pt);
     PARAM* p;
     MtrxUtil mtrx;
     ExpUtil genutil;
@@ -54,7 +54,7 @@ private :
 
     int LoadConfig();
     int UpdateConfig();    
-    void InitializeData(int cnt, int* roi);
+    void InitializeData(int cnt = 0, int* roi = 0);
     
 //    Mat ProcessImages(Mat& img);
     int ProcessImages(SCENE* sc);

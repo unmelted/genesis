@@ -171,6 +171,13 @@ typedef struct _PARAM {
     Cr* circles;
     Pt* moved_region;
 
+    void initialize() { 
+        world = NULL;    // World Coord 4 point
+        region = NULL;     // Point array for polygon (ROI)
+        circles = NULL;
+        moved_region = NULL;
+    };
+
 } PARAM;
 
 enum _match {

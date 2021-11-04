@@ -1,4 +1,4 @@
-
+﻿
 /*****************************************************************************
 *                                                                            *
 *                            ImgUtil          								 *
@@ -14,9 +14,9 @@
     Notes           : Utility related image.
 */
 #pragma once
-#if defined _MAC_
+#define _USE_MATH_DEFINES
+#include <cmath>
 #include <filesystem>
-#endif
 #include "DefData.hpp"
 #include "MtrxUtil.hpp"
 
