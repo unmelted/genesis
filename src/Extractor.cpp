@@ -19,8 +19,11 @@
 using namespace std;
 using namespace cv;
 
-Extractor::Extractor(void) {
-
+Extractor::Extractor(bool _use_gpu) {
+    if(_use_gpu) {
+        Logger(" :: WITH GPU USE :: ");
+        use_gpu = true;
+    }
     mtrx = MtrxUtil();
     genutil = ExpUtil();
     imgutil = ImgUtil();

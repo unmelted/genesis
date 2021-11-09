@@ -29,7 +29,7 @@ class Extractor {
 
 public :
     Extractor(string& imgset, int cnt , int* roi);
-    Extractor(void);    
+    Extractor(bool _use_gpu = false);    
     ~Extractor();
     int Execute();
     
@@ -48,7 +48,7 @@ public :
 private :
     TIMER* t;
     bool verify_mode = false;
-
+    bool use_gpu = false;
     SCENE* cur_train = 0;
     SCENE* cur_query = 0;
 
