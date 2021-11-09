@@ -28,6 +28,8 @@ file(GLOB PRJ_SRC      ${PRJ_PATH}/src/*.cpp
                             ${PRJ_PATH}/src/common/*.cpp
                             ${PRJ_PATH}/genesis.cpp)
 
+list(REMOVE_ITEM PRJ_SRC ${PRJ_PATH}/src/ESMConnector.cpp)
+
 file(GLOB PRJ_INC      ${PRJ_PATH}/src/*.hpp
                             ${PRJ_PATH}/src/detector/*.hpp
                             ${PRJ_PATH}/src/common/*.hpp

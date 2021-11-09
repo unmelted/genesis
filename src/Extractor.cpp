@@ -19,7 +19,7 @@
 using namespace std;
 using namespace cv;
 
-Extractor::Extractor(bool _use_gpu) {
+Extractor::Extractor(int width, bool _use_gpu) {
     if(_use_gpu) {
         Logger(" :: WITH GPU USE :: ");
         use_gpu = true;
@@ -29,7 +29,7 @@ Extractor::Extractor(bool _use_gpu) {
     imgutil = ImgUtil();
     t = new TIMER();    
     LoadConfig();
-    InitializeData();    
+    InitializeData(width);
 }
 
 Extractor::Extractor(string &imgset, int cnt, int *roi)
@@ -40,7 +40,7 @@ Extractor::Extractor(string &imgset, int cnt, int *roi)
     t = new TIMER();    
     LoadConfig();    
 
-    InitializeData(cnt, roi);
+    InitializeData(3840, cnt, roi);
     imgs = imgutil.LoadImages(imgset, &dsc_id);
 
 }
@@ -72,11 +72,11 @@ int Extractor::LoadConfig() {
     return ERR_NONE;
 }
 
-void Extractor::InitializeData(int cnt, int *roi)
+void Extractor::InitializeData(int width, int cnt, int *roi)
 {
     p = (PARAM *)g_os_malloc(sizeof(PARAM));
     p->initialize();
-    Logger("P initialize done . %p", p);
+    Logger("P initialize done. %p. given width %d ", p, width);
 
     p->calibration_type = RECALIBRATION_3D;
     p->match_type = PYRAMID_MATCH;
@@ -163,8 +163,6 @@ void Extractor::InitializeData(int cnt, int *roi)
         p->fast_k = 21;
         p->minx = 0;
 
-        p->pwidth = 3840;  //4K width
-        p->pheight = 2160; //4K height
     } else {
 
         p->blur_ksize = 7;
@@ -174,9 +172,14 @@ void Extractor::InitializeData(int cnt, int *roi)
         p->nms_k = 9;
         p->fast_k = 21;
         p->minx = 0;
+    }
 
+    if(width == 3840) {
         p->pwidth = 3840;
         p->pheight = 2160;
+    } else if (width == 1920) {
+        p->pwidth = 1920;
+        p->pheight = 1080;                
     }
 
     p->sensor_size = 17.30 / 1.35;
@@ -361,7 +364,7 @@ int Extractor::Execute() {
             sc.four_fpt[3].y = 148.0;
             sc.center.x = 1470.0;
             sc.center.y = 630.0; */
-
+            /*
             sc.four_fpt[0].x = 1631.0;
             sc.four_fpt[0].y = 836.0;
             sc.four_fpt[1].x = 817.0;
@@ -369,7 +372,16 @@ int Extractor::Execute() {
             sc.four_fpt[2].x = 2185.0;
             sc.four_fpt[2].y = 1464.0;
             sc.four_fpt[3].x = 3001.0;
-            sc.four_fpt[3].y = 900.0;
+            sc.four_fpt[3].y = 900.0; */
+            sc.four_fpt[0].x = 1688.0 /2;
+            sc.four_fpt[0].y = 1058.0 /2;
+            sc.four_fpt[1].x = 2456.0 /2;
+            sc.four_fpt[1].y = 473.0 /2;
+            sc.four_fpt[2].x = 2831.0 /2;
+            sc.four_fpt[2].y = 510.0 /2;
+            sc.four_fpt[3].x = 2165.0 /2;
+            sc.four_fpt[3].y = 1128.0 /2;
+
 
         }
 
@@ -435,7 +447,7 @@ int Extractor::Execute() {
     return ERR_NONE;
 }
 
-int Extractor::ExecuteClient(Mat ref_file, Mat cur_file, FPt* in_pt, FPt* out_pt)
+int Extractor::ExecuteClient(Mat ref_file, Mat cur_file, FPt* in_pt, FPt* out_pt, double* score)
 {
     Logger("ExecuteClint start");
     int ret = -1;
@@ -467,12 +479,15 @@ int Extractor::ExecuteClient(Mat ref_file, Mat cur_file, FPt* in_pt, FPt* out_pt
     ret = Match();
     Logger("return from FindHomography------  %d", ret);
     Logger("match consuming %f ", LapTimer(t));        
+    if(ret > p->best_cut) {
+        *score = ret;
 
-    for(int i = 0; i < p->roi_count; i ++) {
-         out_pt[i].x = cur.four_fpt[i].x;
-         out_pt[i].y = cur.four_fpt[i].y;
+        for(int i = 0; i < p->roi_count; i ++) {
+            out_pt[i].x = cur.four_fpt[i].x;
+            out_pt[i].y = cur.four_fpt[i].y;
+        }
+
     }
-
     Logger("------- end  consuming %f ", LapTimer(t));
 
     return ERR_NONE;

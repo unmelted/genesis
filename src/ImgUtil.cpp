@@ -189,7 +189,8 @@ vector<Mat> ImgUtil::LoadImages(const string &path, vector<string>* dsc_id)
 
     for (const auto &entry : fs::directory_iterator(path)) {
         if (fs::is_regular_file(entry) &&
-            entry.path().extension().string() == ".png") {
+           (entry.path().extension().string() == ".png" ||
+            entry.path().extension().string() == ".jpg")) {
             image_paths.push_back(entry.path().string());
         }
     }

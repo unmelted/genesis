@@ -29,12 +29,12 @@ class Extractor {
 
 public :
     Extractor(string& imgset, int cnt , int* roi);
-    Extractor(bool _use_gpu = false);    
+    Extractor(int width = 3840, bool _use_gpu = false);    
     ~Extractor();
     int Execute();
     
-    int ExecuteSever(string ref_path, string cur_path, string ref_pts_path, string& out_pts_path);
-    int ExecuteClient(Mat ref_file, Mat cur_file, FPt* in_pt, FPt* out_pt);
+//    int ExecuteSever(string ref_path, string cur_path, string ref_pts_path, string& out_pts_path);
+    int ExecuteClient(Mat ref_file, Mat cur_file, FPt* in_pt, FPt* out_pt, double* score);
     PARAM* p;
     MtrxUtil mtrx;
     ExpUtil genutil;
@@ -54,7 +54,7 @@ private :
 
     int LoadConfig();
     int UpdateConfig();    
-    void InitializeData(int cnt = 0, int* roi = 0);
+    void InitializeData(int width = 3840, int cnt = 0, int* roi = 0);
     
 //    Mat ProcessImages(Mat& img);
     int ProcessImages(SCENE* sc);
