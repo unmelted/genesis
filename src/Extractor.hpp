@@ -34,12 +34,13 @@ public :
     int Execute();
     
 //    int ExecuteSever(string ref_path, string cur_path, string ref_pts_path, string& out_pts_path);
-    int ExecuteClient(Mat ref_file, Mat cur_file, FPt* in_pt, FPt* out_pt, double* score);
+    int ExecuteClient(Mat ref_file, Mat cur_file, FPt* in_pt, FPt* out_pt, string dsc_id);
     PARAM* p;
     MtrxUtil mtrx;
     ExpUtil genutil;
     ImgUtil imgutil;
-
+    Dlog dl;
+    
     vector<string>dsc_id;
     vector<Mat>imgs;
     vector<SCENE>cal_group;
