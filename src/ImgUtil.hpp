@@ -27,6 +27,7 @@ class ImgUtil {
 
     public :
         MtrxUtil mtrx;        
+        string fname;
 
         ImgUtil();
 
@@ -35,8 +36,6 @@ class ImgUtil {
         void SimpleColorBalance(Mat& in, Mat& out, float percent);
         int AdjustImage(SCENE* sc, ADJST adj);
         void ColorCorrection(Mat& ref, Mat& src, Mat& out);
-
-    private:
-
+        void SetLogFilename(std::string fn) { fname = fn; };
 
 };

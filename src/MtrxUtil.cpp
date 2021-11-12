@@ -251,6 +251,12 @@ int MtrxUtil::Hamming(uchar* arr1, uchar* arr2, int size) {
 #endif
     }
 
-    return distance;
-    
+    return distance;    
+}
+
+int MtrxUtil::SignValue(double x) {
+
+  if (x > 0.0) return 1.0;
+  if (x < 0.0) return -1.0;
+  return x;
 }

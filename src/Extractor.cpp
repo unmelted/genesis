@@ -19,14 +19,18 @@
 using namespace std;
 using namespace cv;
 
-Extractor::Extractor(void) {
-
+Extractor::Extractor(int width, bool _use_gpu) {
+    if(_use_gpu) {
+        Logger(" :: WITH GPU USE :: ");
+        use_gpu = true;
+    }
     mtrx = MtrxUtil();
     genutil = ExpUtil();
     imgutil = ImgUtil();
+    dl = Dlog();
     t = new TIMER();    
     LoadConfig();
-    InitializeData();    
+    InitializeData(width);
 }
 
 Extractor::Extractor(string &imgset, int cnt, int *roi)
@@ -34,34 +38,35 @@ Extractor::Extractor(string &imgset, int cnt, int *roi)
     mtrx = MtrxUtil();
     genutil = ExpUtil();
     imgutil = ImgUtil();
+    dl = Dlog();    
     t = new TIMER();    
     LoadConfig();    
 
-    InitializeData(cnt, roi);
+    InitializeData(3840, cnt, roi);
     imgs = imgutil.LoadImages(imgset, &dsc_id);
 
 }
 
 Extractor::~Extractor()
 {
-    Logger("finish 1 ");
+    dl.Logger("finish 1 ");
     if(p->region != NULL)
         g_os_free(p->region);
-    Logger("finish 2 ");        
+    dl.Logger("finish 2 ");        
     if(p->circles != NULL)        
         g_os_free(p->circles);
-    Logger("finish 3 ");        
+    dl.Logger("finish 3 ");        
     if(p->moved_region != NULL)        
         g_os_free(p->moved_region);
     delete p->world;
-    Logger("finish 4 ");    
+    dl.Logger("finish 4 ");    
     g_os_free(p->camera_matrix);
     g_os_free(p->skew_coeff);
     g_os_free(p);
-    Logger("finish 5 ");
+    dl.Logger("finish 5 ");
     delete t;
-    Logger("finish 6 ");        
-    meminfo();    
+    dl.Logger("finish 6 ");        
+//  meminfo();    
 }
 
 int Extractor::LoadConfig() {
@@ -69,11 +74,11 @@ int Extractor::LoadConfig() {
     return ERR_NONE;
 }
 
-void Extractor::InitializeData(int cnt, int *roi)
+void Extractor::InitializeData(int width, int cnt, int *roi)
 {
     p = (PARAM *)g_os_malloc(sizeof(PARAM));
     p->initialize();
-    Logger("P initialize done . %p", p);
+    dl.Logger("P initialize done. %p. given width %d ", p, width);
 
     p->calibration_type = RECALIBRATION_3D;
     p->match_type = PYRAMID_MATCH;
@@ -114,7 +119,7 @@ void Extractor::InitializeData(int cnt, int *roi)
             else if (p->masking_type == USER_INPUT_CIRCLE)
                 p->roi_count = cnt;
 
-            Logger("Initialize circle roi_count %d %d ", cnt, p->roi_count);
+            dl.Logger("Initialize circle roi_count %d %d ", cnt, p->roi_count);
             p->circles = (Cr *)g_os_malloc(sizeof(Cr) * p->roi_count);
             for (int i = 0; i < p->roi_count; i++)
             {
@@ -160,8 +165,6 @@ void Extractor::InitializeData(int cnt, int *roi)
         p->fast_k = 21;
         p->minx = 0;
 
-        p->pwidth = 3840;  //4K width
-        p->pheight = 2160; //4K height
     } else {
 
         p->blur_ksize = 7;
@@ -171,9 +174,14 @@ void Extractor::InitializeData(int cnt, int *roi)
         p->nms_k = 9;
         p->fast_k = 21;
         p->minx = 0;
+    }
 
+    if(width == 3840) {
         p->pwidth = 3840;
         p->pheight = 2160;
+    } else if (width == 1920) {
+        p->pwidth = 1920;
+        p->pheight = 1080;                
     }
 
     p->sensor_size = 17.30 / 1.35;
@@ -230,7 +238,7 @@ void Extractor::InitializeData(int cnt, int *roi)
     p->skew_coeff[2] = 0;
     p->skew_coeff[3] = 0;
 
-    Logger("Data Initalize complete .. ");
+    dl.Logger("Data Initalize complete..");
 }
 
 int Extractor::UpdateConfig()
@@ -261,7 +269,7 @@ void Extractor::NormalizePoint(SCENE *sc, int maxrange)
             maxy = sc->four_fpt[i].y;
     }
 
-    Logger("min max %f %f %f %f ", minx, miny, maxx, maxy);
+    dl.Logger("min max %f %f %f %f ", minx, miny, maxx, maxy);
 
     float range = 0;
     float marginx = 0;
@@ -278,7 +286,7 @@ void Extractor::NormalizePoint(SCENE *sc, int maxrange)
         marginx = (maxrange - ((maxx - minx) * range)) / 2.0;
     }
 
-    Logger("range marginx  %f %f %f ", range, marginx, marginy);
+    dl.Logger("range marginx  %f %f %f ", range, marginx, marginy);
 
     for (int i = 0; i < 4; i++)
     {
@@ -301,15 +309,15 @@ void Extractor::NormalizePoint(SCENE *sc, int maxrange)
     p->normal[1][1] = 50.0;
     p->normal[1][2] = -100.0;
 
-#if _DEBUG
-    Logger("Normalized point 4pt");
+#if defined _DEBUG
+    dl.Logger("Normalized point 4pt");
     for (int i = 0; i < 4; i++)
-        Logger(" %f, %f ", sc->four_fpt[i].x, sc->four_fpt[i].y);
+        dl.Logger(" %f, %f ", sc->four_fpt[i].x, sc->four_fpt[i].y);
 
-    Logger("Normalized point normal.");
+    dl.Logger("Normalized point normal.");
     for (int i = 0; i < 2; i++)
         for (int j = 0; j < 3; j++)
-            Logger("[%d][%d]  %f", i, j, p->normal[i][j]);
+            dl.Logger("[%d][%d]  %f", i, j, p->normal[i][j]);
 
 #endif
 }
@@ -358,7 +366,7 @@ int Extractor::Execute() {
             sc.four_fpt[3].y = 148.0;
             sc.center.x = 1470.0;
             sc.center.y = 630.0; */
-
+            /*
             sc.four_fpt[0].x = 1631.0;
             sc.four_fpt[0].y = 836.0;
             sc.four_fpt[1].x = 817.0;
@@ -366,14 +374,15 @@ int Extractor::Execute() {
             sc.four_fpt[2].x = 2185.0;
             sc.four_fpt[2].y = 1464.0;
             sc.four_fpt[3].x = 3001.0;
-            sc.four_fpt[3].y = 900.0;
+            sc.four_fpt[3].y = 900.0; */
+
 
         }
 
         if(p->match_type == PLAIN_MATCH) {
             ImageMasking(&sc);
             ret = GetFeature(&sc);
-            Logger("[%d] feature extracting  %f ", index, LapTimer(t));
+            dl.Logger("[%d] feature extracting  %f ", index, LapTimer(t));
             if (sc.id == 0) {
                 cal_group.push_back(sc);
                 SetCurTrainScene(p->world);
@@ -387,16 +396,22 @@ int Extractor::Execute() {
         }
         else {
             if(sc.id == 0) {
-                CreateFeature(&sc, true, false);
-                Logger("[%d] feature extracting  %f ", index, LapTimer(t));
+                ret = CreateFeature(&sc, true, false);
+                if( ret != ERR_NONE)
+                    return ret;
+
+                dl.Logger("[%d] feature extracting  %f ", index, LapTimer(t));
                 cal_group.push_back(sc);
                 index++;
                 continue;
                 //break;
             }
             else {
-                CreateFeature(&sc, false, true);    
-                Logger("[%d] feature extracting  %f ", index, LapTimer(t));
+                ret = CreateFeature(&sc, false, true);    
+                if( ret != ERR_NONE)
+                    return ret;
+
+                dl.Logger("[%d] feature extracting  %f ", index, LapTimer(t));
                 cal_group.push_back(sc);                
                 SetCurTrainScene(&cal_group[0]);                         
                 //SetCurTrainScene(&cal_group[index - 1]);
@@ -404,8 +419,8 @@ int Extractor::Execute() {
             }
         }
         ret = Match();
-        Logger("return from FindHomography------  %d", ret);
-        Logger("[%d] match consuming %f ", index, LapTimer(t));        
+        dl.Logger("return from FindHomography------  %d", ret);
+        dl.Logger("[%d] match consuming %f ", index, LapTimer(t));        
 
         if (ret > 0) {
             PostProcess();
@@ -414,10 +429,10 @@ int Extractor::Execute() {
 #endif            
         }
         else {
-            Logger("Match Pair Fail. Can't keep going.");
+            dl.Logger("Match Pair Fail. Can't keep going.");
         }
 
-        Logger("------- [%d] end  consuming %f ", index, LapTimer(t));
+        dl.Logger("------- [%d] end  consuming %f ", index, LapTimer(t));
 
         index++;
         // if (index == 2)
@@ -427,14 +442,17 @@ int Extractor::Execute() {
     //Export result to josn file
     //genutil.Export(dsc_id, cal_group, p);
     //genutil.ExportforApp(dsc_id, cal_group, p);
-    Logger("All process time..  %f ", LapTimer(all));
+    dl.Logger("All process time..  %f ", LapTimer(all));
 
     return ERR_NONE;
 }
 
-int Extractor::ExecuteClient(Mat ref_file, Mat cur_file, FPt* in_pt, FPt* out_pt)
+int Extractor::ExecuteClient(Mat ref_file, Mat cur_file, FPt* in_pt, FPt* out_pt, std::string dsc_id)
 {
-    Logger("ExecuteClint start");
+    dl.Logger("ExecuteClint start");
+    dl.SetLogFilename(dsc_id);    
+    imgutil.SetLogFilename(dsc_id);
+
     int ret = -1;
     StartTimer(t);
 
@@ -445,34 +463,45 @@ int Extractor::ExecuteClient(Mat ref_file, Mat cur_file, FPt* in_pt, FPt* out_pt
         ref.four_fpt[i].x = in_pt[i].x;
         ref.four_fpt[i].y = in_pt[i].y;
     }
-    Logger("four pt insert ");
-    // imwrite("check_ref.png", ref_file);
-    // imwrite("check_cur.png", cur_file);    
+    dl.Logger("four pt insert ");
+    imwrite("recalibration\\saved\\check_ref_in_extractor.png", ref_file);
+    imwrite("recalibration\\saved\\check_cur_in_extractor.png", cur_file);    
     ProcessImages(&ref);
-    CreateFeature(&ref, true, false);    
+    ret = CreateFeature(&ref, true, false);
+    if( ret != ERR_NONE)
+        return ret;
+
     cal_group.push_back(ref);    
 
     cur.id = 1;        
     cur.ori_img = cur_file;
     ProcessImages(&cur);    
     CreateFeature(&cur, false, true);
+    if( ret != ERR_NONE)
+        return ret;
+
     cal_group.push_back(cur);        
 
     SetCurTrainScene(&ref);
     SetCurQueryScene(&cur);
-    Logger("check 2 ");    
+    dl.Logger("check 2 ");    
     ret = Match();
-    Logger("return from FindHomography------  %d", ret);
-    Logger("match consuming %f ", LapTimer(t));        
+    dl.Logger("return from FindHomography------  %d", ret);
+    dl.Logger("match consuming %f ", LapTimer(t));        
+    if(ret > p->best_cut) {
 
-    for(int i = 0; i < p->roi_count; i ++) {
-         out_pt[i].x = cur.four_fpt[i].x;
-         out_pt[i].y = cur.four_fpt[i].y;
+        for(int i = 0; i < p->roi_count; i ++) {
+            out_pt[i].x = cur.four_fpt[i].x;
+            out_pt[i].y = cur.four_fpt[i].y;
+            dl.Logger("out_pt update %f  %f ", out_pt[i].x, out_pt[i].y);
+        }
     }
+    else
+        dl.Logger("Match pyramid fail %d ", ret);
 
-    Logger("------- end  consuming %f ", LapTimer(t));
+    dl.Logger("------- end  consuming %f ", LapTimer(t));
 
-    return ERR_NONE;
+    return ret;
 }
 
 //Mat Extractor::ProcessImages(Mat &img)
@@ -516,7 +545,7 @@ int Extractor::ProcessImages(SCENE* sc) {
 
 int Extractor::ImageMasking(SCENE* sc)
 {
-    Logger("Image masking function start ");
+    dl.Logger("Image masking function start ");
     Mat mask = Mat::zeros(sc->img.rows, sc->img.cols, CV_8UC1);
 
     if (p->masking_type == FOUR_POINT_BASE)
@@ -524,12 +553,12 @@ int Extractor::ImageMasking(SCENE* sc)
         for (int i = 0; i < 4; i++)
         {
             if (sc->id == 0) {
-                Logger("masking point 1 %f %f ", sc->four_fpt[i].x, sc->four_fpt[i].y);
+                dl.Logger("masking point 1 %f %f ", sc->four_fpt[i].x, sc->four_fpt[i].y);
                 circle(mask, Point((int)sc->four_fpt[i].x/p->p_scale, (int)sc->four_fpt[i].y/p->p_scale),
                        int(p->circle_fixedpt_radius), Scalar(255), -1);
             }
             else {
-                Logger("masking point 2 %f %f ", cal_group.back().four_fpt[i].x, cal_group.back().four_fpt[i].y);
+                dl.Logger("masking point 2 %f %f ", cal_group.back().four_fpt[i].x, cal_group.back().four_fpt[i].y);
                 circle(mask,
                        Point((int)cal_group.back().four_fpt[i].x/p->p_scale, (int)cal_group.back().four_fpt[i].y/p->p_scale),
                        int(p->circle_fixedpt_radius), Scalar(255), -1);
@@ -538,7 +567,7 @@ int Extractor::ImageMasking(SCENE* sc)
     }
     else if (p->masking_type == USER_INPUT_CIRCLE) {
         for (int i = 0; i < p->roi_count; i++) {
-            Logger("masking point 3 %d %d %d ", p->circles[i].center.x, p->circles[i].center.y, p->circles[i].radius);
+            dl.Logger("masking point 3 %d %d %d ", p->circles[i].center.x, p->circles[i].center.y, p->circles[i].radius);
             circle(mask,
                    Point(p->circles[i].center.x, p->circles[i].center.y),
                    p->circles[i].radius, Scalar(255), -1);
@@ -572,16 +601,16 @@ int Extractor::GetFeature(SCENE *sc) {
     vector<KeyPoint> f_kpt;
 
     feature_detector->detect(sc->img, kpt, sc->mask_img);
-    Logger("extracted keypoints count : %d", kpt.size());
+    dl.Logger("extracted keypoints count : %d", kpt.size());
     //f_kpt = KeypointMasking(&kpt);
     dscr->compute(sc->img, kpt, desc);
 
     sc->ip = kpt;
     sc->desc = desc;
 
-#if _DEBUG
+#if defined _DEBUG
 /*     for (int i = 0 ; i < sc->ip.size(); i ++) {
-        Logger("Keypoint index %2d id %3d, x %f y %f ",i, sc->ip[i].class_id, 
+        dl.Logger("Keypoint index %2d id %3d, x %f y %f ",i, sc->ip[i].class_id, 
                             sc->ip[i].pt.x, sc->ip[i].pt.y);
     }
  */
@@ -596,7 +625,7 @@ int Extractor::CreateFeature(SCENE* sc, bool train, bool query, int step) {
     float deg_cnt = 0;
     Ptr<xfeatures2d::BriefDescriptorExtractor> dscr;
     dscr = xfeatures2d::BriefDescriptorExtractor::create(p->desc_byte, false);
-    Logger("Create Feature is start %d %d", train, query);
+    dl.Logger("Create Feature is start %d %d", train, query);
     
     if(train) {
         for(int i = p->pyramid_step -1; i >= 0; i --){
@@ -606,8 +635,8 @@ int Extractor::CreateFeature(SCENE* sc, bool train, bool query, int step) {
             for(int j = 0 ; j < p->roi_count; j++) {
                 float cen_x = float(sc->four_fpt[j].x)/scl;
                 float cen_y = float(sc->four_fpt[j].y)/scl;
-//                Logger("train step %d roicnt %d scl %d ", i, j, scl);                                
-//                Logger("fpt %4.2f %4.2f cen %4.2f %4.2f ", sc->four_fpt[j].x, sc->four_fpt[j].y, 
+//                dl.Logger("train step %d roicnt %d scl %d ", i, j, scl);                                
+//                dl.Logger("fpt %4.2f %4.2f cen %4.2f %4.2f ", sc->four_fpt[j].x, sc->four_fpt[j].y, 
 //                            cen_x, cen_y); 
                 KeyPoint kp = KeyPoint(cen_x, cen_y, p->base_kernel, -1, 0, 0, j);
                 sc->pyramid_ip[i].push_back(kp);
@@ -615,7 +644,12 @@ int Extractor::CreateFeature(SCENE* sc, bool train, bool query, int step) {
             dscr->compute(sc->pyramid[i], sc->pyramid_ip[i], sc->pyramid_desc[i]);
         }
 
-        Logger("train kpt size %d %d %d ", sc->pyramid_ip[0].size(), sc->pyramid_ip[1].size(), sc->pyramid_ip[2].size());
+        dl.Logger("train kpt size %d %d %d ", sc->pyramid_ip[0].size(), sc->pyramid_ip[1].size(), sc->pyramid_ip[2].size());
+        if(sc->pyramid_ip[0].size() < p->roi_count ||
+            sc->pyramid_ip[1].size() < p->roi_count || 
+            sc->pyramid_ip[2].size() < p->roi_count) {
+            return TRAIN_CREATE_FEATURE_ERR;
+        }
     }
     else if (query) {
         Mat desc;        
@@ -655,8 +689,8 @@ int Extractor::CreateFeature(SCENE* sc, bool train, bool query, int step) {
                 }
 
                 dscr->compute(sc->pyramid[i], sc->pyramid_ip[i], sc->pyramid_desc[i]);            
-                Logger("step %d query ip size %d /per pt %d ", i, sc->pyramid_ip[i].size(), sc->pyramid_ip_per_pt[i]); 
-                Logger("step %d desc dimension %d %d ", i, sc->pyramid_desc[i].cols, sc->pyramid_desc[i].rows);
+                dl.Logger("step %d query ip size %d /per pt %d ", i, sc->pyramid_ip[i].size(), sc->pyramid_ip_per_pt[i]); 
+                dl.Logger("step %d desc dimension %d %d ", i, sc->pyramid_desc[i].cols, sc->pyramid_desc[i].rows);
 
             } else if(array_type == CIRCULAR) {
 
@@ -679,18 +713,20 @@ int Extractor::CreateFeature(SCENE* sc, bool train, bool query, int step) {
                             FPt newpt = mtrx.GetRotatePoint(FPt(cen_x, cen_y), FPt(cen_x, + cen_y - rk), deg_step* a);
                             KeyPoint kp = KeyPoint(float(newpt.x), float(newpt.y), rk, -1, 0, 0, j);
                             sc->pyramid_ip[i].push_back(kp);
-                            //Logger("2nd push ip [%d] deg %f  - %4.2f %4.2f size %3.2f ", a, deg_step * a, float(newpt.x), /////float(newpt.y));
+                            //dl.Logger("2nd push ip [%d] deg %f  - %4.2f %4.2f size %3.2f ", a, deg_step * a, float(newpt.x), /////float(newpt.y));
                         }
-                        Logger("push kpt k %d size %d ", k, sc->pyramid_ip[i].size());
+                        dl.Logger("push kpt k %d size %d ", k, sc->pyramid_ip[i].size());
                     }
                 }
                 dscr->compute(sc->pyramid[i], sc->pyramid_ip[i], sc->pyramid_desc[i]);            
-                Logger("step %d query ip size %d /per pt %d ", i, sc->pyramid_ip[i].size(), sc->pyramid_ip_per_pt[i]); 
-                Logger("step %d desc dimension %d %d ", i, sc->pyramid_desc[i].cols, sc->pyramid_desc[i].rows);
+                dl.Logger("step %d query ip size %d /per pt %d ", i, sc->pyramid_ip[i].size(), sc->pyramid_ip_per_pt[i]); 
+                dl.Logger("step %d desc dimension %d %d ", i, sc->pyramid_desc[i].cols, sc->pyramid_desc[i].rows);
             }
         }          
+#ifdef _IMGDEBUG        
         imgutil.SaveImage(sc, 6, 0, p, 0);
-        Logger("query kpt size %d %d %d ", sc->pyramid_ip[0].size(), sc->pyramid_ip[1].size(), sc->pyramid_ip[2].size());
+#endif        
+        dl.Logger("query kpt size %d %d %d ", sc->pyramid_ip[0].size(), sc->pyramid_ip[1].size(), sc->pyramid_ip[2].size());
     }
     
     return ERR_NONE;
@@ -699,14 +735,14 @@ int Extractor::CreateFeature(SCENE* sc, bool train, bool query, int step) {
 vector<KeyPoint> Extractor::KeypointMasking(vector<KeyPoint> *oip)
 {
     vector<KeyPoint> ip;
-    //Logger("Before masking %d ", oip->size());
+    //dl.Logger("Before masking %d ", oip->size());
     int left = 0;
     int total = 0;
     int del = 0;
 
     for (int i = 0; i < p->roi_count; i++)
     {
-        Logger("roi check %d %d ", p->moved_region[i].x, p->moved_region[i].y);
+        dl.Logger("roi check %d %d ", p->moved_region[i].x, p->moved_region[i].y);
     }
 
     for (auto it = oip->begin(); it != oip->end(); it++)
@@ -729,7 +765,7 @@ vector<KeyPoint> Extractor::KeypointMasking(vector<KeyPoint> *oip)
         }
     }
 
-    Logger("new vector  %d. left %d  del %d / total ip %d ", ip.size(), left, del, total);
+    dl.Logger("new vector  %d. left %d  del %d / total ip %d ", ip.size(), left, del, total);
     return ip;
 }
 
@@ -752,7 +788,8 @@ int Extractor::Match() {
 
 int Extractor::MatchPyramid() {
     int result = -1;
-    Logger("MatchPyramid start.. "); 
+    dl.Logger("MatchPyramid start.. "); 
+    int found[4] = {0, };
 
     for(int i = p->pyramid_step -1; i >= 0; i --) 
     {
@@ -765,7 +802,7 @@ int Extractor::MatchPyramid() {
         q_desc.assign(cur_query->pyramid_desc[i].data, 
             cur_query->pyramid_desc[i].data + cur_query->pyramid_desc[i].total());
 
-        Logger("desc size %d %d  roi_count %d ", t_desc.size(), q_desc.size(), p->roi_count);
+        dl.Logger("desc size %d %d  roi_count %d ", t_desc.size(), q_desc.size(), p->roi_count);
         for(int j = 0; j < p->roi_count; j++) {
             int best = INT8_MAX;
             int best_index = -1;
@@ -776,7 +813,7 @@ int Extractor::MatchPyramid() {
             memcpy((void *)&t_seg[0], &t_desc[j*p->desc_byte], sizeof(uchar)* p->desc_byte);            
             int start = j * cur_query->pyramid_ip_per_pt[i]; 
             int end = (j + 1)* cur_query->pyramid_ip_per_pt[i];
-//            Logger("start %d end %d ", start, end);
+//            dl.Logger("start %d end %d ", start, end);
             for(int k = start ; k < end; k++) {
                 memcpy((void *)&q_seg[0], &q_desc[p->desc_byte * k], sizeof(uchar)* p->desc_byte);            
                 int dist = mtrx.Hamming(t_seg, q_seg, p->desc_byte);
@@ -785,54 +822,82 @@ int Extractor::MatchPyramid() {
                     best_index = k;
                     memcpy((void *)&best_q[0], (void *)&q_seg[0], sizeof(uchar)* p->desc_byte);
                 }
-                //Logger("distance step %d/%d/%d  dist %d ", i, j, k,  dist);
+                //dl.Logger("distance step %d/%d/%d  dist %d ", i, j, k,  dist);
             }
             best_sum += best;            
             cur_query->pyramid_pair[i].push_back(MATCHPAIR(FPt(cur_train->pyramid_ip[i][j].pt.x * scl,cur_train->pyramid_ip[i][j].pt.y * scl), FPt(cur_query->pyramid_ip[i][best_index].pt.x * scl, cur_query->pyramid_ip[i][best_index].pt.y * scl), 
                 best, scl, int(cur_query->pyramid_ip[i][best_index].size)));
 
-            Logger("best distance %d index %d", best, best_index);
-            Logger("best coord train %f %f query %f %f ", cur_train->pyramid_ip[i][j].pt.x, cur_train->pyramid_ip[i][j].pt.y, cur_query->pyramid_ip[i][best_index].pt.x, cur_query->pyramid_ip[i][best_index].pt.y);
+            dl.Logger("best distance %d index %d", best, best_index);
+            dl.Logger("best coord train %f %f query %f %f ", cur_train->pyramid_ip[i][j].pt.x, cur_train->pyramid_ip[i][j].pt.y, cur_query->pyramid_ip[i][best_index].pt.x, cur_query->pyramid_ip[i][best_index].pt.y);
         }
-
+#ifdef _IMGDEBUG
         imgutil.SaveImage(cur_query, 7, 0, p, i);
-        Logger("best sum %d ave %f ", best_sum, float(best_sum/p->roi_count));
+#endif        
+        dl.Logger("best sum %d ave %f ", best_sum, float(best_sum/p->roi_count));
         float ave = float(best_sum)/ float(p->roi_count);
         int score = 100 - int(ave);
         if( score < p->best_cut) {
             result = -1;
-            break;
+            found[i] = -1;            
+            //break;
         }
-        else result = score;
+        else { 
+            result = score;
+        }
         if(i > 0)
             CreateFeature(cur_query, false, true, i-1);
     }
 
-    if(result > p->best_cut) {
-        float diff_x = 0;
-        float diff_y = 0;
-        float ave_diff_x = 0; float ave_diff_y = 0;
+    int total_found = 0;
+    for(int i = 0 ; i < p->roi_count ; i ++) {
+        if(found[i] == 0)
+            total_found++;
+    }
+    if(total_found < 3) {
+        return PYRAMID_MATCH_NOT_FOUND_NEW_POINT;
+    }
 
-        for(int i = 0 ; i < p->roi_count ; i ++) {
+    float diff_x = 0;
+    float diff_y = 0;
+    float ave_diff_x = 0; float ave_diff_y = 0;
+
+    for(int i = 0 ; i < p->roi_count ; i ++) {
+        if(found[i] == 0) {
             diff_x += abs(cur_train->four_fpt[i].x - cur_query->pyramid_pair[0][i].query.x);
             diff_y += abs(cur_train->four_fpt[i].y - cur_query->pyramid_pair[0][i].query.y);
+            dl.Logger("[%d] DIFF -- %f %f", i, diff_x, diff_y);
         }
-        ave_diff_x = diff_x / p->roi_count;
-        ave_diff_y = diff_y / p->roi_count;
-        Logger("ave diff %f %f ", ave_diff_x, ave_diff_y);
+    }
+    ave_diff_x = diff_x / total_found;
+    ave_diff_y = diff_y / total_found;
+    dl.Logger("AVE DIFF %f %f ", ave_diff_x, ave_diff_y);
 
-        for(int i = 0 ; i < p->roi_count ; i ++) {
+    for(int i = 0 ; i < p->roi_count ; i ++) {
+        if(found[i] == 0) {
             if( abs(cur_train->four_fpt[i].x - cur_query->pyramid_pair[0][i].query.x) > (ave_diff_x + p->pixel_diff_cut) || abs(cur_train->four_fpt[i].y - cur_query->pyramid_pair[0][i].query.y) > (ave_diff_y + p->pixel_diff_cut)) {
                 result = -1;
-                Logger(" Pixel Diff cut out![%d]-- %f %f  ",i, abs(cur_query->pyramid_pair[0][i].query.x - ave_diff_x), abs(cur_query->pyramid_pair[0][i].query.y - ave_diff_y));
-                break;
+                dl.Logger(" Pixel Diff cut out![%d]-- %f %f  ",i, abs(cur_query->pyramid_pair[0][i].query.x - ave_diff_x), abs(cur_query->pyramid_pair[0][i].query.y - ave_diff_y));
+                return PYRAMID_MATCH_FOUND_NEW_POINT_INTEGRITY_FAIL;
             }
         }
+    }
 
-        if(result > p->best_cut) {
-            for(int i = 0 ; i < p->roi_count ; i ++) {
+    if(result > p->best_cut) {
+        for(int i = 0 ; i < p->roi_count ; i ++) {
+            if(found[i] == 0) {            
                 cur_query->four_fpt[i].x = cur_query->pyramid_pair[0][i].query.x;
                 cur_query->four_fpt[i].y = cur_query->pyramid_pair[0][i].query.y;
+                dl.Logger("final point update %f %f  ", cur_query->pyramid_pair[0][i].query.x,
+                    cur_query->pyramid_pair[0][i].query.y);
+            }
+            else {
+                int sp_i = 0;
+                if (i == 0 ) sp_i = 1;
+                int x_sign = mtrx.SignValue(cur_train->four_fpt[sp_i].x - cur_query->pyramid_pair[0][sp_i].query.x);
+                int y_sign = mtrx.SignValue(cur_train->four_fpt[sp_i].y - cur_query->pyramid_pair[0][sp_i].query.y);
+                cur_query->four_fpt[i].x = (cur_train->four_fpt[i].x - ave_diff_x)* x_sign;
+                cur_query->four_fpt[i].y = (cur_train->four_fpt[i].y - ave_diff_y)* y_sign;
             }
         }
     }
@@ -851,7 +916,7 @@ int Extractor::MatchPlain() {
         cur_train->desc.convertTo(cur_train->desc, CV_32F);
         cur_query->desc.convertTo(cur_query->desc, CV_32F);
     }
-    Logger("Match start %d %d ", cur_train->ip.size(), cur_query->ip.size());
+    dl.Logger("Match start %d %d ", cur_train->ip.size(), cur_query->ip.size());
 
     if(p->submatch_type == KNN_MATCH) {
         vector<vector<DMatch>> in;        
@@ -868,7 +933,7 @@ int Extractor::MatchPlain() {
     }
 
     sort(good.begin(), good.end());
-    Logger("First matche size %d ", good.size());
+    dl.Logger("First matche size %d ", good.size());
 
     matches = RefineMatch(good);
     
@@ -887,7 +952,7 @@ int Extractor::MatchPlain() {
         float qx = cur_query->ip[it->queryIdx].pt.x;
         float qy = cur_query->ip[it->queryIdx].pt.y;
 
-        //        Logger("_pt push %f %f %f %f ", tx, ty, qx, qy);
+        //        dl.Logger("_pt push %f %f %f %f ", tx, ty, qx, qy);
 
         if ((tx > 0 && ty > 0) && (tx < cur_train->img.cols && ty < cur_train->img.rows) &&
             (qx > 0 && qy > 0) && (qx < cur_query->img.cols && qy < cur_query->img.rows))
@@ -956,7 +1021,7 @@ int Extractor::MatchPlain() {
 
 int Extractor::MatchSplit(vector<Point2f> m_train, vector<Point2f>m_query) {
 
-    Logger(" Split Match Start! m_train size %d %d   ", m_train.size(), m_query.size());
+    dl.Logger(" Split Match Start! m_train size %d %d   ", m_train.size(), m_query.size());
     vector<Point2f> mr_train[4];
     vector<Point2f> mr_query[4];
     int count[4] = { 0, };    
@@ -966,7 +1031,7 @@ int Extractor::MatchSplit(vector<Point2f> m_train, vector<Point2f>m_query) {
     for(int i = 0 ; i < m_train.size(); i ++) {
         int index = -1;
         for(int j = 0 ; j < 4 ; j ++) {
-//            Logger("value check %f %f ", abs(cur_train->four_fpt[j].x - m_train[i].x), 
+//            dl.Logger("value check %f %f ", abs(cur_train->four_fpt[j].x - m_train[i].x), 
 //                abs(cur_train->four_fpt[j].y - m_train[i].y));
 
             if ( abs(cur_train->four_fpt[j].x - m_train[i].x) < range &&
@@ -980,14 +1045,14 @@ int Extractor::MatchSplit(vector<Point2f> m_train, vector<Point2f>m_query) {
             mr_train[index].push_back(Point2f(m_train[i].x, m_train[i].y));
             mr_query[index].push_back(Point2f(m_query[i].x, m_query[i].y));            
             count[index]++;            
-//            Logger("train %f %f query %f %f insert to index %d (%f %f) count %d", m_train[i].x, m_train[i].y,
+//            dl.Logger("train %f %f query %f %f insert to index %d (%f %f) count %d", m_train[i].x, m_train[i].y,
 //            m_query[i].x, m_query[i].y, index, cur_train->four_fpt[index].x, cur_train->four_fpt[index].y, //count[index]); 
 
         } /*else {
-            Logger("Didn't belong to any range..%f %f ", m_train[i].x, m_train[i].y);
+            dl.Logger("Didn't belong to any range..%f %f ", m_train[i].x, m_train[i].y);
         } */
     }
-    Logger("region match count %d %d %d %d ", count[0], count[1], count[2], count[3]);
+    dl.Logger("region match count %d %d %d %d ", count[0], count[1], count[2], count[3]);
 
     int max_index = -1;
     int max_val = 0;
@@ -999,10 +1064,10 @@ int Extractor::MatchSplit(vector<Point2f> m_train, vector<Point2f>m_query) {
     }
 
     if(max_val < 6) {
-        Logger("Can't find any available answer..");
+        dl.Logger("Can't find any available answer..");
         return -1;
     } else 
-        Logger("max value index %d, score %d", max_index, max_val);
+        dl.Logger("max value index %d, score %d", max_index, max_val);
 
 
     for(int k = 0 ; k < 4 ; k ++) {
@@ -1011,17 +1076,17 @@ int Extractor::MatchSplit(vector<Point2f> m_train, vector<Point2f>m_query) {
             //Mat _h = estimateRigidTransform(mr_train[k], mr_query[k], true);
             _h = estimateAffine2D(mr_train[k], mr_query[k]);            
             FPt newpt = mtrx.TransformPtbyAffine(cur_train->four_fpt[k], _h);
-            Logger("Split match point move[%d] %f %f -> %f %f ", k, cur_train->four_fpt[k].x, 
+            dl.Logger("Split match point move[%d] %f %f -> %f %f ", k, cur_train->four_fpt[k].x, 
                     cur_train->four_fpt[k].y, newpt.x, newpt.y);
             cur_query->four_fpt[k].x = newpt.x;
             cur_query->four_fpt[k].y = newpt.y;        
         }
         else {
-            Logger("Point is not enough..- max_index value apply ");
+            dl.Logger("Point is not enough..- max_index value apply ");
             //Mat _h = estimateRigidTransform(mr_train[max_index], mr_query[max_index], true);                
             _h = estimateAffine2D(mr_train[max_index], mr_query[max_index]);
             FPt newpt = mtrx.TransformPtbyAffine(cur_train->four_fpt[k], _h);
-            Logger("Split match point move[%d] %f %f -> %f %f ", k, cur_train->four_fpt[k].x, 
+            dl.Logger("Split match point move[%d] %f %f -> %f %f ", k, cur_train->four_fpt[k].x, 
                     cur_train->four_fpt[k].y, newpt.x, newpt.y);
             cur_query->four_fpt[k].x = newpt.x;
             cur_query->four_fpt[k].y = newpt.y;        
@@ -1035,13 +1100,13 @@ int Extractor::MatchSplit(vector<Point2f> m_train, vector<Point2f>m_query) {
     /*
     Mat _h = estimateAffine2D(mr_train[max_index], mr_query[max_index]);    
     FPt newpt = mtrx.TransformPtbyAffine(cur_train->four_fpt[max_index], _h);
-    Logger("Split match point move[%d] %f %f -> %f %f ", max_index, cur_train->four_fpt[max_index].x, 
+    dl.Logger("Split match point move[%d] %f %f -> %f %f ", max_index, cur_train->four_fpt[max_index].x, 
             cur_train->four_fpt[max_index].y, newpt.x, newpt.y);
     cur_query->four_fpt[max_index].x = newpt.x;
     cur_query->four_fpt[max_index].y = newpt.y;        
 
     if( ncc_ >= 0.7) {
-        Logger("Homography OK. apply another point.. ");
+        dl.Logger("Homography OK. apply another point.. ");
         for(int k = 0 ; k < 4 ; k ++) {
             if(k != max_index) {
                 FPt newpt = mtrx.TransformPtbyAffine(cur_train->four_fpt[k], _h);
@@ -1051,7 +1116,7 @@ int Extractor::MatchSplit(vector<Point2f> m_train, vector<Point2f>m_query) {
         }
     }
     else {
-        Logger("Homography fail. Try to searching again");
+        dl.Logger("Homography fail. Try to searching again");
     }
  */
     return ERR_NONE;
@@ -1162,7 +1227,7 @@ float Extractor::ncc(int max_index, Mat _h) {
     }
     r = s12 / denom;
 
-    Logger("Cross correl .. m1 %f m2 %f s1 %f s2 %f s12 %f denom %f tcnt %d -> %f", m1, m2, s1, s2, s12, denom, tcnt, r);
+    dl.Logger("Cross correl .. m1 %f m2 %f s1 %f s2 %f s12 %f denom %f tcnt %d -> %f", m1, m2, s1, s2, s12, denom, tcnt, r);
     return r;
 
 }
@@ -1188,7 +1253,7 @@ vector<DMatch> Extractor::RefineMatch(vector<DMatch> good) {
             q_hist[good[t].queryIdx]++;
         }
 //        else
-//            Logger("double check %d %d ", good[t].trainIdx, good[t].queryIdx);
+//            dl.Logger("double check %d %d ", good[t].trainIdx, good[t].queryIdx);
     }
 
     g_os_free(t_hist);
@@ -1201,7 +1266,7 @@ vector<DMatch> Extractor::RefineMatch(vector<DMatch> good) {
             while (last.size() >= 100) {
                 last.pop_back();
             }
-            Logger("matches->pop_back size %d ", last.size());
+            dl.Logger("matches->pop_back size %d ", last.size());
         }
     }
     return last;
@@ -1211,7 +1276,7 @@ vector<DMatch> Extractor::RefineMatch(vector<DMatch> good) {
 vector<DMatch> Extractor::RemoveOutlier(vector<DMatch> matches) {
 
     vector<DMatch> result;
-    Logger("Remove Outlier is called %d ", matches.size());
+    dl.Logger("Remove Outlier is called %d ", matches.size());
     double covar_deg = 0;
     double covar_dist = 0;
     double t_covar_deg = 0;        
@@ -1234,7 +1299,7 @@ vector<DMatch> Extractor::RemoveOutlier(vector<DMatch> matches) {
         if (orideg > 180 )
             orideg -= 180;
         degsum += orideg;
-//        Logger(" diff %f %f ", sqrt( dx * dx  + dy * dy ), orideg);
+//        dl.Logger(" diff %f %f ", sqrt( dx * dx  + dy * dy ), orideg);
     }
 
 
@@ -1261,7 +1326,7 @@ vector<DMatch> Extractor::RemoveOutlier(vector<DMatch> matches) {
     covar_dist = sqrt(t_covar_dist/(float)matches.size());
     covar_deg = sqrt(t_covar_deg/(float)matches.size());    
 
-    Logger("covar %f %f threshold %f %f  ", covar_deg, covar_dist);
+    dl.Logger("covar %f %f threshold %f %f  ", covar_deg, covar_dist);
 
     for(vector<DMatch>::const_iterator it = matches.begin(); it != matches.end(); it++) {
         float tx = cur_train->ip[it->trainIdx].pt.x;
@@ -1278,10 +1343,10 @@ vector<DMatch> Extractor::RemoveOutlier(vector<DMatch> matches) {
 
         float mh_distance_deg = abs(orideg - degavg)/covar_deg;
 
-        //Logger(" mh distance %f -> %f  angle %f -> %f ", sqrt(dx * dx + dy * dy), mh_distance_dist, orideg, mh_distance_deg);
+        //dl.Logger(" mh distance %f -> %f  angle %f -> %f ", sqrt(dx * dx + dy * dy), mh_distance_dist, orideg, mh_distance_deg);
 
         if( mh_distance_deg >= 1.0 || mh_distance_dist >= 1.0)
-            //Logger("mh distance is over limit %f %f ", mh_distance_deg, mh_distance_dist);
+            //dl.Logger("mh distance is over limit %f %f ", mh_distance_deg, mh_distance_dist);
             continue;
         else
            result.push_back(*it);
@@ -1294,7 +1359,7 @@ int Extractor::PostProcess() {
 
     if(p->match_type == PYRAMID_MATCH) {
         for(int i = 0 ; i < p->roi_count ; i ++)
-            Logger("DIFF %2.3f %2.3f ", cur_train->four_fpt[i].x - cur_query->four_fpt[i].x,
+            dl.Logger("DIFF %2.3f %2.3f ", cur_train->four_fpt[i].x - cur_query->four_fpt[i].x,
                 cur_train->four_fpt[i].y - cur_query->four_fpt[i].y);
         return ERR_NONE;
     }
@@ -1303,7 +1368,7 @@ int Extractor::PostProcess() {
         FindBaseCoordfromWd(NORMAL_VECTOR_CAL);
         return ERR_NONE;
     }
-    Logger(" Post Process start.. ");
+    dl.Logger(" Post Process start.. ");
 
     if (p->submatch_type == SPLIT_MATCH) {
         FindBaseCoordfromWd(NORMAL_VECTOR_CAL);    
@@ -1313,7 +1378,7 @@ int Extractor::PostProcess() {
     float err = 0;
     //move centerpoint
     FPt newcen = mtrx.TransformPtbyHomography(cur_train->center, cur_query->matrix_fromimg);
-    Logger("Query center answer(%f, %f) - (%f, %f)", cur_query->center.x, cur_query->center.y, newcen.x, newcen.y);
+    dl.Logger("Query center answer(%f, %f) - (%f, %f)", cur_query->center.x, cur_query->center.y, newcen.x, newcen.y);
     cur_query->center = newcen;
 
     //move 4point
@@ -1321,7 +1386,7 @@ int Extractor::PostProcess() {
     {
         FPt newpt = mtrx.TransformPtbyHomography(cur_train->four_fpt[i], cur_query->matrix_fromimg);
 
-        Logger(" four pt move [%d] answer (%f, %f) - (%f, %f) ", i,
+        dl.Logger(" four pt move [%d] answer (%f, %f) - (%f, %f) ", i,
                cur_query->four_fpt[i].x, cur_query->four_fpt[i].y,
                newpt.x, newpt.y);
         cur_query->four_fpt[i].x = newpt.x;
@@ -1349,7 +1414,7 @@ int Extractor::PostProcess() {
 
 int Extractor::FindBaseCoordfromWd(int mode)
 {
-    Logger("FindBaseCoordfromW start ");
+    dl.Logger("FindBaseCoordfromW start ");
     Mat cm(3, 3, CV_32F, p->camera_matrix);
     Mat sc(4, 1, CV_32F, p->skew_coeff);
     Mat ppset1(4, 3, CV_32F);
@@ -1376,16 +1441,16 @@ int Extractor::FindBaseCoordfromWd(int mode)
     cur_query->rot_matrix = ret1;
     cur_query->trans_matrix = ret2;
 
-    Logger("solve pnp is done result %d :  %d %d %d %d ", result,
+    dl.Logger("solve pnp is done result %d :  %d %d %d %d ", result,
         ret1.cols, ret1.rows, ret2.cols, ret2.rows);
     for (int i = 0; i < cur_query->rot_matrix.rows; i++)
         for (int j = 0; j < cur_query->rot_matrix.cols; j++)
-            Logger("[%d][%d] %f ", i, j, cur_query->rot_matrix.at<float>(i, j));
+            dl.Logger("[%d][%d] %f ", i, j, cur_query->rot_matrix.at<float>(i, j));
 
-    Logger(" ---- ");
+    dl.Logger(" ---- ");
     for (int i = 0; i < cur_query->trans_matrix.rows; i++)
         for (int j = 0; j < cur_query->trans_matrix.cols; j++)
-            Logger("[%d][%d] %f ", i, j, cur_query->trans_matrix.at<float>(i, j));
+            dl.Logger("[%d][%d] %f ", i, j, cur_query->trans_matrix.at<float>(i, j));
 
     Mat projectedNormal;
     float v_normal[6][3];
@@ -1432,11 +1497,11 @@ int Extractor::FindBaseCoordfromWd(int mode)
     double degree = fastAtan2(tp1.y - tp2.y, tp1.x - tp2.x);
     degree = 90 - degree; // skew ratio of vector basd 90deg normal vector
     degree = 360 - degree; // inverse rotation for image
-    Logger(" tp1 %f %f tp2 %f %f dx %f dy %f ", tp1.x, tp1.y, tp2.x, tp2.y, tp1.x-tp2.x, tp1.y - tp2.y);
+    dl.Logger(" tp1 %f %f tp2 %f %f dx %f dy %f ", tp1.x, tp1.y, tp2.x, tp2.y, tp1.x-tp2.x, tp1.y - tp2.y);
     cur_query->rod_norm = distance;
     cur_query->rod_degree = degree;
     double scale = cur_train->rod_norm / cur_query->rod_norm;    
-    Logger("normal vector norm %f degree %f scale %f ", distance, degree, scale);
+    dl.Logger("normal vector norm %f degree %f scale %f ", distance, degree, scale);
 
 
     if (cur_query->id == 0)
@@ -1471,11 +1536,11 @@ int Extractor::FindBaseCoordfromWd(int mode)
     else
     {
         diffnorm = cal_group[0].rod_norm / cur_query->rod_norm;
-        Logger("second train norm %f diff norm %f ", cal_group[0].rod_norm, diffnorm);
+        dl.Logger("second train norm %f diff norm %f ", cal_group[0].rod_norm, diffnorm);
     }
 
-    Logger("dnorm %f degree %f", cur_query->rod_norm, cur_query->rod_degree);
-    Logger(" ---- ");
+    dl.Logger("dnorm %f degree %f", cur_query->rod_norm, cur_query->rod_degree);
+    dl.Logger(" ---- ");
     if (cur_query->id == 0)
         cur_query->rod_rotation_matrix = getRotationMatrix2D(Point2f(cur_query->center.x, cur_query->center.y), degree, 1);
     else
@@ -1485,7 +1550,7 @@ int Extractor::FindBaseCoordfromWd(int mode)
 
     for (int i = 0; i < cur_query->rod_rotation_matrix.rows; i++)
         for (int j = 0; j < cur_query->rod_rotation_matrix.cols; j++)
-            Logger("[%d][%d] %f ", i, j, cur_query->rod_rotation_matrix.at<double>(i, j));
+            dl.Logger("[%d][%d] %f ", i, j, cur_query->rod_rotation_matrix.at<double>(i, j));
 
 #endif
     return 1;
@@ -1593,10 +1658,10 @@ ADJST Extractor::CalAdjustData()
     newadj.trans_x = adjusty;
     newadj.rect = Rect(margin_l, margin_t, margin_r - margin_l, margin_b - margin_t);
 
-    Logger("Adjust data ..");
-    Logger("angle  %f  centerx %f  centery %f scale %f ", newadj.angle, newadj.rotate_centerx, newadj.rotate_centery,
+    dl.Logger("Adjust data ..");
+    dl.Logger("angle  %f  centerx %f  centery %f scale %f ", newadj.angle, newadj.rotate_centerx, newadj.rotate_centery,
            newadj.scale);
-    Logger(" trans x %f y %f rect %f %f %f %f ", newadj.trans_x, newadj.trans_y,
+    dl.Logger(" trans x %f y %f rect %f %f %f %f ", newadj.trans_x, newadj.trans_y,
            newadj.rect.x, newadj.rect.y, newadj.rect.width, newadj.rect.height);
 
     return newadj;
@@ -1614,19 +1679,19 @@ int Extractor::WarpingStep1()
         t_pset.push_back(Point2f(cur_train->four_fpt[i].x, cur_train->four_fpt[i].y));
         q_pset.push_back(Point2f(cur_query->four_fpt[i].x, cur_query->four_fpt[i].y));
 
-        Logger("t_pset %f %f  -- t_qset %f %f", t_pset[i].x, t_pset[i].y,
+        dl.Logger("t_pset %f %f  -- t_qset %f %f", t_pset[i].x, t_pset[i].y,
                q_pset[i].x, q_pset[i].y);
     }
-    Logger(" Start find homography ");
+    dl.Logger(" Start find homography ");
 
     Mat _h = findHomography(q_pset, t_pset, 0);
-    Logger(" Get homography ");
+    dl.Logger(" Get homography ");
 
     for (int i = 0; i < _h.rows; i++)
         for (int j = 0; j < _h.cols; j++)
-            Logger("[%d][%d] %lf ", i, j, _h.at<double>(i, j));
+            dl.Logger("[%d][%d] %lf ", i, j, _h.at<double>(i, j));
 
-    Logger("ori image size %d %d ", cur_query->ori_img.cols, cur_query->ori_img.rows);
+    dl.Logger("ori image size %d %d ", cur_query->ori_img.cols, cur_query->ori_img.rows);
 
     Mat final;
     warpPerspective(cur_query->ori_img, final, _h, Size(cur_query->ori_img.cols, cur_query->ori_img.rows));
@@ -1645,8 +1710,8 @@ int Extractor::WarpingStep1()
 
     Mat mresult = _h * mcenter;
 
-    Logger("estimated center point %f %f ", mresult.at<double>(0), mresult.at<double>(1));
-    Logger("error  %f %f ", cur_query->center.x - mresult.at<double>(0), cur_query->center.y - mresult.at<double>(1));
+    dl.Logger("estimated center point %f %f ", mresult.at<double>(0), mresult.at<double>(1));
+    dl.Logger("error  %f %f ", cur_query->center.x - mresult.at<double>(0), cur_query->center.y - mresult.at<double>(1));
     //ROI Warping
 
     return ERR_NONE;
@@ -1657,7 +1722,7 @@ int Extractor::DecomposeHomography()
 
     Mat _h = cur_query->matrix_fromimg;
     Mat cm(3, 3, CV_32F, p->camera_matrix);
-    Logger("_h from img is cols %d rows %d ", _h.cols, _h.rows);
+    dl.Logger("_h from img is cols %d rows %d ", _h.cols, _h.rows);
 
     vector<Mat> Rs_decomp, ts_decomp, normals_decomp;
 
@@ -1667,14 +1732,14 @@ int Extractor::DecomposeHomography()
     {
         Mat rvec_decomp;
         Rodrigues(Rs_decomp[i], rvec_decomp);
-        Logger("Solution %d : ", i);
+        dl.Logger("Solution %d : ", i);
         Mat rvec_t = rvec_decomp.t();
-        Logger("rvec from homography decomposition: %f %f %f ", rvec_t.at<double>(0), rvec_t.at<double>(1), rvec_t.at<double>(2));
+        dl.Logger("rvec from homography decomposition: %f %f %f ", rvec_t.at<double>(0), rvec_t.at<double>(1), rvec_t.at<double>(2));
         Mat ts_decom_t = ts_decomp[i].t();
         Mat normal_decom_t = normals_decomp[i].t();
-        Logger("tvec from homography decomposition: %f %f %f ", ts_decom_t.at<double>(0), ts_decom_t.at<double>(1),
+        dl.Logger("tvec from homography decomposition: %f %f %f ", ts_decom_t.at<double>(0), ts_decom_t.at<double>(1),
                ts_decom_t.at<double>(2));
-        Logger("plane normal from homography decomposition: %f %f %f ", normal_decom_t.at<double>(0),
+        dl.Logger("plane normal from homography decomposition: %f %f %f ", normal_decom_t.at<double>(0),
                normal_decom_t.at<double>(1), normal_decom_t.at<double>(2));
     }
 
@@ -1694,14 +1759,14 @@ int Extractor::FindHomographyP2P()
         ppset2.at<float>(i, 0) = cur_query->four_fpt[i].x;
         ppset2.at<float>(i, 1) = cur_query->four_fpt[i].y;
 
-        Logger("ppset %f %f %f -- %f %f", ppset1.at<float>(i, 0), ppset1.at<float>(i, 1),
+        dl.Logger("ppset %f %f %f -- %f %f", ppset1.at<float>(i, 0), ppset1.at<float>(i, 1),
                ppset2.at<float>(i, 0), ppset2.at<float>(i, 1));
     }
 
     Mat h = findHomography(ppset1, ppset2);
     for (int i = 0; i < h.rows; i++)
         for (int j = 0; j < h.cols; j++)
-            Logger("[%d][%d] %lf ", i, j, h.at<double>(i, j));
+            dl.Logger("[%d][%d] %lf ", i, j, h.at<double>(i, j));
 
     Mat mcenter(3, 1, CV_64F);
     mcenter.at<double>(0) = cur_train->center.x;
@@ -1711,7 +1776,7 @@ int Extractor::FindHomographyP2P()
 
     double newx = mret.at<double>(0) / mret.at<double>(2);
     double newy = mret.at<double>(1) / mret.at<double>(2);
-    Logger("transformed cetner by P2P : %f %f ", newx, newy);
+    dl.Logger("transformed cetner by P2P : %f %f ", newx, newy);
 
     return ERR_NONE;
 }

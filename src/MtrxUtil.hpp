@@ -41,5 +41,5 @@ public:
 
     FPt TransformPtbyAffine(FPt in, Mat& aff);
     int Hamming(uchar* arr1, uchar* arr2, int size);
-
+    int SignValue(double x);
 };

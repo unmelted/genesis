@@ -33,10 +33,10 @@ void ImgUtil::SaveImage(SCENE *sc, int type, SCENE* sc2, PARAM* p, int opt)
         Mat img;
         char filename[50] = { 0, };
         drawKeypoints(sc->img, sc->ip, img);
-#if defined _WIN_        
-        sprintf(filename, "saved\\%d_keypoint.png", sc->id);
+#if defined _WIN_ || _WINDOWS       
+        sprintf(filename, "recalibration\\saved\\%s_%d_keypoint.png", fname.c_str(), sc->id);
 #else
-        sprintf(filename, "saved/%d_keypoint.png", sc->id);
+        sprintf(filename, "recalibration/saved/%s_%d_keypoint.png", fname.c_str(), sc->id);
 #endif
         imwrite(filename, img);        
     }
@@ -45,10 +45,10 @@ void ImgUtil::SaveImage(SCENE *sc, int type, SCENE* sc2, PARAM* p, int opt)
         Mat img;
         char filename[50] = { 0, };
         img = sc->mask_img;
-#if defined _WIN_        
-        sprintf(filename, "saved\\%d_masking.png", sc->id);        
+#if defined _WIN_ || _WINDOWS       
+        sprintf(filename, "recalibration\\saved\\%s_%d_masking.png", fname.c_str(), sc->id);
 #else
-        sprintf(filename, "saved/%d_keypoint.png", sc->id);        
+        sprintf(filename, "recalibration/saved//%s_%d_keypoint.png", fname.c_str(), sc->id);        
 #endif
 
         imwrite(filename, img);                
@@ -64,10 +64,10 @@ void ImgUtil::SaveImage(SCENE *sc, int type, SCENE* sc2, PARAM* p, int opt)
                     Point((int)sc2->four_fpt[i].x/p->p_scale, (int)sc2->four_fpt[i].y/p->p_scale), 6, Scalar(255), -1);
 
         }        
-#if defined _WIN_                
-        sprintf(filename, "saved\\%d_keypoint.png", sc->id);
+#if defined _WIN_ || _WINDOWS               
+        sprintf(filename, "recalibration\\saved\\%s_%d_keypoint.png", fname.c_str(), sc->id);
 #else
-        sprintf(filename, "saved/%d_keypoint.png", sc->id);        
+        sprintf(filename, "recalibration/saved//%s_%d_keypoint.png", fname.c_str(), sc->id);
 #endif        
         imwrite(filename, img);        
     }
@@ -101,10 +101,10 @@ void ImgUtil::SaveImage(SCENE *sc, int type, SCENE* sc2, PARAM* p, int opt)
             line(img, tp1, tp2, color[i], 2);
         }
 
-#if defined _WIN_        
-        sprintf(filename, "saved\\%d_keypoint+normal.png", sc->id);        
+#if defined _WIN_ || _WINDOWS       
+        sprintf(filename, "recalibration\\saved/\\%s_%d_keypoint+normal.png", fname.c_str(), sc->id);
 #else
-        sprintf(filename, "saved/%d_masking.png", sc->id);                
+        sprintf(filename, "recalibration/saved//%s_%d_masking.png", fname.c_str(), sc->id);
 #endif
 
         imwrite(filename, img);        
@@ -113,24 +113,24 @@ void ImgUtil::SaveImage(SCENE *sc, int type, SCENE* sc2, PARAM* p, int opt)
         Mat img;
         char filename[50] = { 0, };
         img = sc->pyramid[0];
-#if defined _WIN_                    
-        sprintf(filename, "saved\\%d_pyramid_check0.png", sc->id);        
+#if defined _WIN_ || _WINDOWS                   
+        sprintf(filename, "recalibration\\saved\\%d_pyramid_check0.png", sc->id);        
 #else
-        sprintf(filename, "saved/%d_pyramid_check0.png", sc->id);        
+        sprintf(filename, "recalibration/saved//%d_pyramid_check0.png", sc->id);        
 #endif        
         imwrite(filename, img);        
         img = sc->pyramid[1];
-#if defined _WIN_                            
-        sprintf(filename, "saved\\%d_pyramid_check1.png", sc->id);        
+#if defined _WIN_ || _WINDOWS                           
+        sprintf(filename, "recalibration\saved\\%d_pyramid_check1.png", sc->id);        
 #else        
-        sprintf(filename, "saved/%d_pyramid_check1.png", sc->id);        
+        sprintf(filename, "recalibration/saved//%d_pyramid_check1.png", sc->id);        
 #endif        
         imwrite(filename, img);        
         img = sc->pyramid[2];
-#if defined _WIN_                            
-        sprintf(filename, "saved\\%d_pyramid_check2.png", sc->id);
+#if defined _WIN_ || _WINDOWS                           
+        sprintf(filename, "recalibration\\saved\\%d_pyramid_check2.png", sc->id);
 #else
-        sprintf(filename, "saved/%d_pyramid_check2.png", sc->id);
+        sprintf(filename, "recalibration/saved//%d_pyramid_check2.png", sc->id);
 #endif                
         imwrite(filename, img);                
 
@@ -148,10 +148,10 @@ void ImgUtil::SaveImage(SCENE *sc, int type, SCENE* sc2, PARAM* p, int opt)
                     1, Scalar(125, 125,0), -1);
 
             }
-#if defined _WIN_
-            sprintf(filename, "saved\\%d_%d_pr_sel_point.png", sc->id, step);
+#if defined _WIN_ || _WINDOWS
+            sprintf(filename, "recalibration\\saved\\%s_%d_%d_pr_sel_point.png", fname.c_str(), sc->id, step);
 #else            
-            sprintf(filename, "saved/%d_%d_pr_sel_point.png", sc->id, step);            
+            sprintf(filename, "recalibration/saved//%s_%d_%d_pr_sel_point.png", fname.c_str(), sc->id, step);
 #endif            
             imwrite(filename, img);
         }
@@ -168,10 +168,10 @@ void ImgUtil::SaveImage(SCENE *sc, int type, SCENE* sc2, PARAM* p, int opt)
  */            
             circle(img,
                 Point((int)sc->pyramid_pair[step][i].query.x/scl, (int)sc->pyramid_pair[step][i].query.y/scl), 2, Scalar(255), -1);
-#if defined _WIN_
-            sprintf(filename, "saved\\%d_%d_pr2_best_point.png", sc->id, step);
+#if defined _WIN_ || _WINDOWS
+            sprintf(filename, "recalibration\\saved\\%s_%d_%d_pr2_best_point.png", fname.c_str(), sc->id, step);
 #else            
-            sprintf(filename, "saved/%d_%d_pr2_best_point.png", sc->id, step);
+            sprintf(filename, "recalibration/saved//%s_%d_%d_pr2_best_point.png", fname.c_str(), sc->id, step);
 #endif            
             imwrite(filename, img);
         }
@@ -189,7 +189,8 @@ vector<Mat> ImgUtil::LoadImages(const string &path, vector<string>* dsc_id)
 
     for (const auto &entry : fs::directory_iterator(path)) {
         if (fs::is_regular_file(entry) &&
-            entry.path().extension().string() == ".png") {
+           (entry.path().extension().string() == ".png" ||
+            entry.path().extension().string() == ".jpg")) {
             image_paths.push_back(entry.path().string());
         }
     }
@@ -266,7 +267,7 @@ int ImgUtil::AdjustImage(SCENE* sc, ADJST adj) {
     char filename[30] = {
         0,
     };
-    sprintf(filename, "saved/%2d_perspective.png", index);
+    sprintf(filename, "recalibration/saved//%s_%2d_perspective.png", fname.c_str(), index);
     imwrite(filename, final);
 
     return ERR_NONE;
@@ -328,7 +329,7 @@ void ImgUtil::ColorCorrection(Mat& ref, Mat& src, Mat& out) {
     
     Logger("color correction .. ");
     LUT(src, lut, out);
-    // imwrite("saved/cc_ref.png", ref);
-    // imwrite("saved/cc_src.png", src);    
-    // imwrite("saved/cc_out.png", out); 
+    // imwrite("recalibration/saved//cc_ref.png", ref);
+    // imwrite("recalibration/saved//cc_src.png", src);    
+    // imwrite("recalibration/saved//cc_out.png", out); 
 }

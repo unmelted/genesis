@@ -29,17 +29,18 @@ class Extractor {
 
 public :
     Extractor(string& imgset, int cnt , int* roi);
-    Extractor(void);    
+    Extractor(int width = 3840, bool _use_gpu = false);    
     ~Extractor();
     int Execute();
     
-    int ExecuteSever(string ref_path, string cur_path, string ref_pts_path, string& out_pts_path);
-    int ExecuteClient(Mat ref_file, Mat cur_file, FPt* in_pt, FPt* out_pt);
+//    int ExecuteSever(string ref_path, string cur_path, string ref_pts_path, string& out_pts_path);
+    int ExecuteClient(Mat ref_file, Mat cur_file, FPt* in_pt, FPt* out_pt, string dsc_id);
     PARAM* p;
     MtrxUtil mtrx;
     ExpUtil genutil;
     ImgUtil imgutil;
-
+    Dlog dl;
+    
     vector<string>dsc_id;
     vector<Mat>imgs;
     vector<SCENE>cal_group;
@@ -48,13 +49,13 @@ public :
 private :
     TIMER* t;
     bool verify_mode = false;
-
+    bool use_gpu = false;
     SCENE* cur_train = 0;
     SCENE* cur_query = 0;
 
     int LoadConfig();
     int UpdateConfig();    
-    void InitializeData(int cnt = 0, int* roi = 0);
+    void InitializeData(int width = 3840, int cnt = 0, int* roi = 0);
     
 //    Mat ProcessImages(Mat& img);
     int ProcessImages(SCENE* sc);

@@ -1,4 +1,4 @@
-  
+﻿  
 /*****************************************************************************
 *                                                                            *
 *                            DefData         								 *
@@ -29,15 +29,23 @@
 #include <string.h>
 #include "common/TimeUtil.hpp"
 #include "common/os_api.hpp"
+#define _IMGDEBUG
+#define _DEBUG
+
+#define _IMGDEBUG
 
 using namespace cv;
 using namespace std;
 
 typedef enum _err {
     ERR_NONE = 0,
+    
+    TRAIN_CREATE_FEATURE_ERR = -10,
+    PYRAMID_MATCH_NOT_FOUND_NEW_POINT = -20,
+    PYRAMID_MATCH_FOUND_NEW_POINT_INTEGRITY_FAIL = -21,
 
-
-}ERR;
+    EXECUTE_CLIENT_EXCEPTION    = -30,
+} ERR;
 
 
 typedef struct _Pt
