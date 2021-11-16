@@ -376,6 +376,14 @@ int Extractor::Execute() {
             sc.four_fpt[3].x = 3001.0;
             sc.four_fpt[3].y = 900.0; */
 
+            sc.four_fpt[0].x = 1688.0/2;
+            sc.four_fpt[0].y = 1058.0/2;
+            sc.four_fpt[1].x = 2456.0/2;
+            sc.four_fpt[1].y = 473.0/2;
+            sc.four_fpt[2].x = 2831.0/2;
+            sc.four_fpt[2].y = 510.0/2;
+            sc.four_fpt[3].x = 2165.0/2;
+            sc.four_fpt[3].y = 1128.0/2;
 
         }
 

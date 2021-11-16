@@ -29,10 +29,10 @@
 #include <string.h>
 #include "common/TimeUtil.hpp"
 #include "common/os_api.hpp"
+#if defined _WIN_ || _WINDOWS       
 #define _IMGDEBUG
 #define _DEBUG
-
-#define _IMGDEBUG
+#endif
 
 using namespace cv;
 using namespace std;
