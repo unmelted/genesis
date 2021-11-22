@@ -21,7 +21,6 @@ using namespace cv;
 
 Extractor::Extractor(int width, bool _use_gpu) {
     if(_use_gpu) {
-        Logger(" :: WITH GPU USE :: ");
         use_gpu = true;
     }
     mtrx = MtrxUtil();
@@ -78,13 +77,12 @@ void Extractor::InitializeData(int width, int cnt, int *roi)
 {
     p = (PARAM *)g_os_malloc(sizeof(PARAM));
     p->initialize();
-    dl.Logger("P initialize done. %p. given width %d ", p, width);
 
     p->calibration_type = RECALIBRATION_3D;
     p->match_type = PYRAMID_MATCH;
     p->submatch_type = SUBMATCH_NONE;
     p->roi_type = RECTANGLE;
-
+    p->p_scale = 2;
     //PRESET_NONE_3D setting value
     /*
     p->calibration_type = PRESET_NONE_3D;
@@ -138,7 +136,7 @@ void Extractor::InitializeData(int width, int cnt, int *roi)
                 p->masking_type = INNER_2POINT_BASE;
 
             p->roi_count = 4;
-            p->pyramid_step = 3;
+            p->pyramid_step = 2;
             p->pyramid_scale[0] = 1;
             p->pyramid_scale[1] = 2;
             p->pyramid_scale[2] = 4;        
@@ -151,8 +149,10 @@ void Extractor::InitializeData(int width, int cnt, int *roi)
             p->stride[2] = 4;            
             p->base_kernel = 35;
             p->best_cut = 75.0;
-            p->pixel_diff_cut = 4.0;
-
+            p->pixel_diff_cut = 20.0;
+            p->desc_kernel[0] = 3;
+            p->desc_kernel[1] = 3;
+            p->desc_kernel[2] = 3;
         }
     }
 
@@ -238,7 +238,6 @@ void Extractor::InitializeData(int width, int cnt, int *roi)
     p->skew_coeff[2] = 0;
     p->skew_coeff[3] = 0;
 
-    dl.Logger("Data Initalize complete..");
 }
 
 int Extractor::UpdateConfig()
@@ -336,7 +335,9 @@ int Extractor::Execute() {
         StartTimer(t);
         SCENE sc;
         sc.id = index;
+#if not defined GPU
         sc.ori_img = imgs[i];
+#endif
         ProcessImages(&sc);
 
         if (index == 0)
@@ -455,10 +456,14 @@ int Extractor::Execute() {
     return ERR_NONE;
 }
 
+#if defined GPU
+int Extractor::ExecuteClient(cv::cuda::GpuMat ref_file, cv::cuda::GpuMat cur_file, FPt* in_pt, FPt* out_pt, std::string dsc_id)
+#else
 int Extractor::ExecuteClient(Mat ref_file, Mat cur_file, FPt* in_pt, FPt* out_pt, std::string dsc_id)
+#endif
 {
-    dl.Logger("ExecuteClint start");
-    dl.SetLogFilename(dsc_id);    
+    dl.SetLogFilename(dsc_id);
+    dl.Logger("ExecuteClint start");   
     imgutil.SetLogFilename(dsc_id);
 
     int ret = -1;
@@ -472,8 +477,7 @@ int Extractor::ExecuteClient(Mat ref_file, Mat cur_file, FPt* in_pt, FPt* out_pt
         ref.four_fpt[i].y = in_pt[i].y;
     }
     dl.Logger("four pt insert ");
-    imwrite("recalibration\\saved\\check_ref_in_extractor.png", ref_file);
-    imwrite("recalibration\\saved\\check_cur_in_extractor.png", cur_file);    
+
     ProcessImages(&ref);
     ret = CreateFeature(&ref, true, false);
     if( ret != ERR_NONE)
@@ -515,6 +519,7 @@ int Extractor::ExecuteClient(Mat ref_file, Mat cur_file, FPt* in_pt, FPt* out_pt
 //Mat Extractor::ProcessImages(Mat &img)
 int Extractor::ProcessImages(SCENE* sc) {
     if(p->match_type == PLAIN_MATCH) {
+#if not defined GPU
         Mat blur_img;
         Mat dst;
         if (p->p_scale != 1)    {
@@ -526,28 +531,43 @@ int Extractor::ProcessImages(SCENE* sc) {
         GaussianBlur(dst, blur_img, {p->blur_ksize, p->blur_ksize}, p->blur_sigma, p->blur_sigma);
 
         sc->img = blur_img;
+#endif
     }
     else {
+#if defined GPU
+        cv::cuda::GpuMat gdst;
+        Mat dst, out;
+        cv::cuda::cvtColor(sc->ori_img, gdst, cv::COLOR_RGBA2GRAY);
+        for (int i = 0; i < p->pyramid_step; i++) {
+            Mat blur_img;
+            if (p->pyramid_scale[i] != 1)
+                cv::cuda::resize(gdst, gdst, Size(int(sc->ori_img.cols / p->pyramid_scale[i]),
+                    int(sc->ori_img.rows / p->pyramid_scale[i])), 0, 0, 1);
+            //            else dst = sc->ori_img;
+            gdst.download(dst);
+            GaussianBlur(dst, blur_img, { p->blur_ksize, p->blur_ksize }, p->blur_sigma, p->blur_sigma);
+            sc->pyramid[i] = blur_img;
+        }
+#else
         Mat dst, out;
         cvtColor(sc->ori_img, dst, cv::COLOR_RGBA2GRAY);
-        if(sc->id > 0) {
+        if (sc->id > 0) {
             Mat ref;
             cvtColor(cal_group[0].ori_img, ref, cv::COLOR_RGBA2GRAY);
             imgutil.ColorCorrection(ref, dst, out);
-            dst = out;            
+            dst = out;
         }
-        for(int i = 0 ; i < p->pyramid_step; i ++) {
+        for (int i = 0; i < p->pyramid_step; i++) {
             Mat blur_img;
-            if(p->pyramid_scale[i] != 1) 
-                resize(dst, dst, Size(int(sc->ori_img.cols / p->pyramid_scale[i]), 
+            if (p->pyramid_scale[i] != 1)
+                resize(dst, dst, Size(int(sc->ori_img.cols / p->pyramid_scale[i]),
                     int(sc->ori_img.rows / p->pyramid_scale[i])), 0, 0, 1);
-//            else dst = sc->ori_img;
-            GaussianBlur(dst, blur_img, {p->blur_ksize, p->blur_ksize}, p->blur_sigma, p->blur_sigma);
+            //            else dst = sc->ori_img;
+            GaussianBlur(dst, blur_img, { p->blur_ksize, p->blur_ksize }, p->blur_sigma, p->blur_sigma);
             sc->pyramid[i] = blur_img;
         }
-//        imgutil.SaveImage(sc, 5);
+#endif
     }
-
     return ERR_NONE;
 }
 
@@ -644,54 +664,61 @@ int Extractor::CreateFeature(SCENE* sc, bool train, bool query, int step) {
                 float cen_x = float(sc->four_fpt[j].x)/scl;
                 float cen_y = float(sc->four_fpt[j].y)/scl;
 //                dl.Logger("train step %d roicnt %d scl %d ", i, j, scl);                                
-//                dl.Logger("fpt %4.2f %4.2f cen %4.2f %4.2f ", sc->four_fpt[j].x, sc->four_fpt[j].y, 
-//                            cen_x, cen_y); 
-                KeyPoint kp = KeyPoint(cen_x, cen_y, p->base_kernel, -1, 0, 0, j);
+                dl.Logger("fpt %4.2f %4.2f cen %4.2f %4.2f ", sc->four_fpt[j].x, sc->four_fpt[j].y, 
+                            cen_x, cen_y); 
+  
+                KeyPoint kp = KeyPoint(cen_x, cen_y, p->desc_kernel[i], -1, 0, 0, j);
                 sc->pyramid_ip[i].push_back(kp);
             }
+            dl.Logger("train making.. [%d] desc compute  before %d", i, sc->pyramid_ip[i].size());
             dscr->compute(sc->pyramid[i], sc->pyramid_ip[i], sc->pyramid_desc[i]);
+            dl.Logger("train making.. [%d] desc compute  after %d ", i, sc->pyramid_ip[i].size());
         }
 
-        dl.Logger("train kpt size %d %d %d ", sc->pyramid_ip[0].size(), sc->pyramid_ip[1].size(), sc->pyramid_ip[2].size());
-        if(sc->pyramid_ip[0].size() < p->roi_count ||
-            sc->pyramid_ip[1].size() < p->roi_count || 
-            sc->pyramid_ip[2].size() < p->roi_count) {
-            return TRAIN_CREATE_FEATURE_ERR;
+        dl.Logger("train end kpt size %d %d %d ", sc->pyramid_ip[0].size(), sc->pyramid_ip[1].size(), sc->pyramid_ip[2].size());
+        for(int i = p->pyramid_step -1; i >= 0; i --){
+            if(sc->pyramid_ip[i].size() < p->roi_count) {
+                dl.Logger("cannot make feature & deacription in train ");
+                imgutil.SaveImage(sc, 8);
+                return TRAIN_CREATE_FEATURE_ERR;
+            }
         }
     }
     else if (query) {
         Mat desc;        
         const int array_type = PLANE;        
-        if(step == -1 )
-            step = 2;
+        if(step == -1 )            
+            step = p->pyramid_step - 1;
         int i = step;
-
+        //Logger("query feature step %d ", step);
         for(int j = 0 ; j < p->roi_count; j++) {            
             float cen_x, cen_y;            
             if( array_type == PLANE) {
                 int scl = p->pyramid_scale[i];
+                if(step == p->pyramid_step - 1) {
+                    cen_x = float(cal_group.back().four_fpt[j].x)/scl;
+                    cen_y = float(cal_group.back().four_fpt[j].y)/scl;
+                } else {
+                    cen_x = float(cur_query->pyramid_pair[i+1][j].query.x)/scl;
+                    cen_y = float(cur_query->pyramid_pair[i+1][j].query.y)/scl;
+                }
+
+                //Logger("query feature center %f %f  ", cen_x, cen_y);
                 if(step == 0)  {
                     rk = p->base_kernel / 4;
                     sc->pyramid_ip_per_pt[i] = pow(ceil((float)p->base_kernel/4*2 / (float)p->stride[i]), 2);                    
-                    cen_x = float(cur_query->pyramid_pair[i+1][j].query.x)/scl;
-                    cen_y = float(cur_query->pyramid_pair[i+1][j].query.y)/scl;
                 }
                 else if(step == 1) {
                     rk = p->base_kernel / 3;
                     sc->pyramid_ip_per_pt[i] = pow(ceil((float)p->base_kernel/3*2 / (float)p->stride[i]), 2);
-                    cen_x = float(cur_query->pyramid_pair[i+1][j].query.x)/scl;
-                    cen_y = float(cur_query->pyramid_pair[i+1][j].query.y)/scl;
                 } else if (step == 2) {
                     rk = p->base_kernel / 2;              
                     sc->pyramid_ip_per_pt[i] = pow(ceil((float)p->base_kernel / (float)p->stride[i]), 2);
-                    cen_x = float(cal_group.back().four_fpt[j].x)/scl;
-                    cen_y = float(cal_group.back().four_fpt[j].y)/scl;                                
-
                 }
 
                 for(int a = cen_x - rk ; a <= cen_x + rk ; a += p->stride[i]) {
                     for(int b = cen_y - rk ; b <= cen_y + rk ; b += p->stride[i]) {
-                        KeyPoint kp = KeyPoint(float(a), float(b), rk, -1, 0, 0, j);
+                        KeyPoint kp = KeyPoint(float(a), float(b), p->desc_kernel[i], -1, 0, 0, j);
                         sc->pyramid_ip[i].push_back(kp);
                     }
                 }

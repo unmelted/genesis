@@ -29,11 +29,15 @@
 #include <string.h>
 #include "common/TimeUtil.hpp"
 #include "common/os_api.hpp"
-#if defined _WIN_ || _WINDOWS       
+#if defined _WIN_ || _WINDOWS
 #define _IMGDEBUG
 #define _DEBUG
-#endif
+#define GPU
 
+#include <opencv2/core/cuda.hpp>
+#include <opencv2/cudawarping.hpp>
+#include <opencv2/cudaimgproc.hpp>
+#endif
 using namespace cv;
 using namespace std;
 
@@ -96,7 +100,11 @@ typedef struct _maindata {
     int id = 0;
     char filename[100];
     Mat img;
+#if defined GPU
+    cv::cuda::GpuMat ori_img;
+#else
     Mat ori_img;
+#endif
     Mat mask_img;
 
     //for pyramid matching
@@ -153,6 +161,7 @@ typedef struct _PARAM {
     int pyramid_patch[3];
     int stride[3];
     int base_kernel;
+    int desc_kernel[3];
     float best_cut;
     float pixel_diff_cut;
     
