@@ -37,7 +37,11 @@
 #include <opencv2/core/cuda.hpp>
 #include <opencv2/cudawarping.hpp>
 #include <opencv2/cudaimgproc.hpp>
+#else
+#define _IMGDEBUG
+#define _DEBUG
 #endif
+
 using namespace cv;
 using namespace std;
 
@@ -163,6 +167,7 @@ typedef struct _PARAM {
     int base_kernel;
     int desc_kernel[3];
     float best_cut;
+    float distance_cut;
     float pixel_diff_cut;
     
     int blur_ksize;

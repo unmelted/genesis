@@ -149,7 +149,8 @@ void Extractor::InitializeData(int width, int cnt, int *roi)
             p->stride[2] = 4;            
             p->base_kernel = 35;
             p->best_cut = 75.0;
-            p->pixel_diff_cut = 20.0;
+            p->distance_cut = 60.0;            
+            p->pixel_diff_cut = 30.0;
             p->desc_kernel[0] = 3;
             p->desc_kernel[1] = 3;
             p->desc_kernel[2] = 3;
@@ -480,17 +481,21 @@ int Extractor::ExecuteClient(Mat ref_file, Mat cur_file, FPt* in_pt, FPt* out_pt
 
     ProcessImages(&ref);
     ret = CreateFeature(&ref, true, false);
-    if( ret != ERR_NONE)
+    if (ret != ERR_NONE) {
+        dl.Logger("create feature of train err return %d ", ret);
         return ret;
+    }
 
     cal_group.push_back(ref);    
 
     cur.id = 1;        
     cur.ori_img = cur_file;
     ProcessImages(&cur);    
-    CreateFeature(&cur, false, true);
-    if( ret != ERR_NONE)
+    ret = CreateFeature(&cur, false, true);
+    if (ret != ERR_NONE) {
+        dl.Logger("create feature of train err return %d ", ret);
         return ret;
+    }
 
     cal_group.push_back(cur);        
 
@@ -679,7 +684,7 @@ int Extractor::CreateFeature(SCENE* sc, bool train, bool query, int step) {
         for(int i = p->pyramid_step -1; i >= 0; i --){
             if(sc->pyramid_ip[i].size() < p->roi_count) {
                 dl.Logger("cannot make feature & deacription in train ");
-                imgutil.SaveImage(sc, 8);
+                //imgutil.SaveImage(sc, 8);
                 return TRAIN_CREATE_FEATURE_ERR;
             }
         }
@@ -863,6 +868,10 @@ int Extractor::MatchPyramid() {
             cur_query->pyramid_pair[i].push_back(MATCHPAIR(FPt(cur_train->pyramid_ip[i][j].pt.x * scl,cur_train->pyramid_ip[i][j].pt.y * scl), FPt(cur_query->pyramid_ip[i][best_index].pt.x * scl, cur_query->pyramid_ip[i][best_index].pt.y * scl), 
                 best, scl, int(cur_query->pyramid_ip[i][best_index].size)));
 
+            if( best > p->distance_cut && i == 0 ) {
+                dl.Logger("[%d]th point is not sufficient..", j);
+                found[j] = -1;            
+            }
             dl.Logger("best distance %d index %d", best, best_index);
             dl.Logger("best coord train %f %f query %f %f ", cur_train->pyramid_ip[i][j].pt.x, cur_train->pyramid_ip[i][j].pt.y, cur_query->pyramid_ip[i][best_index].pt.x, cur_query->pyramid_ip[i][best_index].pt.y);
         }
@@ -872,16 +881,13 @@ int Extractor::MatchPyramid() {
         dl.Logger("best sum %d ave %f ", best_sum, float(best_sum/p->roi_count));
         float ave = float(best_sum)/ float(p->roi_count);
         int score = 100 - int(ave);
-        if( score < p->best_cut) {
-            result = -1;
-            found[i] = -1;            
-            //break;
-        }
-        else { 
-            result = score;
-        }
+        result = score;
         if(i > 0)
             CreateFeature(cur_query, false, true, i-1);
+    }
+
+    if(result < p->best_cut) {
+        return PYRAMID_MATCH_NOT_FOUND_NEW_POINT;            
     }
 
     int total_found = 0;
