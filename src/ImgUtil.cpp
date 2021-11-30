@@ -138,7 +138,7 @@ void ImgUtil::SaveImage(SCENE *sc, int type, SCENE* sc2, PARAM* p, int opt)
     else if (type == 6) {
         Mat img;
         char filename[50] = { 0, };
-        for(int step = 2 ; step >= 0; step --){ 
+        for(int step = p->pyramid_step - 1 ; step >= 0; step --){ 
             int scl = p->pyramid_scale[step];
             int cnt = sc->pyramid_ip[step].size(); 
             img = sc->pyramid[step].clone();            
@@ -172,6 +172,19 @@ void ImgUtil::SaveImage(SCENE *sc, int type, SCENE* sc2, PARAM* p, int opt)
             sprintf(filename, "recalibration\\saved\\%s_%d_%d_pr2_best_point.png", fname.c_str(), sc->id, step);
 #else            
             sprintf(filename, "recalibration/saved//%s_%d_%d_pr2_best_point.png", fname.c_str(), sc->id, step);
+#endif            
+            imwrite(filename, img);
+        }
+    }
+    else if (type == 8) {
+            Mat img;
+        char filename[50] = { 0, };
+        for (int step = 2; step >= 0; step--) {
+            img = sc->pyramid[step].clone();
+#if defined _WIN_ || _WINDOWS
+            sprintf(filename, "recalibration\\saved\\%s_%d_train_create_err.png", fname.c_str(), step);
+#else            
+            sprintf(filename, "recalibration/saved//%s_%d_train_create_err.png", fname.c_str(), step);
 #endif            
             imwrite(filename, img);
         }

@@ -34,7 +34,11 @@ public :
     int Execute();
     
 //    int ExecuteSever(string ref_path, string cur_path, string ref_pts_path, string& out_pts_path);
+#if defined GPU
+    int ExecuteClient(cv::cuda::GpuMat ref_file, cv::cuda::GpuMat cur_file, FPt* in_pt, FPt* out_pt, string dsc_id);
+#else
     int ExecuteClient(Mat ref_file, Mat cur_file, FPt* in_pt, FPt* out_pt, string dsc_id);
+#endif
     PARAM* p;
     MtrxUtil mtrx;
     ExpUtil genutil;
