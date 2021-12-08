@@ -148,8 +148,8 @@ void Extractor::InitializeData(int width, int cnt, int *roi)
             p->stride[1] = 2;            
             p->stride[2] = 4;            
             p->base_kernel = 35;
-            p->best_cut = 75.0;
-            p->distance_cut = 60.0;            
+            p->best_cut = 80.0;
+            p->distance_cut = 70.0;            
             p->pixel_diff_cut = 30.0;
             p->desc_kernel[0] = 3;
             p->desc_kernel[1] = 3;
@@ -158,7 +158,7 @@ void Extractor::InitializeData(int width, int cnt, int *roi)
     }
 
     if(p->p_scale == 1) { 
-        p->blur_ksize = 15;
+        p->blur_ksize = 17;
         p->blur_sigma = 0.9;
         p->desc_byte = 32;
         p->use_ori = true;
@@ -168,8 +168,8 @@ void Extractor::InitializeData(int width, int cnt, int *roi)
 
     } else {
 
-        p->blur_ksize = 7;
-        p->blur_sigma = 0.9;
+        p->blur_ksize = 11;
+        p->blur_sigma = 1.1;
         p->desc_byte = 32;
         p->use_ori = true;
         p->nms_k = 9;
@@ -505,7 +505,7 @@ int Extractor::ExecuteClient(Mat ref_file, Mat cur_file, FPt* in_pt, FPt* out_pt
     ret = Match();
     dl.Logger("return from FindHomography------  %d", ret);
     dl.Logger("match consuming %f ", LapTimer(t));        
-    if(ret > p->best_cut) {
+    if(ret >= p->best_cut) {
 
         for(int i = 0; i < p->roi_count; i ++) {
             out_pt[i].x = cur.four_fpt[i].x;
@@ -864,14 +864,17 @@ int Extractor::MatchPyramid() {
                 }
                 //dl.Logger("distance step %d/%d/%d  dist %d ", i, j, k,  dist);
             }
-            best_sum += best;            
-            cur_query->pyramid_pair[i].push_back(MATCHPAIR(FPt(cur_train->pyramid_ip[i][j].pt.x * scl,cur_train->pyramid_ip[i][j].pt.y * scl), FPt(cur_query->pyramid_ip[i][best_index].pt.x * scl, cur_query->pyramid_ip[i][best_index].pt.y * scl), 
-                best, scl, int(cur_query->pyramid_ip[i][best_index].size)));
 
-            if( best > p->distance_cut && i == 0 ) {
+             if( best > p->distance_cut - 10 && i == 0 ) {
                 dl.Logger("[%d]th point is not sufficient..", j);
                 found[j] = -1;            
             }
+            else 
+                best_sum += best;            
+
+            cur_query->pyramid_pair[i].push_back(MATCHPAIR(FPt(cur_train->pyramid_ip[i][j].pt.x * scl,cur_train->pyramid_ip[i][j].pt.y * scl), FPt(cur_query->pyramid_ip[i][best_index].pt.x * scl, cur_query->pyramid_ip[i][best_index].pt.y * scl), 
+                best, scl, int(cur_query->pyramid_ip[i][best_index].size)));
+
             dl.Logger("best distance %d index %d", best, best_index);
             dl.Logger("best coord train %f %f query %f %f ", cur_train->pyramid_ip[i][j].pt.x, cur_train->pyramid_ip[i][j].pt.y, cur_query->pyramid_ip[i][best_index].pt.x, cur_query->pyramid_ip[i][best_index].pt.y);
         }
@@ -924,7 +927,7 @@ int Extractor::MatchPyramid() {
         }
     }
 
-    if(result > p->best_cut) {
+    if(result >= p->best_cut) {
         for(int i = 0 ; i < p->roi_count ; i ++) {
             if(found[i] == 0) {            
                 cur_query->four_fpt[i].x = cur_query->pyramid_pair[0][i].query.x;
@@ -939,6 +942,8 @@ int Extractor::MatchPyramid() {
                 int y_sign = mtrx.SignValue(cur_train->four_fpt[sp_i].y - cur_query->pyramid_pair[0][sp_i].query.y);
                 cur_query->four_fpt[i].x = (cur_train->four_fpt[i].x - ave_diff_x)* x_sign;
                 cur_query->four_fpt[i].y = (cur_train->four_fpt[i].y - ave_diff_y)* y_sign;
+                dl.Logger("missing point estimation [%d]-- train %f %f -- query %f %f // signvalue %d %d", i, 
+                    cur_train->four_fpt[i].x, cur_train->four_fpt[i].y, cur_query->four_fpt[i].x, cur_query->four_fpt[i].y, x_sign, y_sign);
             }
         }
     }
